@@ -1,0 +1,11 @@
+{
+  "theme": "default",
+  "паттерн": ["id", "x", "y", "w", "h", "файл"],
+  "/main": [
+    ["hello", "0%",  "0%",  "40%", "40%", "tiles/hello.html"],
+    ["cfg",   "40%", "0%",  "60%", "100%", "tiles/cfg.html"]
+  ],
+  "/nyan": [
+    ["nyan", "0%", "0%", "100%", "100%", "tiles/nyan.html"]
+  ]
+}

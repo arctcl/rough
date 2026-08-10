@@ -1,0 +1,23 @@
+{
+  "name": "default",
+  "symbols": {
+    "tile_tl": "┌",
+    "tile_tr": "┐",
+    "tile_bl": "└",
+    "tile_br": "┘",
+    "tile_h": "─",
+    "tile_v": "│",
+    "button_l": "⟨",
+    "button_r": "⟩",
+    "input_icon": "✎",
+    "cursor": "█"
+  },
+  "colors": {
+    "frame": "3",
+    "header_bg": "4",
+    "header_fg": "7",
+    "title_fg": "10",
+    "status_fg": "11",
+    "input_fg": "10"
+  }
+}
