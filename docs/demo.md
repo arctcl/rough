@@ -46,7 +46,7 @@ myproject\
 ```
 
 **Библиотека (rough) = только движок.** Внутри неё НЕТ плагинов и тем — всё это
-живёт в твоём проекте в папке `rough/`. Готовые плагины (`cat`, `hello`, `nyan`,
+живёт в твоём проекте в папке `rough/`. Готовые плагины (`cat`, `hello`,
 `ssh`, `curl`, `man`, `grep`, `tail`, `head`, `wc`, `line`, `append`, `toggle`,
 `set`, `bars`, `clock`) лежат в корне репозитория в папке `plugins/` — в проекте
 на них можно сослаться
@@ -69,7 +69,7 @@ go build
 ## Плагины
 
 Единый контракт — юникс-команда: строки на входе, строки на выходе.
-Готовые плагины — в корне репозитория `plugins/` (`cat`, `hello`, `nyan`-анимация,
+Готовые плагины — в корне репозитория `plugins/` (`cat`, `hello`,
 `ssh`, `curl`, `man`, текстовые `grep`/`tail`/`head`/`wc`/`line`, правка конфигов
 `toggle`/`set`/`append`, графики `bars`, часы `clock`).
 
@@ -102,7 +102,7 @@ func init() {
 // myproject/rough/plugins/plugins.go
 package plugins
 
-import _ "rough/plugins" // все готовые плагины репозитория (cat, hello, nyan, ssh, curl, man, grep, tail, ...)
+import _ "rough/plugins" // все готовые плагины репозитория (cat, hello, ssh, curl, man, grep, tail, ...)
 ```
 
 В HTML плагин вызывается по имени, можно пайпом:
@@ -147,7 +147,7 @@ import _ "rough/plugins" // все готовые плагины репозит�
 кликом по вкладке или `Tab`/`Shift+Tab`/цифрами:
 
 ```json
-"menu": [["Главная", "/main"], ["Справка", "/man"], ["Нян", "/nyan"]]
+"menu": [["Главная", "/main"], ["Справка", "/man"]]
 ```
 
 ## Данные интерфейса

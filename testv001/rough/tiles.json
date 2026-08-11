@@ -8,8 +8,7 @@
   ],
   "/tools": [
     ["clock", "0%",  "0%",  "50%", "50%", "tiles/tools_clock.html"],
-    ["bars",  "50%", "0%",  "50%", "50%", "tiles/tools_bars.html"],
-    ["nyan",  "0%",  "50%", "100%", "50%", "tiles/nyan.html"]
+    ["bars",  "50%", "0%",  "50%", "50%", "tiles/tools_bars.html"]
   ],
   "/sys": [
     ["info", "0%",  "0%",  "50%", "50%", "tiles/sys_info.html"],

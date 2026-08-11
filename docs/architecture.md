@@ -147,7 +147,7 @@ c:\...\rough\                  # корень = модуль rough (package roug
     syntax_checker.go          # проверяльщик: action/plugin/ссылки должны существовать
   plugins\                     # ВСЕ плагины в одном месте (корень репозитория)
     plugins.go                 # агрегатор: все плагины ниже
-    cat\  hello\  nyan\        # базовые (nyan — анимация)
+    cat\  hello\              # базовые (примеры)
     ssh\  curl\                # сетевые (SSH и HTTP, нативно в Go)
     man\                       # справка: man_<имя> из каждого плагина
     grep\  tail\  head\  wc\   # текстовые фильтры (юникс-набор)
@@ -180,7 +180,7 @@ c:\...\rough\                  # корень = модуль rough (package roug
   "/main": [
     ["time", "0%",   "0%",  "10%",  "10%",  "tiles/time.html"],
     ["plan", "10%",  "0%",  "90%",  "100%", "tiles/plan.html"],
-    ["nyan", "0%",   "10%", "10%",  "90%",  "tiles/nyan.html"]
+    ["out",  "0%",   "10%", "10%",  "90%",  "tiles/out.html"]
   ],
   "/info": [
     ["cpu",  "0%",   "0%",  "100%", "100%", "tiles/cpu.html"]
