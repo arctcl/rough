@@ -87,6 +87,6 @@ func main() { rough.TUI(roughDir) }
 - всё нативно в Go — ssh, curl, sqlite; работает даже в scratch-контейнере
 - справка по плагинам — прямо в интерфейсе (`man`)
 
-Подробнее: [architecture](docs/architecture.md) · [demo](docs/demo.md) · [systemprompt](docs/systemprompt.md)
+Подробнее: [документация](docs/README.md) — кукингбуки (плагины, темы, проект), how-it-works, архитектура.
 
 
