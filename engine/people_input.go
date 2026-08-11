@@ -228,7 +228,11 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 	hotzones = hotzones[:0]
 
 	bg := NewBuffer(w, h)
-	bg.Fill(' ', Style{})
+	// Фон экрана и цвет текста по умолчанию — из темы (ключи bg/fg).
+	bg.Fill(' ', Style{
+		Fg: curTheme.ResolveColor(themeColor("fg"), tcell.ColorDefault),
+		Bg: curTheme.ResolveColor(themeColor("bg"), tcell.ColorDefault),
+	})
 
 	// Шапка с текущим роутом и подсказкой выхода (цвета из темы).
 	hdrFg := curTheme.ResolveColor(themeColor("header_fg"), tcell.ColorWhite)
@@ -378,7 +382,7 @@ func drawTabs(b *Buffer, menu [][]string, route string, out *[]Hotzone) {
 		}
 		b.SetString(x, b.H-1, label, st)
 		*out = append(*out, Hotzone{X: x, Y: b.H - 1, W: lw, H: 1, Href: m[1], Kind: "nav"})
-		x += lw
+		x += lw + 1 // пробел в 1 клетку между вкладками
 	}
 }
 

@@ -80,8 +80,12 @@ func HitTest(x, y int) (kind, action, href, label, output string) {
 
 // RenderHTML рендерит HTML-дерево в буфер тайла, собирая хотзоны.
 // ox, oy — смещение тайла на экране (чтобы хотзоны были абсолютными).
+// Цвета текста/фона по умолчанию берутся из темы (ключи fg/bg).
 func RenderHTML(n *Node, b *Buffer, ox, oy int, out *[]Hotzone) {
-	f := &flowState{fg: tcell.ColorDefault}
+	f := &flowState{
+		fg: curTheme.ResolveColor(themeColor("fg"), tcell.ColorDefault),
+		bg: curTheme.ResolveColor(themeColor("bg"), tcell.ColorDefault),
+	}
 	renderNode(n, b, f, ox, oy, out)
 }
 
