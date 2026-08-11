@@ -88,6 +88,29 @@ import _ "rough/plugins" // cat, hello, ssh, curl, man, grep, tail, head, wc, ..
 <input action="man:" output="out" label="Пакет"/>
 ```
 
+**Формы и данные:**
+
+```html
+<!-- чекбокс: [x]/[ ], состояние из плагина toggle -->
+<checkbox action="toggle:/etc/app.conf:logging">Логирование</checkbox>
+
+<!-- выпадающий список: клик — меню, выбор дописывает :вариант -->
+<select action="set:/etc/app.conf:loglevel" options="info:debug:trace" label="Уровень"/>
+
+<!-- таблица: колонки выравниваются по ширине, th — жирный -->
+<table>
+  <tr><th>Сервис</th><th>Статус</th></tr>
+  <tr><td>api</td><td>работает</td></tr>
+</table>
+
+<!-- картинка PPM (P6) половинчатыми блоками ▀▄█ -->
+<img src="/opt/app/logo.ppm"/>
+
+<hr/>   <!-- горизонтальная линия -->
+```
+
+Контент длиннее тайла — скроллится колесом мыши.
+
 ### Колонки и центрирование
 
 ```html

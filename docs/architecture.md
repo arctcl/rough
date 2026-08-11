@@ -618,13 +618,14 @@ go run . -tui
 
 ### Осталось (roadmap) ⏳
 
-1. Вёрстка: `checkbox`, `select`, `<table>`, `img` (картинки половинчатыми блоками `▀▄█`),
-   скролл внутри тайла. (колонки `<row>` + `<div width>` и вывод в блок `output=` — уже есть)
-2. Плагины: `sql` (sqlite), `deploy` (ssh-цикл по подсети) — остальное
-   (`grep`/`tail`/`head`/`wc`/`line`/`append`/`toggle`/`set`/`bars`/`clock`) — есть.
+1. ~~Вёрстка: `checkbox`, `select`, `<table>`, `img`, скролл~~ — сделано:
+   `checkbox`/`select` (с состоянием и меню), `<table>` (выравнивание колонок),
+   `img` (PPM половинчатыми блоками `▀▄█`), `hr`, `pre`, скролл внутри тайла (колесо).
+2. Плагины: `sql` (sqlite) — остальное
+   (`grep`/`tail`/`head`/`wc`/`line`/`append`/`toggle`/`set`/`bars`/`clock`/`loop`/`man`/`ssh`/`curl`) — есть.
 3. ~~Актуальный `README.md`~~ — сделан (см. корневой `README.md`).
-4. Проверка `CGO_ENABLED=0` и запуск в alpine/scratch-контейнере.
-5. Тесты движка (покрытие `engine/`).
+4. ~~Проверка `CGO_ENABLED=0`~~ — сделан: статическая сборка работает (CGO=0).
+5. ~~Тесты движка~~ — сделаны (`engine/backend_test.go`).
 
 ### Правила для следующей итерации
 
