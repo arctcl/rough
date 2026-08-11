@@ -15,33 +15,33 @@ import (
 )
 
 // man_loop — справка по плагину (для man).
-const man_loop = `loop — перебрать адреса по шаблону (для пайпа с ssh).
+const man_loop = `loop — перебрать по шаблону с диапазонами (для пайпа с ssh).
 
 Использование:
   часть пайпа: loop:ШАБЛОН | ssh:user:команда
 
-ШАБЛОН — IPv4 с диапазонами [a-b] в любых октетах:
-  172.0.0.[1-127]
-  172.0.[0-255].[1-254]
-  10.0.[0-1].[0-255]
+ШАБЛОН — любая строка с диапазонами [a-b]:
+  172.0.0.[1-127]          — адреса 172.0.0.1 .. 172.0.0.127
+  172.0.[0-255].[1-254]    — диапазоны в любых местах
+  пирожок_номер_[1-999]    — не только IP: пирожок_номер_1 .. пирожок_номер_999
 
-Выдаёт все адреса из диапазонов — каждая строка идёт в ssh как хост.
+Выдаёт все варианты — каждая строка идёт в ssh как хост.
 
 Примеры:
   action="loop:172.0.0.[1-127] | ssh:root:apt update && apt upgrade -y"
-  action="loop:172.0.0.[1-127] | ssh:root:-i:/root/keys:uptime"`
+  action="loop:пирожок_номер_[1-5] | ssh:root:hostname"`
 
 func init() {
 	rough.AddMan("loop", man_loop)
 	rough.AddPlugin("loop", func(in []string, args []string) ([]string, error) {
 		if len(args) < 1 {
-			return nil, errors.New("loop: нужен шаблон адреса")
+			return nil, errors.New("loop: нужен шаблон")
 		}
-		// Шаблон с диапазонами: 172.0.0.[1-127]
+		// Шаблон с диапазонами [a-b] — универсальный разворачиватель.
 		if strings.Contains(args[0], "[") {
-			return genPattern(args[0])
+			return genTemplate(args[0])
 		}
-		// Старый формат: loop:БАЗА:КОНЕЦ
+		// Старый формат: loop:БАЗА:КОНЕЦ (только IP-диапазон).
 		if len(args) < 2 {
 			return nil, errors.New("loop: нужен шаблон или стартовый адрес с концом")
 		}
@@ -49,63 +49,83 @@ func init() {
 	})
 }
 
-// octet — диапазон одного октета (lo..hi).
-type octet struct {
-	lo, hi int
+// part — кусок шаблона: фиксированный текст или диапазон lo..hi.
+type part struct {
+	fixed   string
+	lo, hi  int
+	isRange bool
 }
 
-// genPattern разворачивает шаблон вида 172.0.[0-255].[1-254] во все адреса.
-func genPattern(pat string) ([]string, error) {
-	parts := strings.Split(pat, ".")
-	if len(parts) != 4 {
-		return nil, fmt.Errorf("loop: ждём IPv4-шаблон, получили %q", pat)
-	}
-	octs := make([]octet, 4)
-	for i, p := range parts {
-		o, err := parseOctet(p)
-		if err != nil {
-			return nil, err
-		}
-		octs[i] = o
+// genTemplate разворачивает любой шаблон с диапазонами [a-b] во все варианты.
+// Примеры: 172.0.0.[1-3] → 172.0.0.1..3;  пирожок_номер_[1-999] → пирожок_номер_1..999.
+func genTemplate(pat string) ([]string, error) {
+	parts, err := parseTemplate(pat)
+	if err != nil {
+		return nil, err
 	}
 	var out []string
-	cur := make([]int, 4)
+	cur := ""
 	var walk func(i int)
 	walk = func(i int) {
-		if i == 4 {
-			out = append(out, net.IPv4(byte(cur[0]), byte(cur[1]), byte(cur[2]), byte(cur[3])).String())
+		if i == len(parts) {
+			out = append(out, cur)
 			return
 		}
-		for v := octs[i].lo; v <= octs[i].hi; v++ {
-			cur[i] = v
+		p := parts[i]
+		if !p.isRange {
+			cur += p.fixed
 			walk(i + 1)
+			cur = cur[:len(cur)-len(p.fixed)]
+			return
+		}
+		for v := p.lo; v <= p.hi; v++ {
+			s := strconv.Itoa(v)
+			cur += s
+			walk(i + 1)
+			cur = cur[:len(cur)-len(s)]
 		}
 	}
 	walk(0)
 	return out, nil
 }
 
-// parseOctet разбирает октет: "10" — фиксированный, "[1-127]" — диапазон.
-func parseOctet(s string) (octet, error) {
-	s = strings.TrimSpace(s)
-	if strings.HasPrefix(s, "[") && strings.HasSuffix(s, "]") {
-		inner := s[1 : len(s)-1]
+// parseTemplate разбирает шаблон на фиксированные куски и диапазоны [a-b].
+func parseTemplate(pat string) ([]part, error) {
+	var parts []part
+	rest := pat
+	for len(rest) > 0 {
+		i := strings.Index(rest, "[")
+		if i < 0 {
+			if rest != "" {
+				parts = append(parts, part{fixed: rest})
+			}
+			break
+		}
+		if i > 0 {
+			parts = append(parts, part{fixed: rest[:i]})
+		}
+		j := strings.Index(rest[i:], "]")
+		if j < 0 {
+			return nil, fmt.Errorf("loop: незакрытый диапазон в %q", pat)
+		}
+		j += i
+		inner := rest[i+1 : j]
 		pp := strings.SplitN(inner, "-", 2)
 		if len(pp) != 2 {
-			return octet{}, fmt.Errorf("loop: плохой диапазон %q", s)
+			return nil, fmt.Errorf("loop: плохой диапазон [%s]", inner)
 		}
 		lo, err1 := strconv.Atoi(strings.TrimSpace(pp[0]))
 		hi, err2 := strconv.Atoi(strings.TrimSpace(pp[1]))
-		if err1 != nil || err2 != nil || lo < 0 || hi > 255 || lo > hi {
-			return octet{}, fmt.Errorf("loop: плохой диапазон %q", s)
+		if err1 != nil || err2 != nil || lo < 0 || lo > hi {
+			return nil, fmt.Errorf("loop: плохой диапазон [%s]", inner)
 		}
-		return octet{lo: lo, hi: hi}, nil
+		parts = append(parts, part{lo: lo, hi: hi, isRange: true})
+		rest = rest[j+1:]
 	}
-	v, err := strconv.Atoi(s)
-	if err != nil || v < 0 || v > 255 {
-		return octet{}, fmt.Errorf("loop: плохой октет %q", s)
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("loop: пустой шаблон %q", pat)
 	}
-	return octet{lo: v, hi: v}, nil
+	return parts, nil
 }
 
 // genIPs — старый формат: адреса от start до end (конец — число или полный адрес).
@@ -135,4 +155,3 @@ func genIPs(start, end string) ([]string, error) {
 	}
 	return out, nil
 }
-
