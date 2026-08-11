@@ -168,6 +168,11 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		// Блок: дети, затем — если у блока есть id и в кэше лежит результат — его строки.
 		// Так <div id="out"></div> становится приёмником вывода команды (output="out").
 		// Внутри <row> div с width="50%" — колонка (см. renderRow).
+		// align="center" — содержимое по центру блока (по горизонтали и вертикали).
+		if n.Attrs["align"] == "center" {
+			renderCenteredDiv(n, b, f, ox, oy, out)
+			break
+		}
 		f.nl(b)
 		old := *f
 		for _, c := range n.Children {
@@ -400,4 +405,47 @@ func childrenTags(n *Node, tag string) []*Node {
 		}
 	}
 	return out
+}
+
+// renderCenteredDiv — блок <div align="center">: содержимое по центру блока
+// и по горизонтали, и по вертикали (например, часы по центру тайла).
+// Рендерим в мини-буфер, узнаём реальную высоту содержимого и вставляем
+// с вертикальным смещением; хотзоны сдвигаем так же.
+func renderCenteredDiv(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
+	cb := NewBuffer(b.W, b.H)
+	cf := &flowState{fg: f.fg, bg: f.bg, center: true}
+	var hz []Hotzone
+	for _, c := range n.Children {
+		renderNode(c, cb, cf, ox, oy, &hz)
+	}
+	if id := n.Attrs["id"]; id != "" {
+		if lines, ok := outputCache[id]; ok {
+			for _, ln := range lines {
+				cf.put(cb, ln)
+				cf.nl(cb)
+			}
+		}
+	}
+	h := usedHeight(cb)
+	yOff := (b.H - h) / 2
+	if yOff < 0 {
+		yOff = 0
+	}
+	b.Copy(cb, 0, yOff)
+	for _, z := range hz {
+		z.Y += yOff
+		*out = append(*out, z)
+	}
+}
+
+// usedHeight — высота занятого содержимым (нижняя непустая строка + 1).
+func usedHeight(b *Buffer) int {
+	for y := b.H - 1; y >= 0; y-- {
+		for x := 0; x < b.W; x++ {
+			if b.cells[y][x].Rune != 0 {
+				return y + 1
+			}
+		}
+	}
+	return 0
 }
