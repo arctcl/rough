@@ -338,9 +338,12 @@ func Run(fsys fs.FS) error {
 						execAction(act, output)
 						break
 					}
-					// Клик мимо меню — закрыть его.
-					if selectMode {
+					// Меню открыто, клик НЕ по варианту и НЕ по другому select —
+					// промах: закрыть список и НЕ трогать элементы под ним
+					// (поле ввода/кнопки под меню не срабатывают).
+					if selectMode && kind != "select" {
 						selectMode = false
+						break
 					}
 					// Клик не по активному полю — завершаем ввод.
 					if inputMode && !(kind == "input" && act == inputAction && label == inputLabel) {
@@ -535,12 +538,21 @@ func drawSelectMenu(b *Buffer, out *[]Hotzone, w, h int) {
 	titleBg := curTheme.ResolveColor(themeColor("header_bg"), tcell.ColorDarkBlue)
 	titleFg := curTheme.ResolveColor(themeColor("header_fg"), tcell.ColorWhite)
 	inFg := curTheme.ResolveColor(themeColor("input_fg"), tcell.ColorGreen)
+	frameFg := curTheme.ResolveColor(themeColor("frame"), tcell.ColorGray)
 
-	// Рамка + заголовок.
-	drawFrame(b, x0, y0, mw, height)
+	// Изоляция: заливаем ВСЮ область меню непрозрачным фоном — ничего под
+	// списком не просвечивает и не перехватывает клики.
+	fill := Style{Bg: titleBg}
+	for yy := y0; yy < y0+height && yy < h; yy++ {
+		for xx := x0; xx < x0+mw && xx < w; xx++ {
+			b.Set(xx, yy, ' ', fill)
+		}
+	}
+	// Рамка с фоном (поверх заливки).
+	drawFrameStyled(b, x0, y0, mw, height, Style{Fg: frameFg, Bg: titleBg})
 	b.SetString(x0+1, y0, " "+title+" ", Style{Bg: titleBg, Fg: titleFg})
 	for i := 0; i < height-1 && i < len(selectOpts); i++ {
-		st := Style{Fg: inFg}
+		st := Style{Fg: inFg, Bg: titleBg}
 		if i == selectIdx {
 			st = Style{Fg: tcell.ColorBlack, Bg: inFg, Bold: true}
 		}
@@ -548,6 +560,32 @@ func drawSelectMenu(b *Buffer, out *[]Hotzone, w, h int) {
 		ox := x0 + 1
 		b.SetString(ox, y0+1+i, opt, st)
 		*out = append(*out, Hotzone{X: ox, Y: y0 + 1 + i, W: uniseg.StringWidth(opt), H: 1, Kind: "selopt", Action: selectAction + ":" + selectOpts[i], Label: selectAction, Output: selectOutput})
+	}
+}
+
+// drawFrameStyled рисует рамку символами темы с заданным стилем (для изоляции
+// меню: фон рамки непрозрачный).
+func drawFrameStyled(b *Buffer, x, y, w, h int, st Style) {
+	if w < 1 || h < 1 {
+		return
+	}
+	tl := curTheme.Sym("tile_tl", "┌")
+	tr := curTheme.Sym("tile_tr", "┐")
+	bl := curTheme.Sym("tile_bl", "└")
+	br := curTheme.Sym("tile_br", "┘")
+	hh := curTheme.Sym("tile_h", "─")
+	vv := curTheme.Sym("tile_v", "│")
+	b.Set(x, y, tl, st)
+	b.Set(x+w-1, y, tr, st)
+	b.Set(x, y+h-1, bl, st)
+	b.Set(x+w-1, y+h-1, br, st)
+	for i := 1; i < w-1; i++ {
+		b.Set(x+i, y, hh, st)
+		b.Set(x+i, y+h-1, hh, st)
+	}
+	for j := 1; j < h-1; j++ {
+		b.Set(x, y+j, vv, st)
+		b.Set(x+w-1, y+j, vv, st)
 	}
 }
 
