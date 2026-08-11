@@ -29,6 +29,7 @@ const man_ssh = `ssh — выполнить команду на удалённо
 Использование:
   action="ssh:user@host:команда"
   action="ssh:user@host:-i:ПУТЬ:команда"   — с указанием папки или файла ключей
+  пайп:  ... | ssh:user:[ -i ПУТЬ ]:команда   — хост из каждой строки входа (loop)
 
 Аргументы:
   user@host   — куда подключаться.
@@ -46,7 +47,9 @@ const man_ssh = `ssh — выполнить команду на удалённо
   action="ssh:root@srv1:-i:/root/keys:hostname"          — ключи из папки /root/keys
   action="ssh:root@srv1:-i:~/.ssh/id_rsa:uptime"         — конкретный файл ключа
   action="ssh:root@srv1:df -h | grep:/data"              — вывод идёт в пайп
-  action="ssh:root@srv1:-i:/root/keys:df -h | head:3"    — ключи + пайп`
+  action="ssh:root@srv1:-i:/root/keys:df -h | head:3"    — ключи + пайп
+  action="loop:172.0.0.1:25 | ssh:root:apt update && apt upgrade -y"  — апдейт по всем хостам
+  action="loop:172.0.0.1:25 | ssh:root:-i:/root/keys:uptime"          — ключи из папки по циклу`
 
 func init() {
 	// ssh: user@host [ -i ПУТЬ ] : команда (команда склеивается через «:» обратно)
@@ -54,8 +57,13 @@ func init() {
 
 	rough.AddPlugin("ssh", func(in []string, args []string) ([]string, error) {
 		if len(args) < 2 {
-			return nil, errors.New("ssh: нужен хост user@host и команда")
+			return nil, errors.New("ssh: нужен user@host и команда")
 		}
+		// Пайп-режим: ssh:user:команда — хост берётся из строк входа (например loop).
+		if !strings.Contains(args[0], "@") {
+			return sshPipe(in, args)
+		}
+		// Обычный: ssh:user@host:команда (и опционально -i:путь).
 		addr := args[0]
 		rest := args[1:]
 
@@ -73,6 +81,38 @@ func init() {
 		}
 		return runSSH(addr, keyPath, cmd)
 	})
+}
+
+// sshPipe — пайп-режим: ssh:user:[ -i ПУТЬ ]:команда, хост из каждой строки входа.
+// Каждый адрес (строка in) — отдельный хост, для всех выполняется одна команда.
+func sshPipe(in []string, args []string) ([]string, error) {
+	user := args[0]
+	rest := args[1:]
+	keyPath := ""
+	if len(rest) >= 2 && rest[0] == "-i" {
+		keyPath = rest[1]
+		rest = rest[2:]
+	}
+	cmd := strings.Join(rest, ":")
+	if cmd == "" {
+		return nil, errors.New("ssh: нужна команда")
+	}
+	var out []string
+	for _, host := range in {
+		host = strings.TrimSpace(host)
+		if host == "" {
+			continue
+		}
+		res, err := runSSH(user+"@"+host, keyPath, cmd)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", host, err)
+		}
+		out = append(out, res...)
+	}
+	if len(out) == 0 {
+		return nil, errors.New("ssh: нет хостов во входе (нужен loop?)")
+	}
+	return out, nil
 }
 
 // runSSH подключается к серверу, выполняет команду и возвращает вывод построчно.

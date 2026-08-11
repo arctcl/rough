@@ -15,6 +15,7 @@ import (
 	_ "rough/plugins/head"
 	_ "rough/plugins/hello"
 	_ "rough/plugins/line"
+	_ "rough/plugins/loop"
 	_ "rough/plugins/man"
 	_ "rough/plugins/set"
 	_ "rough/plugins/ssh"
