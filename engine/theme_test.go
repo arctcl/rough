@@ -31,9 +31,9 @@ func TestPutColored(t *testing.T) {
 
 	green := tcell.NewHexColor(0x00ff00)
 	cells := []struct {
-		x    int
-		r    rune
-		fg   tcell.Color
+		x  int
+		r  rune
+		fg tcell.Color
 	}{
 		{0, 'A', tcell.ColorDefault},
 		{1, 'B', green},
@@ -49,6 +49,33 @@ func TestPutColored(t *testing.T) {
 	// Маркеры не заняли клеток — ширина строки 3.
 	if b.cells[0][3].Rune != 0 {
 		t.Fatalf("после строки остался мусор: %q", b.cells[0][3].Rune)
+	}
+}
+
+// putColored в центрированном блоке: строка центрируется ОДИН раз целиком,
+// сегменты не накладываются (иначе графики в align="center" разваливались).
+func TestPutColoredCentered(t *testing.T) {
+	curTheme = &Theme{Name: "t", Colors: map[string]string{"color_2": "#00ff00"}}
+	defer func() { curTheme = nil }()
+
+	b := NewBuffer(12, 1)
+	f := &flowState{center: true}
+	// "█x" + "..." — маркеры не входят в ширину.
+	f.putColored(b, "\x01{color_2}██\x01{}....")
+
+	// Видимая ширина 6 → центр: x=(12-6)/2=3. Сегмент "██" на x=3,4, "...." на 5..8.
+	for x := 0; x < 12; x++ {
+		want := rune(0)
+		if x >= 3 && x <= 4 {
+			want = '█'
+		}
+		if x >= 5 && x <= 8 {
+			want = '.'
+		}
+		if b.cells[0][x].Rune != want {
+			t.Fatalf("клетка %d: руна=%q, ждали %q (строка разъехалась)",
+				x, b.cells[0][x].Rune, want)
+		}
 	}
 }
 

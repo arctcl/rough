@@ -216,13 +216,29 @@ func (f *flowState) putColored(b *Buffer, s string) {
 		}
 		segs = append(segs, seg{cur, "\x01"})
 	}
-	// Рисуем сегменты подряд — x продолжает идти по строке.
+	// Центрируем ВСЮ строку один раз (по ширине без маркеров), а не каждый
+	// сегмент: иначе при f.center каждый сегмент ляжет по своему центру и
+	// наложится на соседний (графики внутри <div align="center"> ломались).
+	center := f.center
+	if center {
+		visW := 0
+		for _, g := range segs {
+			visW += uniseg.StringWidth(g.val)
+		}
+		f.x = (b.W - visW) / 2
+		if f.x < 0 {
+			f.x = 0
+		}
+	}
+	// Рисуем сегменты подряд (центр уже учтён — повторно не центрируем).
+	f.center = false
 	for _, g := range segs {
 		old := f.fg
 		f.fg = g.fg
 		f.put(b, g.val)
 		f.fg = old
 	}
+	f.center = center
 }
 
 // StripMarkers убирает цветовые маркеры \x01{имя} из строки. Нужно там, где
