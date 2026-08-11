@@ -57,19 +57,24 @@ type Hotzone struct {
 	Href       string // куда перейти (роут)
 	Kind       string // вид зоны: "" (действие), "nav" (ссылка), "input" (поле ввода)
 	Label      string // подпись для окна ввода
+	Output     string // id блока, куда направить вывод (пусто = статус-строка)
 }
 
 // hotzones — хотзоны последнего кадра, по ним делаем hit-test мыши.
 var hotzones []Hotzone
 
+// outputCache — результаты команд, направленных в блоки с id (id блока → строки).
+// Блок <div id="..."> или <col id="..."> при рендере рисует эти строки.
+var outputCache = map[string][]string{}
+
 // HitTest ищет хотзону по координатам клика.
-func HitTest(x, y int) (kind, action, href, label string) {
+func HitTest(x, y int) (kind, action, href, label, output string) {
 	for _, hz := range hotzones {
 		if x >= hz.X && x < hz.X+hz.W && y >= hz.Y && y < hz.Y+hz.H {
-			return hz.Kind, hz.Action, hz.Href, hz.Label
+			return hz.Kind, hz.Action, hz.Href, hz.Label, hz.Output
 		}
 	}
-	return "", "", "", ""
+	return "", "", "", "", ""
 }
 
 // RenderHTML рендерит HTML-дерево в буфер тайла, собирая хотзоны.
@@ -142,12 +147,31 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 	switch n.Tag {
 	case "br":
 		f.nl(b)
-	case "h1", "p", "div":
+	case "h1", "p":
 		f.nl(b)
 		old := *f
 		f.bold = n.Tag == "h1"
 		for _, c := range n.Children {
 			renderNode(c, b, f, ox, oy, out)
+		}
+		*f = old
+		f.nl(b)
+	case "div":
+		// Блок: дети, затем — если у блока есть id и в кэше лежит результат — его строки.
+		// Так <div id="out"></div> становится приёмником вывода команды (output="out").
+		// Внутри <row> div с width="50%" — колонка (см. renderRow).
+		f.nl(b)
+		old := *f
+		for _, c := range n.Children {
+			renderNode(c, b, f, ox, oy, out)
+		}
+		if id := n.Attrs["id"]; id != "" {
+			if lines, ok := outputCache[id]; ok {
+				for _, ln := range lines {
+					f.put(b, ln)
+					f.nl(b)
+				}
+			}
 		}
 		*f = old
 		f.nl(b)
@@ -176,9 +200,7 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		f.nl(b)
 	case "row":
 		f.nl(b)
-		for _, c := range n.Children {
-			renderNode(c, b, f, ox, oy, out)
-		}
+		renderRow(n, b, f, ox, oy, out)
 		f.nl(b)
 	case "button":
 		f.nl(b)
@@ -188,7 +210,7 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		br := curTheme.Sym("button_r", "⟩")
 		x0, y0 := f.x, f.y
 		f.put(b, string(bl)+" "+label+" "+string(br))
-		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: len([]rune(label)) + 4, H: 1, Action: act})
+		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: len([]rune(label)) + 4, H: 1, Action: act, Output: n.Attrs["output"]})
 		f.nl(b)
 	case "a":
 		f.nl(b)
@@ -211,12 +233,18 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		ic := curTheme.Sym("input_icon", "✎")
 		x0, y0 := f.x, f.y
 		f.put(b, string(ic)+" "+label)
-		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: len([]rune(label)) + 2, H: 1, Action: act, Kind: "input", Label: label})
+		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: len([]rune(label)) + 2, H: 1, Action: act, Kind: "input", Label: label, Output: n.Attrs["output"]})
 		f.nl(b)
 	case "plugin":
 		f.nl(b)
 		renderPlugin(n, b, f)
 		f.nl(b)
+	default:
+		// Неизвестные теги (html, body, span и т.п.) — просто обходим детей.
+		// Без этого документ/тайл не рендерится вообще.
+		for _, c := range n.Children {
+			renderNode(c, b, f, ox, oy, out)
+		}
 	}
 }
 
@@ -292,4 +320,65 @@ func parseDur(s string) time.Duration {
 		return 0
 	}
 	return d
+}
+
+// renderRow рисует <row>: дети-<div width="..."> — колонки, делят ширину тайла
+// (width в %/px, пусто — поровну). Каждая колонка рендерится в свой мини-буфер
+// своей ширины, поэтому плагины внутри видят реальный размер через Window()
+// и сжимаются/растягиваются сами. Поменял 50% на 40% — колонка просто стала уже.
+func renderRow(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
+	cols := childrenTags(n, "div")
+	if len(cols) == 0 {
+		// Нет колонок — дети идут подряд, как обычная строка.
+		for _, c := range n.Children {
+			renderNode(c, b, f, ox, oy, out)
+		}
+		return
+	}
+	// Считаем ширины колонок: явная width, остаток — поровну авто-колонкам.
+	total := b.W
+	widths := make([]int, len(cols))
+	used, auto := 0, 0
+	for i, c := range cols {
+		if c.Attrs["width"] != "" {
+			widths[i] = parseLen(c.Attrs["width"], total)
+			used += widths[i]
+		} else {
+			auto++
+		}
+	}
+	if auto > 0 {
+		share := 0
+		if rest := total - used; rest > 0 {
+			share = rest / auto
+		}
+		for i, c := range cols {
+			if c.Attrs["width"] == "" {
+				widths[i] = share
+			}
+		}
+	}
+	// Каждую колонку рендерим в свой буфер и вставляем рядом по x-смещению.
+	x := 0
+	for i, c := range cols {
+		if widths[i] <= 0 {
+			continue
+		}
+		cb := NewBuffer(widths[i], b.H)
+		cf := &flowState{fg: f.fg, bg: f.bg}
+		renderNode(c, cb, cf, ox+x, oy, out)
+		b.Copy(cb, x, 0)
+		x += widths[i]
+	}
+}
+
+// childrenTags возвращает детей-элементы с заданным тегом.
+func childrenTags(n *Node, tag string) []*Node {
+	var out []*Node
+	for _, c := range n.Children {
+		if c.Tag == tag {
+			out = append(out, c)
+		}
+	}
+	return out
 }

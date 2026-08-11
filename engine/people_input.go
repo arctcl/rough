@@ -19,29 +19,43 @@ var (
 	inputAction string // действие, которое выполним (без значения)
 	inputLabel  string // подпись (что редактируем, например MAX_USERS)
 	inputBuf    string // набранное значение
+	inputOutput string // id блока, куда направить результат (output="...")
 )
 
 // Состояние окна подтверждения (шаг "| confirm" в action).
 var (
-	confirmMode  bool     // открыто ли окно подтверждения
-	confirmMsg   string   // текст вопроса
-	pendingSteps []string // шаги, которые выполним после подтверждения
+	confirmMode   bool     // открыто ли окно подтверждения
+	confirmMsg    string   // текст вопроса
+	pendingSteps  []string // шаги, которые выполним после подтверждения
+	pendingOutput string   // куда направить вывод после подтверждения
 )
 
 // execAction выполняет action из HTML (кнопка/поле/пайп).
+// target — id блока для вывода (output="..."), пусто = статус-строка.
 // Если в action есть "| confirm" — открывает окно подтверждения и ждёт.
-func execAction(raw string) {
+func execAction(raw, target string) {
 	steps, need := PrepareAction(raw)
 	if need {
 		confirmMode = true
 		confirmMsg = "Выполнить?"
 		pendingSteps = steps
+		pendingOutput = target
 		statusMsg = ""
 		return
 	}
 	out, err := RunSteps(steps, nil)
 	if err != nil {
 		statusMsg = "ошибка: " + err.Error()
+		return
+	}
+	putOutput(out, target)
+}
+
+// putOutput направляет результат действия: в блок вывода (по id) или в статус-строку.
+func putOutput(out []string, target string) {
+	if target != "" {
+		outputCache[target] = out
+		statusMsg = "выполнено → " + target
 		return
 	}
 	statusMsg = strings.Join(out, " | ")
@@ -56,6 +70,7 @@ func Run(fsys fs.FS) error {
 		return err
 	}
 	pages := ui.Pages
+	menu := ui.Menu
 
 	// Проверяльщик синтаксиса: пока есть ошибки — интерфейс не стартует.
 	if errs := CheckSyntax(fsys, pages); len(errs) > 0 {
@@ -90,7 +105,7 @@ func Run(fsys fs.FS) error {
 	defer tick.Stop()
 
 	for {
-		renderFrame(s, pages, route, w, h, fsys)
+		renderFrame(s, pages, route, menu, w, h, fsys)
 		select {
 		case ev := <-evCh:
 			switch e := ev.(type) {
@@ -108,7 +123,7 @@ func Run(fsys fs.FS) error {
 						}
 						act += inputBuf
 						inputMode = false
-						execAction(act)
+						execAction(act, inputOutput)
 					case tcell.KeyEscape:
 						inputMode = false
 						statusMsg = "ввод отменён"
@@ -134,7 +149,7 @@ func Run(fsys fs.FS) error {
 						if err != nil {
 							statusMsg = "ошибка: " + err.Error()
 						} else {
-							statusMsg = strings.Join(out, " | ")
+							putOutput(out, pendingOutput)
 						}
 					case tcell.KeyEscape:
 						confirmMode = false
@@ -149,7 +164,7 @@ func Run(fsys fs.FS) error {
 							if err != nil {
 								statusMsg = "ошибка: " + err.Error()
 							} else {
-								statusMsg = strings.Join(out, " | ")
+								putOutput(out, pendingOutput)
 							}
 						case 'n', 'N':
 							confirmMode = false
@@ -164,11 +179,22 @@ func Run(fsys fs.FS) error {
 				if e.Rune() == 'q' || e.Rune() == 'Q' {
 					return nil
 				}
+				// Вкладки: Tab — вперёд, Shift+Tab — назад, цифры 1-9 — по номеру.
+				switch {
+				case e.Key() == tcell.KeyTab:
+					route = nextRoute(menu, route, 1)
+				case e.Key() == tcell.KeyBacktab:
+					route = nextRoute(menu, route, -1)
+				case e.Rune() >= '1' && e.Rune() <= '9':
+					if i := int(e.Rune() - '1'); i < len(menu) {
+						route = menu[i][1]
+					}
+				}
 			case *tcell.EventMouse:
 				// Левый клик — hit-test по хотзонам.
 				if e.Buttons()&tcell.Button1 != 0 {
 					x, y := e.Position()
-					kind, act, href, label := HitTest(x, y)
+					kind, act, href, label, output := HitTest(x, y)
 					if href != "" {
 						if _, ok := pages[href]; ok {
 							route = href
@@ -182,11 +208,12 @@ func Run(fsys fs.FS) error {
 						inputMode = true
 						inputAction = act
 						inputLabel = label
+						inputOutput = output
 						inputBuf = ""
 						statusMsg = ""
 						break
 					}
-					execAction(act)
+					execAction(act, output)
 				}
 			}
 		case <-tick.C:
@@ -195,8 +222,8 @@ func Run(fsys fs.FS) error {
 	}
 }
 
-// renderFrame рисует текущий кадр: фон, заголовок, тайлы и статусную строку.
-func renderFrame(s tcell.Screen, pages Pages, route string, w, h int, fsys fs.FS) {
+// renderFrame рисует текущий кадр: фон, заголовок, тайлы, вкладки и статус.
+func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, h int, fsys fs.FS) {
 	hotzones = hotzones[:0]
 
 	bg := NewBuffer(w, h)
@@ -229,9 +256,15 @@ func renderFrame(s tcell.Screen, pages Pages, route string, w, h int, fsys fs.FS
 		bg.Copy(inner, x+1, y+1)
 	}
 
+	// Вкладки — под всеми тайлами (нижняя строка), статус — над ними.
+	statusY := h - 1
+	if len(menu) > 0 {
+		statusY = h - 2
+		drawTabs(bg, menu, route, &hotzones)
+	}
 	if statusMsg != "" {
 		statusFg := curTheme.ResolveColor(themeColor("status_fg"), tcell.ColorYellow)
-		bg.SetString(0, h-1, statusMsg, Style{Bold: true, Fg: statusFg})
+		bg.SetString(0, statusY, statusMsg, Style{Bold: true, Fg: statusFg})
 	}
 
 	// Окна ввода/подтверждения рисуются поверх всего.
@@ -326,4 +359,39 @@ func drawFrame(b *Buffer, x, y, w, h int) {
 		b.Set(x, y+j, vv, st)
 		b.Set(x+w-1, y+j, vv, st)
 	}
+}
+
+// drawTabs рисует вкладки внизу (под всеми тайлами). Активная — подсвечена.
+// Каждая вкладка — хотзона-ссылка (Kind "nav", Href=роут), клик переключает страницу.
+func drawTabs(b *Buffer, menu [][]string, route string, out *[]Hotzone) {
+	tabFg := curTheme.ResolveColor(themeColor("header_fg"), tcell.ColorWhite)
+	tabBg := curTheme.ResolveColor(themeColor("header_bg"), tcell.ColorDarkBlue)
+	actBg := curTheme.ResolveColor(themeColor("title_fg"), tcell.ColorGreen)
+	x := 0
+	for _, m := range menu {
+		label := " " + m[0] + " "
+		st := Style{Fg: tabFg, Bg: tabBg}
+		if m[1] == route {
+			st = Style{Fg: tabFg, Bg: actBg, Bold: true}
+		}
+		b.SetString(x, b.H-1, label, st)
+		*out = append(*out, Hotzone{X: x, Y: b.H - 1, W: len([]rune(label)), H: 1, Href: m[1], Kind: "nav"})
+		x += len([]rune(label))
+	}
+}
+
+// nextRoute — следующая/предыдущая вкладка относительно текущего роута (шаг ±1).
+func nextRoute(menu [][]string, route string, step int) string {
+	if len(menu) == 0 {
+		return route
+	}
+	idx := 0
+	for i, m := range menu {
+		if m[1] == route {
+			idx = i
+			break
+		}
+	}
+	idx = (idx + step + len(menu)) % len(menu)
+	return menu[idx][1]
 }

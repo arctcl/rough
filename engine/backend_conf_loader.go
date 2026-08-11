@@ -101,6 +101,36 @@ func (p Pages) FirstRoute() string {
 	return ""
 }
 
+// LoadMenu читает вкладки "menu" из tiles.json: список пар [имя, роут].
+// Вкладки рисуются внизу интерфейса, переключение — клик/Tab/цифры.
+func LoadMenu(fsys fs.FS) [][]string {
+	b, err := fs.ReadFile(fsys, "tiles.json")
+	if err != nil {
+		return nil
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return nil
+	}
+	arr, ok := raw["menu"].([]any)
+	if !ok {
+		return nil
+	}
+	var menu [][]string
+	for _, it := range arr {
+		pair, ok := it.([]any)
+		if !ok || len(pair) < 2 {
+			continue
+		}
+		name, _ := pair[0].(string)
+		route, _ := pair[1].(string)
+		if name != "" && route != "" {
+			menu = append(menu, []string{name, route})
+		}
+	}
+	return menu
+}
+
 // Rect считает координаты тайла в клетках терминала w×h.
 func (t Tile) Rect(w, h int) (x, y, tw, th int) {
 	x = parseLen(t.X, w)

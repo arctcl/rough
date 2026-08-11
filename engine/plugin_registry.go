@@ -172,19 +172,20 @@ func ApplyMask(lines []string, mask string) []float64 {
 	return out
 }
 
-// UI — всё, что движок вытащил из папки /rough проекта: страницы и тема.
+// UI — всё, что движок вытащил из папки /rough проекта: страницы, вкладки и тема.
 type UI struct {
 	Pages Pages
+	Menu  [][]string // вкладки [имя, роут] — навбар внизу
 	Theme *Theme
 }
 
 // LoadUI — единый загрузчик: читает из вшитой папки (fs.FS) всё, что нужно
-// интерфейсу — tiles.json (страницы/тайлы) и тему. HTML тайлов читается по ходу
-// отрисовки из той же папки. Больше никаких загрузчиков нет.
+// интерфейсу — tiles.json (страницы/тайлы/вкладки) и тему. HTML тайлов читается
+// по ходу отрисовки из той же папки. Больше никаких загрузчиков нет.
 func LoadUI(fsys fs.FS) (*UI, error) {
 	pages, err := LoadPages(fsys)
 	if err != nil {
 		return nil, err
 	}
-	return &UI{Pages: pages, Theme: LoadTheme(fsys, ConfigTheme(fsys))}, nil
+	return &UI{Pages: pages, Menu: LoadMenu(fsys), Theme: LoadTheme(fsys, ConfigTheme(fsys))}, nil
 }
