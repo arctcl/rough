@@ -501,25 +501,28 @@ func drawConfirmModal(b *Buffer, w, h int) {
 	b.SetString(x0, y0, line, Style{Fg: inFg})
 }
 
-// drawSelectMenu рисует выпадающее меню select ПОД самим элементом (как в HTML),
-// а не по центру экрана. Не влезло вниз — рисует над элементом. Варианты —
-// хотзоны "selopt": клик выбирает.
+// drawSelectMenu рисует выпадающее меню select ПОД самим элементом (как в HTML).
+// Без заголовка — только варианты. Не влезло вниз — рисует над элементом.
+// Каждый вариант — хотзона "selopt" на ВСЮ ширину строки: клик в любом месте
+// строки выбирает (первый предвыбранный тоже кликается).
 func drawSelectMenu(b *Buffer, out *[]Hotzone, w, h int) {
-	title := "▼ " + selectLabel
 	// Ширина меню: под самый длинный вариант + рамка.
-	mw := uniseg.StringWidth(title)
+	mw := 0
 	for _, o := range selectOpts {
 		if lw := uniseg.StringWidth(o); lw > mw {
 			mw = lw
 		}
 	}
 	mw += 2
-	// Высота: заголовок + варианты.
-	height := 1 + len(selectOpts)
+	// Высота: только варианты (заголовка нет).
+	height := len(selectOpts)
+	if height < 1 {
+		height = 1
+	}
 	if height > h {
 		height = h
 	}
-	// Позиция: под элементом; не влезло вниз — над ним; прижимаем к краям экрана.
+	// Позиция: под элементом; не влезло вниз — над ним; прижимаем к краям.
 	x0 := selectX
 	if x0+mw > w {
 		x0 = w - mw
@@ -536,12 +539,10 @@ func drawSelectMenu(b *Buffer, out *[]Hotzone, w, h int) {
 	}
 
 	titleBg := curTheme.ResolveColor(themeColor("header_bg"), tcell.ColorDarkBlue)
-	titleFg := curTheme.ResolveColor(themeColor("header_fg"), tcell.ColorWhite)
 	inFg := curTheme.ResolveColor(themeColor("input_fg"), tcell.ColorGreen)
 	frameFg := curTheme.ResolveColor(themeColor("frame"), tcell.ColorGray)
 
-	// Изоляция: заливаем ВСЮ область меню непрозрачным фоном — ничего под
-	// списком не просвечивает и не перехватывает клики.
+	// Изоляция: непрозрачный фон области меню.
 	fill := Style{Bg: titleBg}
 	for yy := y0; yy < y0+height && yy < h; yy++ {
 		for xx := x0; xx < x0+mw && xx < w; xx++ {
@@ -550,16 +551,20 @@ func drawSelectMenu(b *Buffer, out *[]Hotzone, w, h int) {
 	}
 	// Рамка с фоном (поверх заливки).
 	drawFrameStyled(b, x0, y0, mw, height, Style{Fg: frameFg, Bg: titleBg})
-	b.SetString(x0+1, y0, " "+title+" ", Style{Bg: titleBg, Fg: titleFg})
-	for i := 0; i < height-1 && i < len(selectOpts); i++ {
-		st := Style{Fg: inFg, Bg: titleBg}
-		if i == selectIdx {
-			st = Style{Fg: tcell.ColorBlack, Bg: inFg, Bold: true}
-		}
+
+	for i := 0; i < height && i < len(selectOpts); i++ {
 		opt := " " + selectOpts[i] + " "
-		ox := x0 + 1
-		b.SetString(ox, y0+1+i, opt, st)
-		*out = append(*out, Hotzone{X: ox, Y: y0 + 1 + i, W: uniseg.StringWidth(opt), H: 1, Kind: "selopt", Action: selectAction + ":" + selectOpts[i], Label: selectAction, Output: selectOutput})
+		if i == selectIdx {
+			// Активный вариант — закрашиваем всю строку, текст чёрным.
+			for xx := 0; xx < mw-2; xx++ {
+				b.Set(x0+1+xx, y0+i, ' ', Style{Bg: inFg})
+			}
+			b.SetString(x0+1, y0+i, opt, Style{Fg: tcell.ColorBlack, Bg: inFg, Bold: true})
+		} else {
+			b.SetString(x0+1, y0+i, opt, Style{Fg: inFg, Bg: titleBg})
+		}
+		// Хотзона на всю строку — клик в любом месте строки выбирает.
+		*out = append(*out, Hotzone{X: x0 + 1, Y: y0 + i, W: mw - 2, H: 1, Kind: "selopt", Action: selectAction + ":" + selectOpts[i], Label: selectAction, Output: selectOutput})
 	}
 }
 
