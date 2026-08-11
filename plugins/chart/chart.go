@@ -8,30 +8,37 @@ package chart
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
+
+	"github.com/rivo/uniseg"
 
 	"rough"
 	"rough/engine"
 )
 
 // man_chart — справка по плагину (для man).
-const man_chart = `chart — живой столбчатый график (столбики привязаны к низу).
+const man_chart = `chart — живой столбчатый график с осями.
 
 Использование:
-  часть пайпа: ... | chart:МИН:МАКС[:ШИРИНА]
+  часть пайпа: ... | chart:МИН:МАКС[:ШИРИНА[:СЕКУНД]]
 
 Аргументы:
   МИН, МАКС — диапазон значений (например 0:100 для CPU в процентах).
   ШИРИНА    — ширина столбика в клетках (по умолчанию 1).
+  СЕКУНД    — секунд на столбик (для подписи времени, по умолчанию 2).
 
-Высота зоны графика задаётся в HTML атрибутом height на <plugin>,
-обновление — через interval (дефолт 2 с). Каждый тик добавляется новый
-столбик справа, старые сдвигаются влево.
+Столбики привязаны к низу и левому краю, закрашены █ с полублоками ▄
+для детализации, могут быть пустыми (значение = минимум). Снизу и слева —
+тонкие оси с подписями: в перекрестии — минимум, сверху — максимум,
+на нижней линии в разрыве — сколько столбиков и сколько это времени.
+Фон области — ░. Высота зоны задаётся в HTML (height на <plugin>),
+обновление — через interval (дефолт 2 с).
 
 Примеры:
-  <plugin pipe="emu_cpu | chart:0:100" height="12" interval="2s"/>
-  <plugin pipe="emu_mem | chart:0:100:2" height="10" interval="2s"/>`
+  <plugin pipe="emu_cpu | chart:0:100:1:2" height="14" interval="2s"/>
+  <plugin pipe="emu_mem | chart:0:100:2:2" height="10" interval="2s"/>`
 
 // series — история значений по сигнатуре плагина (серии): карта → срез чисел.
 var series = map[string][]float64{}
@@ -53,8 +60,14 @@ func init() {
 				colW = v
 			}
 		}
+		secPer := 2
+		if len(args) > 3 {
+			if v, err := strconv.Atoi(args[3]); err == nil && v > 0 {
+				secPer = v
+			}
+		}
 
-		// Данные: берём последнее число из входа (текущее значение).
+		// Данные: последнее число из входа (текущее значение).
 		nums := chartNumbers(in)
 		if len(nums) == 0 {
 			nums = []float64{lo}
@@ -67,29 +80,77 @@ func init() {
 		s = append(s, v)
 
 		w, h := engine.Window()
-		cols := w / colW
+		plotH := h - 1 // строки 0..h-2, нижняя — ось X
+		if plotH < 2 {
+			plotH = 2
+		}
+
+		// Подписи диапазона слева от оси Y (по самой широкой).
+		hiLabel := fmt.Sprintf("%g", hi)
+		loLabel := fmt.Sprintf("%g", lo)
+		labelW := uniseg.StringWidth(hiLabel)
+		if lw := uniseg.StringWidth(loLabel); lw > labelW {
+			labelW = lw
+		}
+		gx := labelW + 1 // колонка оси Y
+		gw := w - gx - 1 // ширина области графика
+		if gw < 1 {
+			gw = 1
+		}
+
+		cols := gw / colW
 		if cols < 1 {
 			cols = 1
 		}
-		// Держим историю не длиннее числа колонок — сдвигаем влево.
 		if len(s) > cols {
-			s = s[len(s)-cols:]
+			s = s[len(s)-cols:] // сдвигаем старые столбики влево
 		}
 		series[key] = s
 
-		// Рисуем h строк от верха к низу. База — нижняя строка (y=h-1).
-		base := h - 1
-		if base < 1 {
-			base = 1
-		}
+		// Собираем строки от верха к низу.
 		out := make([]string, 0, h)
 		for y := 0; y < h; y++ {
 			row := make([]rune, w)
 			for i := range row {
 				row[i] = ' '
 			}
+
+			if y == h-1 {
+				// Нижняя ось: подпись минимума, угол, линия.
+				copy(row, []rune(loLabel))
+				row[gx] = '└'
+				for x := gx + 1; x < w; x++ {
+					row[x] = '─'
+				}
+				// Подпись «N шт · Tс» прямо в разрыве нижней линии.
+				bot := fmt.Sprintf("%d шт · %ds", len(s), len(s)*secPer)
+				bw := uniseg.StringWidth(bot)
+				bx := (w - bw) / 2
+				if bx < gx+1 {
+					bx = gx + 1
+				}
+				if bx+bw <= w {
+					copy(row[bx:], []rune(bot))
+				}
+				out = append(out, string(row))
+				continue
+			}
+
+			// Ось Y, подпись максимума наверху.
+			row[gx] = '│'
+			if y == 0 {
+				copy(row[:labelW], []rune(hiLabel))
+			}
+			// Фон области из символов ░.
+			for x := gx + 1; x < w; x++ {
+				row[x] = '░'
+			}
+			// Столбики: привязаны к низу, могут быть пустыми.
 			for x, val := range s {
-				col := x * colW
+				col := gx + 1 + x*colW
+				if col >= w {
+					break
+				}
 				norm := (val - lo) / (hi - lo)
 				if norm < 0 {
 					norm = 0
@@ -97,10 +158,18 @@ func init() {
 				if norm > 1 {
 					norm = 1
 				}
-				colH := int(norm * float64(base))
+				// Высота в полупикселях: полный блок █ = 2, нижний полублок ▄ = 1.
+				hPix := int(norm * float64(plotH) * 2)
+				if hPix <= 0 {
+					continue // столбик не закрашен (значение = минимум)
+				}
+				full := hPix / 2
+				half := hPix%2 == 1
 				for c := 0; c < colW && col+c < w; c++ {
-					if y >= base-colH {
+					if y >= plotH-full && y <= plotH-1 {
 						row[col+c] = '█'
+					} else if half && y == plotH-full-1 {
+						row[col+c] = '▄'
 					}
 				}
 			}
