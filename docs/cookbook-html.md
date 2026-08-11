@@ -143,14 +143,14 @@
 <plugin pipe="emu_cpu | chart:0:100:bars:1:2" height="14" interval="2s"/>
 
 <!-- японские свечи: вход — OHLC (open high low close) -->
-<plugin pipe="emu_candle | chart:0:100:candles:3:2" height="14" interval="2s"/>
+<plugin pipe="emu_candle | chart:0:100:japanse:3:2" height="14" interval="2s"/>
 
 <!-- спарклайн (одна строка из блоков) -->
 <plugin pipe="cat:data.log | tail:10 | bars" interval="2s"/>
 ```
 
 `chart` — живой график с осями (ось справа): режим `bars` (столбики, по
-умолчанию) или `candles` (японские свечи — вход даёт `open high low close`).
+умолчанию) или `japanse` (японские свечи — вход даёт `open high low close`).
 Ширину берёт из тайла/колонки, высоту — из атрибута `height` на `<plugin>`.
 Столбики/свечи привязаны к низу, новые появляются справа у оси.
 
@@ -479,7 +479,7 @@ graph LR
 | `ssh` | `ssh:user@host:[ -i ПУТЬ ]:команда` | выполнить команду по SSH |
 | `loop` | `loop:ШАБЛОН` или `loop:БАЗА:КОНЕЦ` | развернуть диапазоны в адреса |
 | `bars` | `… \| bars[:МАСКА]` | спарклайн (одна строка из блоков) |
-| `chart` | `… \| chart:МИН:МАКС[:bars\|candles[:ШИРИНА[:СЕКУНД]]]` | живой график с осями (столбики или свечи, нужен `height`) |
+| `chart` | `… \| chart:МИН:МАКС[:bars\|japanse[:ШИРИНА[:СЕКУНД]]]` | живой график с осями (столбики или свечи, нужен `height`) |
 | `clock` | `<plugin name="clock" interval="1s"/>` | живые часы |
 | `tobotom` | `… \| tobotom:pass` / `… \| tobotom:stop` | отладка: вывод в статус-строку |
 

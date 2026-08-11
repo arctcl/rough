@@ -19,15 +19,15 @@ import (
 )
 
 // man_chart — справка по плагину (для man).
-const man_chart = `chart — живой график: обычные столбики (bars) или японские свечи (candles).
+const man_chart = `chart — живой график: обычные столбики (bars) или японские свечи (japanse).
 
 Использование:
   часть пайпа: ... | chart:МИН:МАКС[:ВИД[:ШИРИНА[:СЕКУНД]]]
 
 Аргументы:
   МИН, МАКС — диапазон значений (например 0:100 для CPU в процентах).
-  ВИД       — bars (столбики, по умолчанию) или candles (японские свечи).
-  ШИРИНА    — ширина столбика/свечи в клетках (bars: 1, candles: 3 по умолчанию).
+  ВИД       — bars (столбики, по умолчанию) или japanse (японские свечи).
+  ШИРИНА    — ширина столбика/свечи в клетках (bars: 1, japanse: 3 по умолчанию).
   СЕКУНД    — секунд на столбик (для подписи времени, по умолчанию 2).
 
 Новый столбик/свеча появляется справа (у оси), старые уходят влево. Ось Y —
@@ -35,16 +35,16 @@ const man_chart = `chart — живой график: обычные столб�
 в разрыве — сколько столбиков и сколько это времени. Фон области — ░.
 Высота зоны задаётся в HTML (height на <plugin>), обновление — через interval.
 
-Для candles вход должен давать OHLC: open high low close (4 числа строкой).
+Для japanse вход должен давать OHLC: open high low close (4 числа строкой).
 Тело свечи — от open до close (полублоки ▄/▀ для границ), фитиль │ — от
 high до low. Медвежья (close<open) — тело ▓, бычья — █.
 
 Примеры:
   <plugin pipe="emu_cpu | chart:0:100:bars:1:2" height="14" interval="2s"/>
-  <plugin pipe="emu_candle | chart:0:100:candles:3:2" height="14" interval="2s"/>`
+  <plugin pipe="emu_candle | chart:0:100:japanse:3:2" height="14" interval="2s"/>`
 
 // series — история точек по сигнатуре плагина (серии): точка = []float64
-// (1 число для bars, 4 числа OHLC для candles).
+// (1 число для bars, 4 числа OHLC для japanse).
 var series = map[string][][]float64{}
 
 func init() {
@@ -58,15 +58,15 @@ func init() {
 		if err1 != nil || err2 != nil || hi <= lo {
 			return nil, errors.New("chart: нужен диапазон мин<макс")
 		}
-		// Режим: bars (по умолчанию) или candles.
+		// Режим: bars (по умолчанию) или japanse.
 		kind := "bars"
 		ai := 2
-		if len(args) > 2 && (args[2] == "bars" || args[2] == "candles") {
+		if len(args) > 2 && (args[2] == "bars" || args[2] == "japanse") {
 			kind = args[2]
 			ai = 3
 		}
 		colW := 1
-		if kind == "candles" {
+		if kind == "japanse" {
 			colW = 3 // свечи по умолчанию шире
 		}
 		if len(args) > ai {
@@ -81,9 +81,9 @@ func init() {
 			}
 		}
 
-		// Точка данных: одно число (bars) или OHLC (candles).
+		// Точка данных: одно число (bars) или OHLC (japanse).
 		var pt []float64
-		if kind == "candles" {
+		if kind == "japanse" {
 			nums := lastLineNumbers(in)
 			if len(nums) >= 4 {
 				pt = nums[:4] // open high low close
@@ -175,7 +175,7 @@ func init() {
 				row[x] = '░'
 			}
 			// Точки: старые слева, новые справа (у оси).
-			if kind == "candles" {
+			if kind == "japanse" {
 				for i, p := range s {
 					col := i * colW
 					if col >= gw {

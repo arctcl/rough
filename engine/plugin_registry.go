@@ -155,6 +155,10 @@ func Window() (int, int) {
 	return curW, curH
 }
 
+// SetWindowSize вручную задаёт размер окна тайла для рисовалок.
+// Нужна тестам плагинов (без запуска всего интерфейса).
+func SetWindowSize(w, h int) { curW, curH = w, h }
+
 // curW, curH — размер окна тайла для рисовалок (глобал, как curTheme).
 var curW, curH int
 
