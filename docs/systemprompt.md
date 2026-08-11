@@ -122,6 +122,8 @@ rough.AddPlugin("restart_nginx", func(in []string, args []string) ([]string, err
 | `wc -l file` | `action="wc:file"` |
 | `sed`-подобная правка строки | `action="line:file:N"` |
 | `echo "k=v" >> file` | `action="append:file:key=value"` |
+| `ssh user@host команда` | `action="ssh:user@host:команда"` (агент + ключи `~/.ssh`, нативно в Go) |
+| `curl URL` | `action="curl:https://..."` (`net/http`, тело построчно, нативно в Go) |
 
 Правила для плагинов:
 

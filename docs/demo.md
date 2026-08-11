@@ -46,8 +46,9 @@ myproject\
 ```
 
 **Библиотека (rough) = только движок.** Внутри неё НЕТ плагинов и тем — всё это
-живёт в твоём проекте в папке `rough/`. Готовые плагины (`cat`, `hello`, `nyan`)
-лежат в корне репозитория в папке `plugins/` — в проекте на них можно сослаться
+живёт в твоём проекте в папке `rough/`. Готовые плагины (`cat`, `hello`, `nyan`,
+`ssh`, `curl`) лежат в корне репозитория в папке `plugins/` — в проекте на них
+можно сослаться
 одним импортом (как в `example/`), либо скопировать к себе и допилить. При сборке
 движок + плагины + папка `rough/` сливаются в **один исполняемый файл**.
 На проде ничего снаружи не нужно.
@@ -98,7 +99,7 @@ func init() {
 // myproject/rough/plugins/plugins.go
 package plugins
 
-import _ "rough/plugins" // все готовые плагины репозитория (cat, hello, nyan)
+import _ "rough/plugins" // все готовые плагины репозитория (cat, hello, nyan, ssh, curl)
 ```
 
 В HTML плагин вызывается по имени, можно пайпом:
@@ -106,7 +107,13 @@ import _ "rough/plugins" // все готовые плагины репозит�
 ```html
 <button action="hello">Поздороваться</button>
 <button action="cat:/etc/hostname | hello">Показать hostname</button>
+<button action="curl:https://api.example.com/status">Статус API</button>
+<button action="ssh:root@srv1:systemctl status nginx">Nginx на srv1</button>
 ```
+
+Сетевые плагины тоже юникс-лайк: `ssh` ходит по SSH (агент + ключи `~/.ssh`),
+`curl` — GET по URL (тело построчно). Оба нативно в Go — без внешних бинарников,
+работают в любом контейнере.
 
 `| confirm` в конце — окно подтверждения («Выполнить?»).
 
