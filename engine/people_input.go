@@ -128,7 +128,11 @@ func runStepsAndShow(steps []string, target string) {
 }
 
 // putOutput направляет результат действия: в блок вывода (по id) или в статус-строку.
+// Маркеры цветов вычищаем — тут раскраска не рисуется, остался бы мусор.
 func putOutput(out []string, target string) {
+	for i := range out {
+		out[i] = StripMarkers(out[i])
+	}
 	if target != "" {
 		outputCache[target] = out
 		statusMsg = "выполнено → " + target
@@ -154,6 +158,8 @@ func Run(fsys fs.FS) error {
 	}
 
 	curTheme = ui.Theme
+	// Вшитая папка — нужна плагину theme (переключение тем на лету).
+	curFS = fsys
 
 	s, err := tcell.NewScreen()
 	if err != nil {

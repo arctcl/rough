@@ -303,6 +303,10 @@ func DoAction(raw string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// Маркеры цветов вычищаем — DoAction отдаёт текст без раскраски.
+	for i := range out {
+		out[i] = StripMarkers(out[i])
+	}
 	return strings.Join(out, " | "), nil
 }
 

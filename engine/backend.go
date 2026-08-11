@@ -178,6 +178,78 @@ func (f *flowState) put(b *Buffer, s string) {
 	}
 }
 
+// putColored рисует строку плагина с поддержкой цветовых маркеров \x01{имя}.
+// Маркер \x01{имя} ставит цвет текста из темы (ключ в colors: color_2, frame…),
+// \x01{} — сброс к цвету по умолчанию. Маркеры невидимы и не влияют на ширину —
+// рамка/ось графика не съезжают, красится только то, что обёрнуто.
+func (f *flowState) putColored(b *Buffer, s string) {
+	// Разбиваем строку на сегменты: каждый несёт свой цвет переднего плана.
+	type seg struct {
+		fg  tcell.Color
+		val string
+	}
+	var segs []seg
+	cur := f.fg
+	rest := s
+	for len(rest) > 0 {
+		i := strings.Index(rest, "\x01")
+		if i < 0 {
+			segs = append(segs, seg{cur, rest})
+			break
+		}
+		if i > 0 {
+			segs = append(segs, seg{cur, rest[:i]})
+		}
+		rest = rest[i+1:]
+		// После \x01 ждём {имя} — иначе рисуем маркер как обычный символ.
+		if strings.HasPrefix(rest, "{") {
+			if j := strings.Index(rest, "}"); j >= 0 {
+				name := rest[1:j]
+				rest = rest[j+1:]
+				if name == "" {
+					cur = f.fg // сброс
+				} else {
+					cur = curTheme.ResolveColor(themeColor(name), f.fg)
+				}
+				continue
+			}
+		}
+		segs = append(segs, seg{cur, "\x01"})
+	}
+	// Рисуем сегменты подряд — x продолжает идти по строке.
+	for _, g := range segs {
+		old := f.fg
+		f.fg = g.fg
+		f.put(b, g.val)
+		f.fg = old
+	}
+}
+
+// StripMarkers убирает цветовые маркеры \x01{имя} из строки. Нужно там, где
+// вывод плагина показывается БЕЗ раскраски (статус-строка, блоки output):
+// иначе в текст попал бы видимый мусор {color_2}.
+func StripMarkers(s string) string {
+	var sb strings.Builder
+	rest := s
+	for len(rest) > 0 {
+		i := strings.Index(rest, "\x01")
+		if i < 0 {
+			sb.WriteString(rest)
+			break
+		}
+		sb.WriteString(rest[:i])
+		rest = rest[i+1:]
+		if strings.HasPrefix(rest, "{") {
+			if j := strings.Index(rest, "}"); j >= 0 {
+				rest = rest[j+1:]
+				continue
+			}
+		}
+		sb.WriteString("\x01")
+	}
+	return sb.String()
+}
+
 // renderNode обходит дерево и рисует в буфер.
 func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 	// Атрибуты color/bg: hex, номер палитры терминала или имя из темы.
@@ -435,7 +507,8 @@ func renderPlugin(n *Node, b *Buffer, f *flowState) {
 		pluginCache[key] = pluginEntry{at: time.Now(), lines: lines}
 	}
 	for _, ln := range lines {
-		f.put(b, ln)
+		// Вывод плагина может нести цветовые маркеры \x01{имя} из темы.
+		f.putColored(b, ln)
 		f.nl(b)
 	}
 }

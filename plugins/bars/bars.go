@@ -84,7 +84,8 @@ func init() {
 			}
 			line[x] = rune(levels[lvl])
 		}
-		return []string{string(line)}, nil
+		// Цвет из темы (color_2) — движковый putColored разбирает маркер.
+		return []string{"\x01{color_2}" + string(line) + "\x01{}"}, nil
 	})
 }
 

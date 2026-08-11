@@ -104,10 +104,41 @@ func TestChartLeftToRight(t *testing.T) {
 		t.Fatal(err)
 	}
 	// В области столбики начинаются с нижней части: строка y=7 (первая из 4).
-	// 4 столбика по ширине 1 — префикс "████" (слева направо).
-	row := out[7]
+	// 4 столбика по ширине 1 — префикс "████" (слева направо). Маркеры цвета
+	// вычищаем — проверяем только сами столбики.
+	row := engine.StripMarkers(out[7])
 	if !strings.HasPrefix(row, "████") {
 		t.Fatalf("столбики не слева направо (ожидали ████ в начале строки):\n%s", dump(out))
+	}
+}
+
+// TestChartBarsMarkers — столбики обёрнуты маркером цвета color_2 (из темы),
+// а рамка/ось — нет: красится только сам столбик.
+func TestChartBarsMarkers(t *testing.T) {
+	engine.SetWindowSize(40, 14)
+	defer engine.SetWindowSize(0, 0)
+	delete(series, "M")
+	delete(lastAdd, "M")
+
+	out, err := engine.RunSteps([]string{"chart:0:100:1:2:M"}, []string{"100"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Строка со столбиком: начинается с \x01{color_2} и содержит сброс \x01{}.
+	found := false
+	for _, ln := range out {
+		if strings.HasPrefix(ln, "\x01{color_2}") && strings.Contains(ln, "\x01{}") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("столбики без маркера цвета:\n%s", dump(out))
+	}
+	// Без маркеров вывод ровный (ширина не ломается).
+	for _, ln := range out {
+		if len([]rune(engine.StripMarkers(ln))) != 40 {
+			t.Fatalf("строка ширины не 40 после снятия маркеров:\n%q", ln)
+		}
 	}
 }
 

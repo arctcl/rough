@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rivo/uniseg"
@@ -212,10 +213,34 @@ func init() {
 					}
 				}
 			}
-			out = append(out, string(row))
+			// Столбики красим цветом из темы (color_2), рамку/ось — нет.
+			out = append(out, paintBars(string(row)))
 		}
 		return out, nil
 	})
+}
+
+// paintBars обрамляет столбики (█/▄) маркерами цвета из темы: \x01{color_2}.
+// Красятся ТОЛЬКО сами столбики — рамка, ось и подписи остаются в своём цвете
+// (движковый putColored разбирает маркеры, они не влияют на ширину).
+func paintBars(row string) string {
+	runes := []rune(row)
+	var sb strings.Builder
+	i := 0
+	for i < len(runes) {
+		if runes[i] == '█' || runes[i] == '▄' {
+			sb.WriteString("\x01{color_2}")
+			for i < len(runes) && (runes[i] == '█' || runes[i] == '▄') {
+				sb.WriteRune(runes[i])
+				i++
+			}
+			sb.WriteString("\x01{}")
+			continue
+		}
+		sb.WriteRune(runes[i])
+		i++
+	}
+	return sb.String()
 }
 
 // chartNumbers — все числа из строк (первое в строке — значение).

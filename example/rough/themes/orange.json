@@ -1,5 +1,5 @@
 {
-  "name": "default",
+  "name": "orange",
   "symbols": {
     "tile_tl": "╔",
     "tile_tr": "╗",
@@ -21,15 +21,15 @@
     "status_v": "║"
   },
   "colors": {
-    "bg": "#1e1e1e",
-    "fg": "#d4d4d4",
-    "frame": "#569cd6",
-    "header_bg": "#1e1e1e",
-    "header_fg": "#d4d4d4",
-    "title_fg": "#4ec9b0",
-    "status_fg": "#dcdcaa",
-    "status_bg": "#1e1e1e",
-    "input_fg": "#9cdcfe",
+    "bg": "#1d1207",
+    "fg": "#f2dfc2",
+    "frame": "#ff8c42",
+    "header_bg": "#1d1207",
+    "header_fg": "#f2dfc2",
+    "title_fg": "#ffb347",
+    "status_fg": "#ffd28a",
+    "status_bg": "#1d1207",
+    "input_fg": "#ff9e4a",
     "color_0": "#000000",
     "color_1": "#cd0000",
     "color_2": "#00cd00",
