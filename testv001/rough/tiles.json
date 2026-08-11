@@ -1,0 +1,19 @@
+{
+  "theme": "default",
+  "menu": [["Справка", "/man"], ["Инструменты", "/tools"], ["Система", "/sys"]],
+  "паттерн": ["id", "x", "y", "w", "h", "файл"],
+  "/man": [
+    ["in",  "0%",  "0%",  "40%", "100%", "tiles/man_in.html"],
+    ["out", "40%", "0%",  "60%", "100%", "tiles/man_out.html"]
+  ],
+  "/tools": [
+    ["clock", "0%",  "0%",  "50%", "50%", "tiles/tools_clock.html"],
+    ["bars",  "50%", "0%",  "50%", "50%", "tiles/tools_bars.html"],
+    ["nyan",  "0%",  "50%", "100%", "50%", "tiles/nyan.html"]
+  ],
+  "/sys": [
+    ["info", "0%",  "0%",  "50%", "50%", "tiles/sys_info.html"],
+    ["net",  "50%", "0%",  "50%", "50%", "tiles/sys_net.html"],
+    ["cfg",  "0%",  "50%", "100%", "50%", "tiles/sys_cfg.html"]
+  ]
+}
