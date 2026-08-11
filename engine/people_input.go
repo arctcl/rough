@@ -665,8 +665,9 @@ func drawStatus(b *Buffer, w, h int, hasTabs bool) {
 		all = wrapStatus(statusMsg, innerW)
 	}
 	// Окно до textRows строк со скроллом (если контента больше).
+	maxOff := len(all) - textRows
 	lines := all
-	if maxOff := len(all) - textRows; maxOff > 0 {
+	if maxOff > 0 {
 		if statusScroll > maxOff {
 			statusScroll = maxOff
 		}
@@ -738,6 +739,25 @@ func drawStatus(b *Buffer, w, h int, hasTabs bool) {
 	// Текст: строки, обрезанные по ширине блока.
 	for i, ln := range lines {
 		b.SetString(x0+1, top+1+i, truncateWidth(ln, innerW), text)
+	}
+
+	// Полоса прокрутки внутри статуса (если контента больше 3 строк).
+	if maxOff > 0 {
+		scFg := curTheme.ResolveColor(themeColor("frame"), tcell.ColorGray)
+		sc := Style{Fg: scFg}
+		sx := x0 + bw - 2 // перед правой рамкой
+		thumbH := textRows * textRows / len(all)
+		if thumbH < 1 {
+			thumbH = 1
+		}
+		thumbY := statusScroll * (textRows - thumbH) / maxOff
+		for i := 0; i < textRows; i++ {
+			if i >= thumbY && i < thumbY+thumbH {
+				b.Set(sx, top+1+i, '█', sc)
+			} else {
+				b.Set(sx, top+1+i, '│', sc)
+			}
+		}
 	}
 
 	// Прямоугольник блока — для прокрутки колесом мыши.
@@ -898,6 +918,32 @@ func renderTile(root *Node, inner *Buffer, id string, ox, oy, viewH int, out *[]
 			continue
 		}
 		*out = append(*out, z)
+	}
+
+	// Полоса прокрутки: если контент длиннее видимой области.
+	if maxOff > 0 && inner.W > 1 {
+		scFg := curTheme.ResolveColor(themeColor("frame"), tcell.ColorGray)
+		sc := Style{Fg: scFg}
+		sx := inner.W - 1 // правый край тайла (внутри рамки)
+		// Высота бегунка — пропорционально видимой части контента.
+		thumbH := viewH * viewH / contentH
+		if thumbH < 1 {
+			thumbH = 1
+		}
+		if thumbH > viewH {
+			thumbH = viewH
+		}
+		thumbY := 0
+		if maxOff > 0 {
+			thumbY = off * (viewH - thumbH) / maxOff
+		}
+		for yy := 0; yy < viewH; yy++ {
+			if yy >= thumbY && yy < thumbY+thumbH {
+				inner.Set(sx, yy, '█', sc)
+			} else {
+				inner.Set(sx, yy, '│', sc)
+			}
+		}
 	}
 }
 
