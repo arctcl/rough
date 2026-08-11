@@ -82,6 +82,27 @@ func TestParseArgsDefaults(t *testing.T) {
 	})
 }
 
+// Частичный ввод: fuck:ass — только первый параметр, остальные уходят в
+// дефолты (отсутствие разраб обрабатывает сам).
+func TestParseArgsPartial(t *testing.T) {
+	v, err := ParseArgs([]string{"зад"}, testParams)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkVals(t, v, map[string]string{
+		"место": "зад", "время": "10", "скорость": "4", "смазка": "да",
+	})
+	// Частичный + дефолт «пустое»: необязательный без дефолта → пустая строка.
+	params := []Param{{Name: "место"}, {Name: "деталь"}}
+	v2, err := ParseArgs([]string{"зад"}, params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v2["место"] != "зад" || v2["деталь"] != "" {
+		t.Fatalf("пустой дефолт: %v", v2)
+	}
+}
+
 // Обязательный параметр без значения — ошибка.
 func TestParseArgsRequiredMissing(t *testing.T) {
 	_, err := ParseArgs(nil, testParams)
@@ -135,7 +156,11 @@ func TestParseArgsPosSpaces(t *testing.T) {
 func TestParamsUsage(t *testing.T) {
 	u := ParamsUsage("fuck", testParams)
 	// Обязательный — без скобок, опциональные — вложенными [:...].
-	for _, want := range []string{"fuck:МЕСТО[:ВРЕМЯ[:СКОРОСТЬ[:СМАЗКА]]]", "--место=ЗНАЧ", "--смазка=ЗНАЧ"} {
+	// В флагах дефолты видны: --время=10, --скорость=4, --смазка=да.
+	for _, want := range []string{
+		"fuck:МЕСТО[:ВРЕМЯ[:СКОРОСТЬ[:СМАЗКА]]]",
+		"--место=ЗНАЧ", "--время=10", "--скорость=4", "--смазка=да",
+	} {
 		if !strings.Contains(u, want) {
 			t.Fatalf("в ParamsUsage нет %q:\n%s", want, u)
 		}
