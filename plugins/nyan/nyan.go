@@ -15,7 +15,25 @@ import (
 // frame — счётчик кадров анимации (глобал плагина).
 var frame int
 
+// man_nyan — справка по плагину (для man).
+const man_nyan = `nyan — анимация нян-кота, едет по тайлу и оставляет радужный хвост.
+
+Использование (живой тайл, перерисовывается по таймеру):
+  <plugin name="nyan" interval="0.5s"/>
+
+Атрибуты тега <plugin>:
+  name="nyan"          — имя плагина (обязательно)
+  interval="0.5s"      — период перерисовки (таймер движка)
+
+Размер: подстраивается под ширину тайла через engine.Window().
+
+Примеры:
+  <plugin name="nyan" interval="0.5s"/>          — стандартный бег
+  <plugin name="nyan" interval="1s"/>           — медленный кот`
+
 func init() {
+	rough.AddMan("nyan", man_nyan)
+
 	rough.AddPlugin("nyan", func(in []string, args []string) ([]string, error) {
 		w, h := engine.Window()
 		frame++

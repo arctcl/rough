@@ -23,24 +23,64 @@ import (
 	"rough"
 )
 
+// man_ssh — справка по плагину (для man).
+const man_ssh = `ssh — выполнить команду на удалённом сервере по SSH.
+
+Использование:
+  action="ssh:user@host:команда"
+  action="ssh:user@host:-i:ПУТЬ:команда"   — с указанием папки или файла ключей
+
+Аргументы:
+  user@host   — куда подключаться.
+  -i ПУТЬ     — папка с ключами или конкретный файл ключа (как у настоящего ssh).
+                Если не указан — ключи ищутся в ~/.ssh (дефолт ssh).
+  команда     — что выполнить (склеивается из остатка через «:»).
+
+Аутентификация: ssh-agent (SSH_AUTH_SOCK), затем ключи из указанной папки
+или ~/.ssh по дефолту: id_ed25519, id_rsa, id_ecdsa. Проверка хоста —
+по known_hosts (если файл есть).
+
+Примеры:
+  action="ssh:root@srv1:systemctl status nginx"
+  action="ssh:root@srv1:uptime"
+  action="ssh:root@srv1:-i:/root/keys:hostname"          — ключи из папки /root/keys
+  action="ssh:root@srv1:-i:~/.ssh/id_rsa:uptime"         — конкретный файл ключа
+  action="ssh:root@srv1:df -h | grep:/data"              — вывод идёт в пайп
+  action="ssh:root@srv1:-i:/root/keys:df -h | head:3"    — ключи + пайп`
+
 func init() {
-	// ssh: host user@host + команда (склеивается через «:» обратно)
+	// ssh: user@host [ -i ПУТЬ ] : команда (команда склеивается через «:» обратно)
+	rough.AddMan("ssh", man_ssh)
+
 	rough.AddPlugin("ssh", func(in []string, args []string) ([]string, error) {
 		if len(args) < 2 {
 			return nil, errors.New("ssh: нужен хост user@host и команда")
 		}
 		addr := args[0]
-		cmd := strings.Join(args[1:], ":")
-		return runSSH(addr, cmd)
+		rest := args[1:]
+
+		// Необязательный флаг -i: папка с ключами или конкретный файл ключа.
+		// Не указан — ключи из ~/.ssh по дефолту (как у настоящего ssh).
+		keyPath := ""
+		if len(rest) >= 2 && rest[0] == "-i" {
+			keyPath = rest[1]
+			rest = rest[2:]
+		}
+
+		cmd := strings.Join(rest, ":")
+		if cmd == "" {
+			return nil, errors.New("ssh: нужна команда")
+		}
+		return runSSH(addr, keyPath, cmd)
 	})
 }
 
 // runSSH подключается к серверу, выполняет команду и возвращает вывод построчно.
-func runSSH(addr, cmd string) ([]string, error) {
+func runSSH(addr, keyPath, cmd string) ([]string, error) {
 	user, host := splitHost(addr)
 	config := &ssh.ClientConfig{
 		User:            user,
-		Auth:            authMethods(),
+		Auth:            authMethods(keyPath),
 		HostKeyCallback: hostKeyCallback(),
 		Timeout:         10 * 1e9, // 10 секунд на установку соединения
 	}
@@ -80,8 +120,8 @@ func splitHost(addr string) (usr, host string) {
 	return u.Username, addr
 }
 
-// authMethods собирает способы аутентификации: ssh-agent и стандартные ключи.
-func authMethods() []ssh.AuthMethod {
+// authMethods собирает способы аутентификации: ssh-agent и ключи.
+func authMethods(keyPath string) []ssh.AuthMethod {
 	var methods []ssh.AuthMethod
 
 	// 1) ssh-agent (SSH_AUTH_SOCK) — если запущен агент.
@@ -91,9 +131,8 @@ func authMethods() []ssh.AuthMethod {
 		}
 	}
 
-	// 2) стандартные ключи из ~/.ssh (без пароля — пароль не храним нигде).
-	for _, name := range []string{"id_ed25519", "id_rsa", "id_ecdsa"} {
-		p := filepath.Join(homeDir(), ".ssh", name)
+	// 2) ключи: указанная папка/файл или ~/.ssh по дефолту.
+	for _, p := range keyFiles(keyPath) {
 		if b, err := os.ReadFile(p); err == nil {
 			if signer, err := ssh.ParsePrivateKey(b); err == nil {
 				methods = append(methods, ssh.PublicKeys(signer))
@@ -101,6 +140,25 @@ func authMethods() []ssh.AuthMethod {
 		}
 	}
 	return methods
+}
+
+// keyFiles возвращает файлы ключей для аутентификации. keyPath может быть:
+// пустой — дефолт ~/.ssh (как у настоящего ssh);
+// файл — используется только он; папка — стандартные имена внутри неё.
+func keyFiles(keyPath string) []string {
+	if keyPath == "" {
+		keyPath = filepath.Join(homeDir(), ".ssh")
+	}
+	// Если указан конкретный файл — берём только его.
+	if fi, err := os.Stat(keyPath); err == nil && !fi.IsDir() {
+		return []string{keyPath}
+	}
+	// Иначе — стандартные имена ключей в указанной (или дефолтной) папке.
+	var out []string
+	for _, n := range []string{"id_ed25519", "id_rsa", "id_ecdsa"} {
+		out = append(out, filepath.Join(keyPath, n))
+	}
+	return out
 }
 
 // hostKeyCallback проверяет хост по known_hosts. Если файла нет — не проверяем

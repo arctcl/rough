@@ -16,7 +16,27 @@ import (
 	"rough"
 )
 
+// man_curl — справка по плагину (для man).
+const man_curl = `curl — скачать URL и отдать тело построчно.
+
+Использование:
+  action="curl:URL"
+
+Аргументы:
+  URL — http(s) адрес. URL содержит «:», поэтому аргументы склеиваются обратно
+        через «:» (URL восстанавливается как есть).
+
+Таймаут: 10 секунд. Код ответа >= 400 — ошибка.
+
+Примеры:
+  action="curl:https://api.example.com/status"
+  action="curl:https://api.example.com | grep:ok"       — ищем ok в ответе
+  action="curl:https://example.com | head:5"            — первые 5 строк
+  action="curl:https://example.com | wc:"               — сколько строк в ответе`
+
 func init() {
+	rough.AddMan("curl", man_curl)
+
 	rough.AddPlugin("curl", func(in []string, args []string) ([]string, error) {
 		if len(args) < 1 {
 			return nil, errors.New("curl: нужен URL")

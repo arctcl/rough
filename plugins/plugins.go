@@ -9,6 +9,7 @@ import (
 	_ "rough/plugins/cat"
 	_ "rough/plugins/curl"
 	_ "rough/plugins/hello"
+	_ "rough/plugins/man"
 	_ "rough/plugins/nyan"
 	_ "rough/plugins/ssh"
 )
