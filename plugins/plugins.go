@@ -7,6 +7,8 @@ package plugins
 
 import (
 	_ "rough/plugins/cat"
+	_ "rough/plugins/curl"
 	_ "rough/plugins/hello"
 	_ "rough/plugins/nyan"
+	_ "rough/plugins/ssh"
 )

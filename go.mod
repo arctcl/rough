@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/gdamore/tcell/v2 v2.13.10
+	golang.org/x/crypto v0.54.0
 	golang.org/x/net v0.57.0
 )
 
