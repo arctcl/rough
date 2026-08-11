@@ -146,7 +146,9 @@ func init() {
 				row[x] = '░'
 			}
 			// Столбики: привязаны к низу, могут быть пустыми.
-			for x, val := range s {
+			// Самый свежий — слева, старые уходят вправо.
+			for i, val := range s {
+				x := len(s) - 1 - i
 				col := gx + 1 + x*colW
 				if col >= w {
 					break
