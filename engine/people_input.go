@@ -13,6 +13,12 @@ import (
 // statusMsg — последний результат действия/ошибка для нижней строки.
 var statusMsg string
 
+// Позиция мыши — для подсветки квадратика под курсором (-1 — мышь вне экрана).
+var mouseX, mouseY = -1, -1
+
+// focusIdx — индекс сфокусированной хотзоны (навигация стрелками, -1 — нет фокуса).
+var focusIdx = -1
+
 // Состояние окна ввода: пока inputMode включён, клавиши идут в буфер,
 // а Enter дописывает значение к действию и выполняет его.
 var (
@@ -175,8 +181,8 @@ func Run(fsys fs.FS) error {
 					break
 				}
 				// Печать символа при наличии поля ввода — активируем первое поле:
-				// 'q'/'Esc' идут в ввод, а не выходят из приложения.
-				if r := e.Rune(); r != 0 {
+				// 'q'/'Esc' идут в ввод, а не выходят из приложения. Ctrl-комбо не трогаем.
+				if r := e.Rune(); r != 0 && e.Modifiers()&tcell.ModCtrl == 0 {
 					for _, hz := range hotzones {
 						if hz.Kind == "input" {
 							inputMode = true
@@ -198,18 +204,37 @@ func Run(fsys fs.FS) error {
 				if e.Rune() == 'q' || e.Rune() == 'Q' {
 					return nil
 				}
-				// Вкладки: Tab — вперёд, Shift+Tab — назад, цифры 1-9 — по номеру.
+				// Стрелки — фокус по элементам, Enter — активировать (как клик).
+				ctrl := e.Modifiers()&tcell.ModCtrl != 0
+				switch e.Key() {
+				case tcell.KeyUp, tcell.KeyLeft:
+					moveFocus(-1)
+				case tcell.KeyDown, tcell.KeyRight:
+					moveFocus(1)
+				case tcell.KeyEnter:
+					if focusIdx >= 0 && focusIdx < len(hotzones) {
+						activateFocus(&pages, &route)
+					}
+				}
+				// Вкладки: как в хроме — Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+цифры;
+				// плюс Tab / Shift+Tab без Ctrl.
 				switch {
-				case e.Key() == tcell.KeyTab:
+				case e.Key() == tcell.KeyTab && !ctrl:
 					route = nextRoute(menu, route, 1)
-				case e.Key() == tcell.KeyBacktab:
+				case e.Key() == tcell.KeyBacktab && !ctrl:
 					route = nextRoute(menu, route, -1)
-				case e.Rune() >= '1' && e.Rune() <= '9':
+				case e.Key() == tcell.KeyTab && ctrl:
+					route = nextRoute(menu, route, 1)
+				case e.Key() == tcell.KeyBacktab && ctrl:
+					route = nextRoute(menu, route, -1)
+				case ctrl && e.Rune() >= '1' && e.Rune() <= '9':
 					if i := int(e.Rune() - '1'); i < len(menu) {
 						route = menu[i][1]
 					}
 				}
 			case *tcell.EventMouse:
+				// Позиция мыши — для подсветки квадратика под курсором.
+				mouseX, mouseY = e.Position()
 				// Левый клик — hit-test по хотзонам.
 				if e.Buttons()&tcell.Button1 != 0 {
 					x, y := e.Position()
@@ -297,6 +322,19 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 	// Окно подтверждения рисуется поверх всего (ввод идёт прямо в поле, без модалки).
 	if confirmMode {
 		drawConfirmModal(bg, w, h)
+	}
+
+	// Квадратик под курсором мыши и подсветка сфокусированной хотзоны.
+	if mouseX >= 0 && mouseY >= 0 && mouseX < w && mouseY < h {
+		bg.Highlight(mouseX, mouseY)
+	}
+	if focusIdx >= 0 && focusIdx < len(hotzones) {
+		hz := hotzones[focusIdx]
+		for yy := hz.Y; yy < hz.Y+hz.H; yy++ {
+			for xx := hz.X; xx < hz.X+hz.W; xx++ {
+				bg.Highlight(xx, yy)
+			}
+		}
 	}
 
 	bg.Blit(s, 0, 0)
@@ -419,4 +457,45 @@ func nextRoute(menu [][]string, route string, step int) string {
 	}
 	idx = (idx + step + len(menu)) % len(menu)
 	return menu[idx][1]
+}
+
+// moveFocus двигает фокус по хотзонам (в порядке рендера: сверху вниз, слева направо).
+func moveFocus(dir int) {
+	if len(hotzones) == 0 {
+		focusIdx = -1
+		return
+	}
+	if focusIdx < 0 {
+		if dir > 0 {
+			focusIdx = 0
+		} else {
+			focusIdx = len(hotzones) - 1
+		}
+		return
+	}
+	focusIdx = (focusIdx + dir + len(hotzones)) % len(hotzones)
+}
+
+// activateFocus активирует сфокусированную хотзону (как клик): переход по ссылке,
+// активация поля ввода или выполнение действия.
+func activateFocus(pages *Pages, route *string) {
+	hz := hotzones[focusIdx]
+	if hz.Href != "" {
+		if _, ok := (*pages)[hz.Href]; ok {
+			*route = hz.Href
+		}
+		return
+	}
+	if hz.Kind == "input" {
+		inputMode = true
+		inputAction = hz.Action
+		inputLabel = hz.Label
+		inputOutput = hz.Output
+		inputBuf = ""
+		statusMsg = ""
+		return
+	}
+	if hz.Action != "" {
+		execAction(hz.Action, hz.Output)
+	}
 }

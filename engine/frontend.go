@@ -58,6 +58,26 @@ func (b *Buffer) SetString(x, y int, s string, st Style) {
 	}
 }
 
+// Highlight подсвечивает клетку (квадратик под курсором мыши / фокусом).
+// Непустую клетку инвертирует по цветам, пустую — закрашивает белым,
+// чтобы «квадратик» был виден даже на пустом месте экрана.
+func (b *Buffer) Highlight(x, y int) {
+	if !b.In(x, y) {
+		return
+	}
+	c := b.cells[y][x]
+	if c.Style.Fg == tcell.ColorDefault && c.Style.Bg == tcell.ColorDefault {
+		c.Style.Bg = tcell.ColorWhite
+		c.Style.Fg = tcell.ColorBlack
+	} else {
+		c.Style.Fg, c.Style.Bg = c.Style.Bg, c.Style.Fg
+	}
+	if c.Rune == 0 {
+		c.Rune = ' '
+	}
+	b.cells[y][x] = c
+}
+
 // Fill заливает буфер руной и стилем.
 func (b *Buffer) Fill(r rune, st Style) {
 	for y := 0; y < b.H; y++ {
