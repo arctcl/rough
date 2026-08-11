@@ -371,15 +371,10 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 		bg.Copy(inner, x+1, y+1)
 	}
 
-	// Вкладки — под всеми тайлами (нижняя строка), статус — над ними.
-	statusY := h - 1
+	// Статус — внизу, обведён рамкой из темы (поверх тайлов). Вкладки — под ним.
+	drawStatus(bg, w, h, len(menu) > 0)
 	if len(menu) > 0 {
-		statusY = h - 2
 		drawTabs(bg, menu, route, &hotzones)
-	}
-	if statusMsg != "" {
-		statusFg := curTheme.ResolveColor(themeColor("status_fg"), tcell.ColorYellow)
-		bg.SetString(0, statusY, statusMsg, Style{Bold: true, Fg: statusFg})
 	}
 
 	// Окно подтверждения рисуется поверх всего (ввод идёт прямо в поле, без модалки).
@@ -546,7 +541,90 @@ func drawTabs(b *Buffer, menu [][]string, route string, out *[]Hotzone) {
 		x += lw + 1 // пробел в 1 клетку между вкладками
 	}
 }
+// drawStatus рисует статус-сообщение внизу в рамке из темы.
+// Блок: верх рамки + 2 строки текста (перенос по ширине) + низ рамки.
+// Рисуется поверх тайлов, над вкладками, если они есть. Символы рамки —
+// status_* из темы (фоллбэк на tile_*), цвет — frame/status_fg.
+func drawStatus(b *Buffer, w, h int, hasTabs bool) {
+	if statusMsg == "" {
+		return
+	}
+	// Высота блока: рамка + 2 строки текста = 4 строки.
+	total := 4
+	if h < total+1 {
+		return
+	}
+	bottom := h - 1
+	if hasTabs {
+		bottom = h - 2 // освобождаем последнюю строку под вкладки
+	}
+	top := bottom - (total - 1) // = bottom-3
 
+	frameFg := curTheme.ResolveColor(themeColor("frame"), tcell.ColorGray)
+	statusFg := curTheme.ResolveColor(themeColor("status_fg"), tcell.ColorYellow)
+	frame := Style{Fg: frameFg}
+	text := Style{Bold: true, Fg: statusFg}
+
+	// Символы рамки: status_* или запасные tile_* (углы/линии тайла).
+	tl := curTheme.Sym("status_tl", string(curTheme.Sym("tile_tl", "┌")))
+	tr := curTheme.Sym("status_tr", string(curTheme.Sym("tile_tr", "┐")))
+	bl := curTheme.Sym("status_bl", string(curTheme.Sym("tile_bl", "└")))
+	br := curTheme.Sym("status_br", string(curTheme.Sym("tile_br", "┘")))
+	hh := curTheme.Sym("status_h", string(curTheme.Sym("tile_h", "─")))
+	vv := curTheme.Sym("status_v", string(curTheme.Sym("tile_v", "│")))
+
+	b.Set(0, top, tl, frame)
+	b.Set(w-1, top, tr, frame)
+	b.Set(0, bottom, bl, frame)
+	b.Set(w-1, bottom, br, frame)
+	for x := 1; x < w-1; x++ {
+		b.Set(x, top, hh, frame)
+		b.Set(x, bottom, hh, frame)
+	}
+	for y := top + 1; y < bottom; y++ {
+		b.Set(0, y, vv, frame)
+		b.Set(w-1, y, vv, frame)
+	}
+
+	// Текст: переносим на 2 строки по ширине w-2 (минус рамки).
+	l1, l2 := wrapStatus(statusMsg, w-2)
+	if w-2 > 0 {
+		b.SetString(1, top+1, l1, text)
+		if l2 != "" {
+			b.SetString(1, top+2, l2, text)
+		}
+	}
+}
+
+// wrapStatus разбивает текст на 2 строки по ширине (перенос по рунам,
+// ширина считается через uniseg). Вторая строка заполняется до предела,
+// остаток обрезается.
+func wrapStatus(text string, width int) (string, string) {
+	if width < 1 {
+		return "", ""
+	}
+	var line1, line2 []rune
+	w := 0
+	fill := 0 // какая строка заполняется: 0 — первая, 1 — вторая
+	for _, r := range text {
+		rw := uniseg.StringWidth(string(r))
+		if w+rw > width {
+			if fill == 0 {
+				fill = 1
+				w = 0
+			} else {
+				break // вторая строка заполнена — остаток обрезаем
+			}
+		}
+		if fill == 0 {
+			line1 = append(line1, r)
+		} else {
+			line2 = append(line2, r)
+		}
+		w += rw
+	}
+	return string(line1), string(line2)
+}
 // nextRoute — следующая/предыдущая вкладка относительно текущего роута (шаг ±1).
 func nextRoute(menu [][]string, route string, step int) string {
 	if len(menu) == 0 {

@@ -13,7 +13,9 @@
     "tile_h": "═", "tile_v": "║",
     "button_l": "⟨", "button_r": "⟩",
     "input_l": "[", "input_r": "]",
-    "input_icon": "✎", "cursor": "█"
+    "input_icon": "✎", "cursor": "█",
+    "status_tl": "╔", "status_tr": "╗", "status_bl": "╚", "status_br": "╝",
+    "status_h": "═", "status_v": "║"
   },
   "colors": {
     "bg": "#1e1e1e",
@@ -40,6 +42,9 @@
 | `input_icon` | иконка поля ввода | `✎` |
 | `select_icon` | иконка выпадающего списка | `▼` |
 | `cursor` | курсор в поле | `█` |
+| `status_tl/tr/bl/br` | углы рамки статус-строки | `┌ ┐ └ ┘` (фоллбэк — tile) |
+| `status_h` | горизонтальная линия статус-строки | `─` (фоллбэк — tile_h) |
+| `status_v` | вертикальная линия статус-строки | `│` (фоллбэк — tile_v) |
 
 «Двойные границы» — просто замени углы/линии на `╔═╗║╚╝`.
 
@@ -86,7 +91,9 @@
     "tile_h": "═", "tile_v": "║",
     "button_l": "⟨", "button_r": "⟩",
     "input_l": "[", "input_r": "]",
-    "input_icon": "✎", "cursor": "█"
+    "input_icon": "✎", "cursor": "█",
+    "status_tl": "╔", "status_tr": "╗", "status_bl": "╚", "status_br": "╝",
+    "status_h": "═", "status_v": "║"
   },
   "colors": {
     "bg": "#1e1e1e", "fg": "#d4d4d4",

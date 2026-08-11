@@ -12,7 +12,13 @@
     "input_l": "[",
     "input_r": "]",
     "input_icon": "✎",
-    "cursor": "█"
+    "cursor": "█",
+    "status_tl": "╔",
+    "status_tr": "╗",
+    "status_bl": "╚",
+    "status_br": "╝",
+    "status_h": "═",
+    "status_v": "║"
   },
   "colors": {
     "bg": "#1e1e1e",
