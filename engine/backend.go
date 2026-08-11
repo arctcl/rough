@@ -113,6 +113,20 @@ func (f *flowState) style() Style {
 	return Style{Fg: f.fg, Bg: f.bg, Bold: f.bold, Italic: f.italic, Underline: f.underline}
 }
 
+// drawX — x-позиция начала строки с учётом центрирования (f.center).
+// Нужна для хотзон: кнопка/поле рисуются по центру — и зона должна совпадать,
+// иначе клики/подсветка уезжают влево.
+func (f *flowState) drawX(b *Buffer, s string) int {
+	if !f.center {
+		return f.x
+	}
+	x := (b.W - uniseg.StringWidth(s)) / 2
+	if x < 0 {
+		x = 0
+	}
+	return x
+}
+
 // put рисует строку с переносом по ширине буфера.
 // Сдвиг — по реальной ширине руны (uniseg): кириллица/иероглифы занимают 2 клетки,
 // иначе буквы наезжают друг на друга.
@@ -241,8 +255,8 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		if checkboxOn(act) {
 			mark = "[x]"
 		}
-		x0, y0 := f.x, f.y
 		s := mark + " " + label
+		x0, y0 := f.drawX(b, s), f.y
 		f.put(b, s)
 		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act})
 		f.nl(b)
@@ -260,17 +274,19 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		act := n.Attrs["action"]
 		bl := curTheme.Sym("button_l", "⟨")
 		br := curTheme.Sym("button_r", "⟩")
-		x0, y0 := f.x, f.y
-		f.put(b, string(bl)+" "+label+" "+string(br))
-		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(label) + 4, H: 1, Action: act, Output: n.Attrs["output"]})
+		s := string(bl) + " " + label + " " + string(br)
+		x0, y0 := f.drawX(b, s), f.y
+		f.put(b, s)
+		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act, Output: n.Attrs["output"]})
 		f.nl(b)
 	case "a":
 		f.nl(b)
 		label := strings.TrimSpace(textContent(n))
 		href := n.Attrs["href"]
-		x0, y0 := f.x, f.y
-		f.put(b, "→ "+label)
-		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(label) + 2, H: 1, Href: href, Kind: "nav"})
+		s := "→ " + label
+		x0, y0 := f.drawX(b, s), f.y
+		f.put(b, s)
+		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Href: href, Kind: "nav"})
 		f.nl(b)
 	case "input":
 		// Поле ввода: обведённое рамкой, как HTML-инпут. Клик — активирует поле,
@@ -287,7 +303,6 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		ic := curTheme.Sym("input_icon", "✎")
 		// Активное поле: лейбл заменяется вводом — карандаш и скобки остаются.
 		// Покой: [ ✎ Пакет ]  →  Ввод: [ ✎ ssh█ ]
-		x0, y0 := f.x, f.y
 		s := string(il) + " " + string(ic) + " "
 		if inputMode && inputAction == act && inputLabel == label {
 			s += inputBuf + string(curTheme.Sym("cursor", "█"))
@@ -295,6 +310,7 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 			s += label
 		}
 		s += " " + string(ir)
+		x0, y0 := f.drawX(b, s), f.y
 		f.put(b, s)
 		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act, Kind: "input", Label: label, Output: n.Attrs["output"]})
 		f.nl(b)
@@ -308,8 +324,8 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		}
 		act := n.Attrs["action"]
 		sl := curTheme.Sym("select_icon", "▼")
-		x0, y0 := f.x, f.y
 		s := string(sl) + " " + label
+		x0, y0 := f.drawX(b, s), f.y
 		f.put(b, s)
 		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act, Kind: "select", Label: label, Output: n.Attrs["output"], Options: n.Attrs["options"]})
 		f.nl(b)

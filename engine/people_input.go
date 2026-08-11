@@ -228,25 +228,9 @@ func Run(fsys fs.FS) error {
 					}
 					break
 				}
-				// Печать символа при наличии поля ввода — активируем первое поле:
-				// 'q'/'Esc' идут в ввод, а не выходят из приложения. Ctrl-комбо не трогаем.
-				if r := e.Rune(); r != 0 && e.Modifiers()&tcell.ModCtrl == 0 {
-					for _, hz := range hotzones {
-						if hz.Kind == "input" {
-							inputMode = true
-							inputAction = hz.Action
-							inputLabel = hz.Label
-							inputOutput = hz.Output
-							inputBuf = string(r)
-							statusMsg = ""
-							debugLines = nil
-							break
-						}
-					}
-					if inputMode {
-						break
-					}
-				}
+				// Поле ввода активируется только кликом или фокусом+Enter.
+				// Никакого перехвата печати в неактивное поле: q закрывает статус,
+				// а не пишется в инпут.
 				// Ctrl+C — всегда выход. Esc — закрыть строку вывода, если она открыта,
 				// иначе выход (стандартный способ закрыть терминальное приложение).
 				if e.Key() == tcell.KeyCtrlC {
