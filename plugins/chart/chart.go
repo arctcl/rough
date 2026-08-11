@@ -335,13 +335,14 @@ func drawCandle(row []rune, col, colW, y, plotH int, lo, hi float64, p []float64
 
 // renderRow собирает строку, вставляя цветовые маркеры свечей (colColor).
 // Маркер \x01G/\x01R ставится перед каждым символом свечи — движок красит.
+// На линии осей (─ ┐ ┘) и пустоту маркеры не ставим — чтобы не красить рамку.
 func renderRow(row []rune, colColor []byte) string {
 	if colColor == nil {
 		return string(row)
 	}
 	var sb strings.Builder
 	for x, r := range row {
-		if x < len(colColor) && colColor[x] != 0 {
+		if x < len(colColor) && colColor[x] != 0 && r != ' ' && r != '─' && r != '┐' && r != '┘' {
 			sb.WriteByte('\x01')
 			sb.WriteByte(colColor[x])
 		}

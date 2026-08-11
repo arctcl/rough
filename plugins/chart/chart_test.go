@@ -104,3 +104,26 @@ func TestChartSeriesGrows(t *testing.T) {
 		t.Fatalf("серия должна расти: len=%d, ждали 3\n%v", n, series[""])
 	}
 }
+
+// TestCandlesLeftToRight — свечи заполняются СЛЕВА НАПРАВО, как и bars:
+// первая свеча в колонке 0, вторая в колонке 1 и т.д. (новые справа).
+func TestCandlesLeftToRight(t *testing.T) {
+	engine.SetWindowSize(40, 14)
+	defer engine.SetWindowSize(0, 0)
+	delete(series, "")
+	delete(lastAdd, "")
+
+	// 3 разные свечи, каждая добавляется с новым «тиком».
+	ins := []string{"10 20 5 15", "15 25 8 20", "20 30 10 25"}
+	for _, in := range ins {
+		if _, err := engine.RunSteps([]string{"chart:0:100:japanse:1:2"}, []string{in}); err != nil {
+			t.Fatal(err)
+		}
+		delete(lastAdd, "")
+	}
+	out, err := engine.RunSteps([]string{"chart:0:100:japanse:1:2"}, []string{ins[len(ins)-1]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("рендер свечей:\n%s", dump(out))
+}
