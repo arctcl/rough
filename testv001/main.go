@@ -125,6 +125,23 @@ func init() {
 			"Время:     " + time.Now().Format("02.01.2006 15:04:05"),
 		}, nil
 	})
+
+	// emu_candle — эмуляция японских свечей: open high low close с трендом.
+	rough.AddMan("emu_candle", `emu_candle — эмуляция OHLC для свечей (тестовый плагин).
+
+Использование:
+  часть пайпа: emu_candle | chart:0:100:candles
+
+Примеры:
+  <plugin pipe="emu_candle | chart:0:100:candles:3:2" height="14" interval="2s"/>`)
+
+	rough.AddPlugin("emu_candle", func(in []string, args []string) ([]string, error) {
+		open := 40 + 30*rand.Float64()
+		close := open + 20*rand.Float64() - 10
+		high := math.Max(open, close) + 10*rand.Float64()
+		low := math.Min(open, close) - 10*rand.Float64()
+		return []string{fmt.Sprintf("%.1f %.1f %.1f %.1f", open, high, low, close)}, nil
+	})
 }
 
 func main() {

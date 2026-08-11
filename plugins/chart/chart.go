@@ -19,29 +19,33 @@ import (
 )
 
 // man_chart — справка по плагину (для man).
-const man_chart = `chart — живой столбчатый график с осями.
+const man_chart = `chart — живой график: обычные столбики (bars) или японские свечи (candles).
 
 Использование:
-  часть пайпа: ... | chart:МИН:МАКС[:ШИРИНА[:СЕКУНД]]
+  часть пайпа: ... | chart:МИН:МАКС[:ВИД[:ШИРИНА[:СЕКУНД]]]
 
 Аргументы:
   МИН, МАКС — диапазон значений (например 0:100 для CPU в процентах).
-  ШИРИНА    — ширина столбика в клетках (по умолчанию 1).
+  ВИД       — bars (столбики, по умолчанию) или candles (японские свечи).
+  ШИРИНА    — ширина столбика/свечи в клетках (bars: 1, candles: 3 по умолчанию).
   СЕКУНД    — секунд на столбик (для подписи времени, по умолчанию 2).
 
-Столбики привязаны к низу и левому краю, закрашены █ с полублоками ▄
-для детализации, могут быть пустыми (значение = минимум). Снизу и слева —
-тонкие оси с подписями: в перекрестии — минимум, сверху — максимум,
-на нижней линии в разрыве — сколько столбиков и сколько это времени.
-Фон области — ░. Высота зоны задаётся в HTML (height на <plugin>),
-обновление — через interval (дефолт 2 с).
+Новый столбик/свеча появляется справа (у оси), старые уходят влево. Ось Y —
+справа: сверху — максимум, в перекрестии снизу — минимум; на нижней линии
+в разрыве — сколько столбиков и сколько это времени. Фон области — ░.
+Высота зоны задаётся в HTML (height на <plugin>), обновление — через interval.
+
+Для candles вход должен давать OHLC: open high low close (4 числа строкой).
+Тело свечи — от open до close (полублоки ▄/▀ для границ), фитиль │ — от
+high до low. Медвежья (close<open) — тело ▓, бычья — █.
 
 Примеры:
-  <plugin pipe="emu_cpu | chart:0:100:1:2" height="14" interval="2s"/>
-  <plugin pipe="emu_mem | chart:0:100:2:2" height="10" interval="2s"/>`
+  <plugin pipe="emu_cpu | chart:0:100:bars:1:2" height="14" interval="2s"/>
+  <plugin pipe="emu_candle | chart:0:100:candles:3:2" height="14" interval="2s"/>`
 
-// series — история значений по сигнатуре плагина (серии): карта → срез чисел.
-var series = map[string][]float64{}
+// series — история точек по сигнатуре плагина (серии): точка = []float64
+// (1 число для bars, 4 числа OHLC для candles).
+var series = map[string][][]float64{}
 
 func init() {
 	rough.AddMan("chart", man_chart)
@@ -54,30 +58,53 @@ func init() {
 		if err1 != nil || err2 != nil || hi <= lo {
 			return nil, errors.New("chart: нужен диапазон мин<макс")
 		}
+		// Режим: bars (по умолчанию) или candles.
+		kind := "bars"
+		ai := 2
+		if len(args) > 2 && (args[2] == "bars" || args[2] == "candles") {
+			kind = args[2]
+			ai = 3
+		}
 		colW := 1
-		if len(args) > 2 {
-			if v, err := strconv.Atoi(args[2]); err == nil && v > 0 {
+		if kind == "candles" {
+			colW = 3 // свечи по умолчанию шире
+		}
+		if len(args) > ai {
+			if v, err := strconv.Atoi(args[ai]); err == nil && v > 0 {
 				colW = v
 			}
 		}
 		secPer := 2
-		if len(args) > 3 {
-			if v, err := strconv.Atoi(args[3]); err == nil && v > 0 {
+		if len(args) > ai+1 {
+			if v, err := strconv.Atoi(args[ai+1]); err == nil && v > 0 {
 				secPer = v
 			}
 		}
 
-		// Данные: последнее число из входа (текущее значение).
-		nums := chartNumbers(in)
-		if len(nums) == 0 {
-			nums = []float64{lo}
+		// Точка данных: одно число (bars) или OHLC (candles).
+		var pt []float64
+		if kind == "candles" {
+			nums := lastLineNumbers(in)
+			if len(nums) >= 4 {
+				pt = nums[:4] // open high low close
+			} else if len(nums) > 0 {
+				c := nums[len(nums)-1]
+				pt = []float64{c, c, c, c}
+			} else {
+				pt = []float64{lo, lo, lo, lo}
+			}
+		} else {
+			nums := chartNumbers(in)
+			if len(nums) == 0 {
+				nums = []float64{lo}
+			}
+			pt = []float64{nums[len(nums)-1]}
 		}
-		v := nums[len(nums)-1]
 
-		// История по сигнатуре плагина: новый столбик справа.
+		// История: новый столбик/свеча добавляется, старые уходят влево.
 		key := engine.PluginKey()
+		series[key] = append(series[key], pt)
 		s := series[key]
-		s = append(s, v)
 
 		w, h := engine.Window()
 		plotH := h - 1 // строки 0..h-2, нижняя — ось X
@@ -85,15 +112,15 @@ func init() {
 			plotH = 2
 		}
 
-		// Подписи диапазона слева от оси Y (по самой широкой).
+		// Подписи диапазона справа от оси Y (по самой широкой).
 		hiLabel := fmt.Sprintf("%g", hi)
 		loLabel := fmt.Sprintf("%g", lo)
 		labelW := uniseg.StringWidth(hiLabel)
 		if lw := uniseg.StringWidth(loLabel); lw > labelW {
 			labelW = lw
 		}
-		gx := labelW + 1 // колонка оси Y
-		gw := w - gx - 1 // ширина области графика
+		gx := w - labelW - 1 // колонка оси Y (справа)
+		gw := gx              // ширина области графика (слева от оси)
 		if gw < 1 {
 			gw = 1
 		}
@@ -103,7 +130,7 @@ func init() {
 			cols = 1
 		}
 		if len(s) > cols {
-			s = s[len(s)-cols:] // сдвигаем старые столбики влево
+			s = s[len(s)-cols:]
 		}
 		series[key] = s
 
@@ -116,62 +143,73 @@ func init() {
 			}
 
 			if y == h-1 {
-				// Нижняя ось: подпись минимума, угол, линия.
-				copy(row, []rune(loLabel))
-				row[gx] = '└'
-				for x := gx + 1; x < w; x++ {
+				// Нижняя ось: линия, угол в перекрестии справа, подпись минимума.
+				for x := 0; x <= gx; x++ {
 					row[x] = '─'
+				}
+				row[gx] = '┘'
+				if gx+1+labelW <= w {
+					copy(row[gx+1:], []rune(loLabel))
 				}
 				// Подпись «N шт · Tс» прямо в разрыве нижней линии.
 				bot := fmt.Sprintf("%d шт · %ds", len(s), len(s)*secPer)
 				bw := uniseg.StringWidth(bot)
-				bx := (w - bw) / 2
-				if bx < gx+1 {
-					bx = gx + 1
+				bx := (gw - bw) / 2
+				if bx < 0 {
+					bx = 0
 				}
-				if bx+bw <= w {
+				if bx+bw <= gw {
 					copy(row[bx:], []rune(bot))
 				}
 				out = append(out, string(row))
 				continue
 			}
 
-			// Ось Y, подпись максимума наверху.
+			// Ось Y справа, подпись максимума наверху.
 			row[gx] = '│'
-			if y == 0 {
-				copy(row[:labelW], []rune(hiLabel))
+			if y == 0 && gx+1+labelW <= w {
+				copy(row[gx+1:], []rune(hiLabel))
 			}
 			// Фон области из символов ░.
-			for x := gx + 1; x < w; x++ {
+			for x := 0; x < gw; x++ {
 				row[x] = '░'
 			}
-			// Столбики: привязаны к низу, могут быть пустыми.
-			// Самый свежий — слева, старые уходят вправо.
-			for i, val := range s {
-				x := len(s) - 1 - i
-				col := gx + 1 + x*colW
-				if col >= w {
-					break
+			// Точки: старые слева, новые справа (у оси).
+			if kind == "candles" {
+				for i, p := range s {
+					col := i * colW
+					if col >= gw {
+						break
+					}
+					drawCandle(row, col, colW, y, plotH, lo, hi, p)
 				}
-				norm := (val - lo) / (hi - lo)
-				if norm < 0 {
-					norm = 0
-				}
-				if norm > 1 {
-					norm = 1
-				}
-				// Высота в полупикселях: полный блок █ = 2, нижний полублок ▄ = 1.
-				hPix := int(norm * float64(plotH) * 2)
-				if hPix <= 0 {
-					continue // столбик не закрашен (значение = минимум)
-				}
-				full := hPix / 2
-				half := hPix%2 == 1
-				for c := 0; c < colW && col+c < w; c++ {
-					if y >= plotH-full && y <= plotH-1 {
-						row[col+c] = '█'
-					} else if half && y == plotH-full-1 {
-						row[col+c] = '▄'
+			} else {
+				for i, p := range s {
+					col := i * colW
+					if col >= gw {
+						break
+					}
+					val := p[0]
+					norm := (val - lo) / (hi - lo)
+					if norm < 0 {
+						norm = 0
+					}
+					if norm > 1 {
+						norm = 1
+					}
+					// Высота в полупикселях: █ = 2, ▄ = 1.
+					hPix := int(norm * float64(plotH) * 2)
+					if hPix <= 0 {
+						continue // столбик не закрашен (значение = минимум)
+					}
+					full := hPix / 2
+					half := hPix%2 == 1
+					for c := 0; c < colW && col+c < gw; c++ {
+						if y >= plotH-full && y <= plotH-1 {
+							row[col+c] = '█'
+						} else if half && y == plotH-full-1 {
+							row[col+c] = '▄'
+						}
 					}
 				}
 			}
@@ -179,6 +217,71 @@ func init() {
 		}
 		return out, nil
 	})
+}
+
+// pIn — полупиксель p внутри диапазона [lo, hi].
+func pIn(p, lo, hi int) bool { return p >= lo && p <= hi }
+
+// posOf — позиция значения в полупикселях ОТ ВЕРХА (0..plotH*2-1).
+func posOf(v, lo, hi float64, plotH int) int {
+	norm := (v - lo) / (hi - lo)
+	if norm < 0 {
+		norm = 0
+	}
+	if norm > 1 {
+		norm = 1
+	}
+	ph := int(norm * float64(plotH) * 2)
+	p := plotH*2 - 1 - ph
+	if p < 0 {
+		p = 0
+	}
+	if p > plotH*2-1 {
+		p = plotH*2 - 1
+	}
+	return p
+}
+
+// drawCandle рисует японскую свечу (OHLC) в колонке col шириной colW.
+// Строка y (0..plotH-1), полупиксели: верх клетки = y*2, низ = y*2+1.
+// Тело — от open до close (бычья █, медвежья ▓), фитиль │ — от high до low.
+func drawCandle(row []rune, col, colW, y, plotH int, lo, hi float64, p []float64) {
+	o, hh, ll, cc := p[0], p[1], p[2], p[3]
+	posHigh := posOf(hh, lo, hi, plotH)
+	posLow := posOf(ll, lo, hi, plotH)
+	posOpen := posOf(o, lo, hi, plotH)
+	posClose := posOf(cc, lo, hi, plotH)
+	bodyLo := posOpen
+	bodyHi := posClose
+	if bodyLo > bodyHi {
+		bodyLo, bodyHi = bodyHi, bodyLo
+	}
+	bodyChar := '█'
+	if cc < o {
+		bodyChar = '▓' // медвежья свеча
+	}
+	for ccx := 0; ccx < colW && col+ccx < len(row); ccx++ {
+		up := y * 2
+		dn := y*2 + 1
+		switch {
+		case pIn(up, bodyLo, bodyHi) && pIn(dn, bodyLo, bodyHi):
+			row[col+ccx] = bodyChar
+		case pIn(dn, bodyLo, bodyHi):
+			row[col+ccx] = bodyChar
+		case pIn(up, bodyLo, bodyHi):
+			row[col+ccx] = bodyChar
+		case pIn(up, posHigh, posLow) || pIn(dn, posHigh, posLow):
+			row[col+ccx] = '│'
+		}
+	}
+}
+
+// lastLineNumbers — все числа из последней строки входа (для OHLC свечей).
+func lastLineNumbers(lines []string) []float64 {
+	if len(lines) == 0 {
+		return nil
+	}
+	return chartNumbers([]string{lines[len(lines)-1]})
 }
 
 // chartNumbers извлекает числа из строк — первое число в каждой строке.
