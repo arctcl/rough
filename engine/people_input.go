@@ -20,6 +20,12 @@ var debugLines []string
 // SetDebug — плагин отладки (tobotom) показывает строки в статус-блоке.
 func SetDebug(lines []string) { debugLines = lines }
 
+// statusScroll — сдвиг прокрутки внутри статус-блока (если строк больше 3).
+var statusScroll int
+
+// statusRect — прямоугольник статус-блока на экране (для прокрутки колесом).
+var statusRectX, statusRectY, statusRectW, statusRectH int
+
 // Позиция мыши — для подсветки квадратика под курсором (-1 — мышь вне экрана).
 var mouseX, mouseY = -1, -1
 
@@ -42,12 +48,12 @@ var (
 // Состояние меню выбора (select): пока selectMode включён, стрелки выбирают,
 // Enter выполняет action с выбранным вариантом.
 var (
-	selectMode   bool
-	selectOpts   []string
-	selectIdx    int
-	selectAction string
-	selectLabel  string
-	selectOutput string
+	selectMode       bool
+	selectOpts       []string
+	selectIdx        int
+	selectAction     string
+	selectLabel      string
+	selectOutput     string
 	selectX, selectY int // позиция элемента — выпадающее меню рисуется под ним
 )
 
@@ -63,8 +69,9 @@ var (
 // target — id блока для вывода (output="..."), пусто = статус-строка.
 // Если в action есть "| confirm" — открывает окно подтверждения и ждёт.
 func execAction(raw, target string) {
-	// Новое действие — убираем отладочный вывод прошлого раза.
+	// Новое действие — убираем отладочный вывод и скролл статуса прошлого раза.
 	debugLines = nil
+	statusScroll = 0
 	steps, need := PrepareAction(raw)
 	if need {
 		confirmMode = true
@@ -283,14 +290,26 @@ func Run(fsys fs.FS) error {
 			case *tcell.EventMouse:
 				// Позиция мыши — для подсветки квадратика под курсором.
 				mouseX, mouseY = e.Position()
-				// Колесо — скролл тайла под курсором.
-				if e.Buttons()&tcell.WheelUp != 0 {
-					scrollTile(pages, route, mouseX, mouseY, w, h, -1)
-					break
-				}
-				if e.Buttons()&tcell.WheelDown != 0 {
-					scrollTile(pages, route, mouseX, mouseY, w, h, 1)
-					break
+				// Колесо: над статус-блоком — прокрутка статуса, иначе — скролл тайла.
+				if e.Buttons()&(tcell.WheelUp|tcell.WheelDown) != 0 {
+					if statusRectH > 0 && mouseX >= statusRectX && mouseX < statusRectX+statusRectW &&
+						mouseY >= statusRectY && mouseY < statusRectY+statusRectH {
+						if e.Buttons()&tcell.WheelUp != 0 {
+							statusScroll--
+						}
+						if e.Buttons()&tcell.WheelDown != 0 {
+							statusScroll++
+						}
+						break
+					}
+					if e.Buttons()&tcell.WheelUp != 0 {
+						scrollTile(pages, route, mouseX, mouseY, w, h, -1)
+						break
+					}
+					if e.Buttons()&tcell.WheelDown != 0 {
+						scrollTile(pages, route, mouseX, mouseY, w, h, 1)
+						break
+					}
 				}
 				// Левый клик — hit-test по хотзонам.
 				if e.Buttons()&tcell.Button1 != 0 {
@@ -616,25 +635,68 @@ func drawQuit(b *Buffer, out *[]Hotzone) {
 	*out = append(*out, Hotzone{X: x, Y: b.H - 1, W: tw, H: 1, Kind: "quit"})
 }
 
-// drawStatus рисует статус-сообщение внизу в рамке из темы.
-// Блок: верх рамки + 3 строки текста (перенос по ширине) + низ рамки.
-// Рисуется поверх тайлов, над вкладками, если они есть. Символы рамки —
-// status_* из темы (фоллбэк на tile_*), цвет — frame/status_fg.
+// drawStatus рисует статус-сообщение в правом нижнем углу экрана.
+// Блок: 30% ширины, прижат к правому краю с отступом 2 и к низу с отступом 2
+// (над вкладками, если они есть). Высота — по содержимому: от 1 до 3 строк
+// текста плюс рамка. Если строк больше 3 — прокрутка колесом мыши над блоком.
+// Фон непрозрачный (status_bg), чтобы сквозь статус ничего не просвечивало.
 func drawStatus(b *Buffer, w, h int, hasTabs bool) {
 	if statusMsg == "" && len(debugLines) == 0 {
+		statusRectH = 0
 		return
 	}
-	// Высота блока: рамка + 3 строки текста = 5 строк.
 	const textRows = 3
-	total := textRows + 2
-	if h < total+1 {
-		return
+
+	// Ширина блока: 30% экрана (минимум 20, чтобы не превращался в щель).
+	bw := w * 30 / 100
+	if bw < 20 {
+		bw = 20
 	}
-	bottom := h - 1
+	if bw > w-4 {
+		bw = w - 4
+	}
+	innerW := bw - 2
+
+	// Все строки содержимого: отладочный вывод или перенос статуса по ширине.
+	var all []string
+	if len(debugLines) > 0 {
+		all = debugLines
+	} else {
+		all = wrapStatus(statusMsg, innerW)
+	}
+	// Окно до textRows строк со скроллом (если контента больше).
+	lines := all
+	if maxOff := len(all) - textRows; maxOff > 0 {
+		if statusScroll > maxOff {
+			statusScroll = maxOff
+		}
+		if statusScroll < 0 {
+			statusScroll = 0
+		}
+		lines = all[statusScroll : statusScroll+textRows]
+	} else {
+		statusScroll = 0
+	}
+	if len(lines) == 0 {
+		lines = []string{""}
+	}
+
+	// Высота блока: рамка + строки (от 1 до 3).
+	blockH := len(lines) + 2
+
+	// Позиция: правый нижний угол, отступы 2 от края (и от вкладок, если они есть).
+	x0 := w - 2 - bw
+	if x0 < 0 {
+		x0 = 0
+	}
+	bottom := h - 3
 	if hasTabs {
-		bottom = h - 2 // освобождаем последнюю строку под вкладки
+		bottom = h - 3 // вкладки на последней строке — блок выше них
 	}
-	top := bottom - (total - 1) // = bottom-4
+	top := bottom - blockH + 1
+	if top < 0 {
+		top = 0
+	}
 
 	frameFg := curTheme.ResolveColor(themeColor("frame"), tcell.ColorGray)
 	statusFg := curTheme.ResolveColor(themeColor("status_fg"), tcell.ColorYellow)
@@ -647,7 +709,7 @@ func drawStatus(b *Buffer, w, h int, hasTabs bool) {
 	// Заливаем весь блок фоном — чтобы сквозь статус не просвечивали тайлы.
 	fill := Style{Bg: statusBg}
 	for y := top; y <= bottom; y++ {
-		for x := 0; x < w; x++ {
+		for x := x0; x < x0+bw; x++ {
 			b.Set(x, y, ' ', fill)
 		}
 	}
@@ -660,37 +722,44 @@ func drawStatus(b *Buffer, w, h int, hasTabs bool) {
 	hh := curTheme.Sym("status_h", string(curTheme.Sym("tile_h", "─")))
 	vv := curTheme.Sym("status_v", string(curTheme.Sym("tile_v", "│")))
 
-	b.Set(0, top, tl, frame)
-	b.Set(w-1, top, tr, frame)
-	b.Set(0, bottom, bl, frame)
-	b.Set(w-1, bottom, br, frame)
-	for x := 1; x < w-1; x++ {
+	b.Set(x0, top, tl, frame)
+	b.Set(x0+bw-1, top, tr, frame)
+	b.Set(x0, bottom, bl, frame)
+	b.Set(x0+bw-1, bottom, br, frame)
+	for x := x0 + 1; x < x0+bw-1; x++ {
 		b.Set(x, top, hh, frame)
 		b.Set(x, bottom, hh, frame)
 	}
 	for y := top + 1; y < bottom; y++ {
-		b.Set(0, y, vv, frame)
-		b.Set(w-1, y, vv, frame)
+		b.Set(x0, y, vv, frame)
+		b.Set(x0+bw-1, y, vv, frame)
 	}
 
-	// Текст: если есть отладочный вывод (tobotom) — показываем его последние textRows
-	// строк (как хвост); иначе — статус-сообщение с переносом по ширине.
-	if len(debugLines) > 0 {
-		lines := debugLines
-		if len(lines) > textRows {
-			lines = lines[len(lines)-textRows:]
-		}
-		for i, ln := range lines {
-			b.SetString(1, top+1+i, ln, text)
-		}
-		return
+	// Текст: строки, обрезанные по ширине блока.
+	for i, ln := range lines {
+		b.SetString(x0+1, top+1+i, truncateWidth(ln, innerW), text)
 	}
-	lines := wrapStatus(statusMsg, w-2)
-	if w-2 > 0 {
-		for i := 0; i < textRows && i < len(lines); i++ {
-			b.SetString(1, top+1+i, lines[i], text)
-		}
+
+	// Прямоугольник блока — для прокрутки колесом мыши.
+	statusRectX, statusRectY, statusRectW, statusRectH = x0, top, bw, blockH
+}
+
+// truncateWidth обрезает строку до ширины в клетках (по uniseg).
+func truncateWidth(s string, width int) string {
+	if width < 1 {
+		return ""
 	}
+	var out []rune
+	w := 0
+	for _, r := range s {
+		rw := uniseg.StringWidth(string(r))
+		if w+rw > width {
+			break
+		}
+		out = append(out, r)
+		w += rw
+	}
+	return string(out)
 }
 
 // wrapStatus разбивает текст на строки по ширине (перенос по рунам,
