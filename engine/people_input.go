@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"strings"
@@ -12,6 +13,12 @@ import (
 
 // statusMsg — последний результат действия/ошибка для нижней строки.
 var statusMsg string
+
+// debugLines — отладочный вывод плагина tobotom (рисуется в статус-блоке).
+var debugLines []string
+
+// SetDebug — плагин отладки (tobotom) показывает строки в статус-блоке.
+func SetDebug(lines []string) { debugLines = lines }
 
 // Позиция мыши — для подсветки квадратика под курсором (-1 — мышь вне экрана).
 var mouseX, mouseY = -1, -1
@@ -55,6 +62,8 @@ var (
 // target — id блока для вывода (output="..."), пусто = статус-строка.
 // Если в action есть "| confirm" — открывает окно подтверждения и ждёт.
 func execAction(raw, target string) {
+	// Новое действие — убираем отладочный вывод прошлого раза.
+	debugLines = nil
 	steps, need := PrepareAction(raw)
 	if need {
 		confirmMode = true
@@ -64,7 +73,16 @@ func execAction(raw, target string) {
 		statusMsg = ""
 		return
 	}
+	runStepsAndShow(steps, target)
+}
+
+// runStepsAndShow выполняет пайп и показывает результат (в тайл или статус).
+// Ошибка ErrStop — пайп остановлен плагином отладки tobotom, вывод уже показан.
+func runStepsAndShow(steps []string, target string) {
 	out, err := RunSteps(steps, nil)
+	if errors.Is(err, ErrStop) {
+		return
+	}
 	if err != nil {
 		statusMsg = "ошибка: " + err.Error()
 		return
@@ -190,12 +208,8 @@ func Run(fsys fs.FS) error {
 					switch e.Key() {
 					case tcell.KeyEnter:
 						confirmMode = false
-						out, err := RunSteps(pendingSteps, nil)
-						if err != nil {
-							statusMsg = "ошибка: " + err.Error()
-						} else {
-							putOutput(out, pendingOutput)
-						}
+						debugLines = nil
+						runStepsAndShow(pendingSteps, pendingOutput)
 					case tcell.KeyEscape:
 						confirmMode = false
 						statusMsg = "отменено"
@@ -205,12 +219,8 @@ func Run(fsys fs.FS) error {
 						switch e.Rune() {
 						case 'y', 'Y':
 							confirmMode = false
-							out, err := RunSteps(pendingSteps, nil)
-							if err != nil {
-								statusMsg = "ошибка: " + err.Error()
-							} else {
-								putOutput(out, pendingOutput)
-							}
+							debugLines = nil
+							runStepsAndShow(pendingSteps, pendingOutput)
 						case 'n', 'N':
 							confirmMode = false
 							statusMsg = "отменено"
@@ -229,6 +239,7 @@ func Run(fsys fs.FS) error {
 							inputOutput = hz.Output
 							inputBuf = string(r)
 							statusMsg = ""
+							debugLines = nil
 							break
 						}
 					}
@@ -242,8 +253,9 @@ func Run(fsys fs.FS) error {
 					return nil
 				}
 				if e.Key() == tcell.KeyEscape {
-					if statusMsg != "" {
+					if statusMsg != "" || len(debugLines) > 0 {
 						statusMsg = ""
+						debugLines = nil
 					} else {
 						return nil
 					}
@@ -251,6 +263,7 @@ func Run(fsys fs.FS) error {
 				// q — закрыть строку вывода (всплывающее окошко), НЕ выход из приложения.
 				if e.Rune() == 'q' || e.Rune() == 'Q' {
 					statusMsg = ""
+					debugLines = nil
 				}
 				// Стрелки — фокус по элементам, Enter — активировать (как клик).
 				ctrl := e.Modifiers()&tcell.ModCtrl != 0
@@ -301,6 +314,7 @@ func Run(fsys fs.FS) error {
 					// Кнопка «Закрыть» — закрыть строку вывода (не выход из приложения).
 					if kind == "quit" {
 						statusMsg = ""
+						debugLines = nil
 						break
 					}
 					// Клик не по активному полю — завершаем ввод.
@@ -323,6 +337,7 @@ func Run(fsys fs.FS) error {
 						inputOutput = output
 						inputBuf = ""
 						statusMsg = ""
+						debugLines = nil
 						break
 					}
 					// Селект: открываем меню выбора.
@@ -339,6 +354,7 @@ func Run(fsys fs.FS) error {
 							}
 						}
 						statusMsg = ""
+						debugLines = nil
 						break
 					}
 					execAction(act, output)
@@ -393,8 +409,8 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 	if len(menu) > 0 {
 		drawTabs(bg, menu, route, &hotzones)
 	}
-	// Кнопка «Закрыть» — ТОЛЬКО при открытой строке вывода, на правом краю нижней строки.
-	if statusMsg != "" {
+	// Кнопка «Закрыть» — ТОЛЬКО при открытой строке вывода/отладки, на правом краю нижней строки.
+	if statusMsg != "" || len(debugLines) > 0 {
 		drawQuit(bg, &hotzones)
 	}
 
@@ -587,7 +603,7 @@ func drawQuit(b *Buffer, out *[]Hotzone) {
 // Рисуется поверх тайлов, над вкладками, если они есть. Символы рамки —
 // status_* из темы (фоллбэк на tile_*), цвет — frame/status_fg.
 func drawStatus(b *Buffer, w, h int, hasTabs bool) {
-	if statusMsg == "" {
+	if statusMsg == "" && len(debugLines) == 0 {
 		return
 	}
 	// Высота блока: рамка + 3 строки текста = 5 строк.
@@ -628,7 +644,18 @@ func drawStatus(b *Buffer, w, h int, hasTabs bool) {
 		b.Set(w-1, y, vv, frame)
 	}
 
-	// Текст: переносим по ширине w-2 (минус рамки), берём первые textRows строк.
+	// Текст: если есть отладочный вывод (tobotom) — показываем его последние textRows
+	// строк (как хвост); иначе — статус-сообщение с переносом по ширине.
+	if len(debugLines) > 0 {
+		lines := debugLines
+		if len(lines) > textRows {
+			lines = lines[len(lines)-textRows:]
+		}
+		for i, ln := range lines {
+			b.SetString(1, top+1+i, ln, text)
+		}
+		return
+	}
 	lines := wrapStatus(statusMsg, w-2)
 	if w-2 > 0 {
 		for i := 0; i < textRows && i < len(lines); i++ {
@@ -704,6 +731,7 @@ func activateFocus(pages *Pages, route *string) bool {
 	// Кнопка «Закрыть» — закрыть строку вывода (не выход из приложения).
 	if hz.Kind == "quit" {
 		statusMsg = ""
+		debugLines = nil
 		return false
 	}
 	if hz.Href != "" {
@@ -719,6 +747,7 @@ func activateFocus(pages *Pages, route *string) bool {
 		inputOutput = hz.Output
 		inputBuf = ""
 		statusMsg = ""
+		debugLines = nil
 		return false
 	}
 	if hz.Action != "" {

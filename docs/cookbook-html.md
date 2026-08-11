@@ -335,9 +335,7 @@ logging=0
 <!-- не только IP: пирожок_номер_1 .. пирожок_номер_999 -->
 <button action="loop:пирожок_номер_[1-999] | ssh:root:hostname">Пирожки</button>
 
-<!-- старый формат: loop:БАЗА:КОНЕЦ (только IP) -->
-<button action="loop:172.0.0.1:25 | ssh:root:uptime">Uptime 172.0.0.1..25</button>
-```
+
 
 ### Ключи: -i ПУТЬ
 
@@ -475,6 +473,7 @@ graph LR
 | `loop` | `loop:ШАБЛОН` или `loop:БАЗА:КОНЕЦ` | развернуть диапазоны в адреса |
 | `bars` | `… \| bars[:МАСКА]` | полосковый график из чисел |
 | `clock` | `<plugin name="clock" interval="1s"/>` | живые часы |
+| `tobotom` | `… \| tobotom:pass` / `… \| tobotom:stop` | отладка: вывод в статус-строку |
 
 ### Примеры каждого
 
@@ -530,7 +529,10 @@ graph LR
 
 <!-- clock -->
 <plugin name="clock" interval="1s"/>
-```
+
+<!-- tobotom: отладка пайпа — увидеть, что реально приходит на вход -->
+<button action="cat:x | tobotom:pass | grep:y">cat → показать → grep</button>
+<button action="cat:x | tobotom:stop">cat → показать и стоп</button>`
 
 ---
 
@@ -557,3 +559,5 @@ id по всему интерфейсу, не только в текущем т�
 
 **У меня не работает кириллица.** Терминал должен быть UTF-8: Windows — `chcp
 65001` или Windows Terminal / VS Code.
+
+Версия 0.1 для разработки

@@ -116,6 +116,10 @@ func RunSteps(steps []string, in []string) ([]string, error) {
 		}
 		out, err := fn(cur, args)
 		if err != nil {
+			// Плагин отладки попросил остановить пайп — это не ошибка, вывод уже в статусе.
+			if errors.Is(err, ErrStop) {
+				return nil, ErrStop
+			}
 			return nil, fmt.Errorf("%s: %w", name, err)
 		}
 		cur = out
@@ -125,6 +129,10 @@ func RunSteps(steps []string, in []string) ([]string, error) {
 
 // ErrNeedConfirm — сигнал движку: в action есть confirm, нужна модалка.
 var ErrNeedConfirm = errors.New("нужно подтверждение")
+
+// ErrStop — сигнал движку остановить пайп без ошибки (плагин отладки tobotom:stop):
+// вывод уже показан в статус-блоке, дальше пайп не работает.
+var ErrStop = errors.New("стоп")
 
 // DoAction выполняет action из HTML (кнопка/поле) и возвращает текст для статуса.
 // Если в action есть confirm — возвращает ErrNeedConfirm (движок сам покажет модалку).

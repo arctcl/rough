@@ -20,6 +20,7 @@ import (
 	_ "rough/plugins/set"
 	_ "rough/plugins/ssh"
 	_ "rough/plugins/tail"
+	_ "rough/plugins/tobotom"
 	_ "rough/plugins/toggle"
 	_ "rough/plugins/wc"
 )

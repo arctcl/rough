@@ -8,9 +8,11 @@
       <checkbox action="toggle:app.conf:logging">Логирование</checkbox>
       <select action="set:app.conf:loglevel" options="info:debug:trace" label="Уровень"/>
       <input action="man:" output="out" label="Справка"/>
+      <button action="cat:app.conf | tobotom:pass | wc" output="out">conf | tob:pass | wc</button>
       <hr/>
       <pre>  pre: моноширинный блок
   вторая строка пре</pre>
+      <div id="out"></div>
     </div>
   </div>
   <div width="5%"></div>
