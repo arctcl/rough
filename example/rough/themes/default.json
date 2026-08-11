@@ -9,6 +9,8 @@
     "tile_v": "║",
     "button_l": "⟨",
     "button_r": "⟩",
+    "input_l": "[",
+    "input_r": "]",
     "input_icon": "✎",
     "cursor": "█"
   },
