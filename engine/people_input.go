@@ -321,28 +321,30 @@ func Run(fsys fs.FS) error {
 				// Левый клик — hit-test по хотзонам.
 				if e.Buttons()&tcell.Button1 != 0 {
 					x, y := e.Position()
+					// Меню select открыто: карта экрана ПОЛНОСТЬЮ отключена,
+					// работает ТОЛЬКО список. Клик по варианту — выбор, клик
+					// в любом другом месте — закрыть список. Поле ввода/кнопки
+					// под меню не срабатывают (исключено перекрытие хотзон).
+					if selectMode {
+						kind, act, label, output := HitSelect(x, y)
+						if kind == "selopt" {
+							selectMode = false
+							// label в хотзоне = базовый action, act = action:вариант.
+							if label != "" && strings.HasPrefix(act, label+":") {
+								selectValue[label] = act[len(label)+1:]
+							}
+							execAction(act, output)
+						} else {
+							// Промах мимо списка — просто закрыть меню.
+							selectMode = false
+						}
+						break
+					}
 					kind, act, href, label, output, options := HitTest(x, y)
 					// Кнопка «Закрыть» — закрыть строку вывода (не выход из приложения).
 					if kind == "quit" {
 						statusMsg = ""
 						debugLines = nil
-						break
-					}
-					// Вариант выпадающего меню — клик выбирает (до закрытия меню).
-					if kind == "selopt" {
-						selectMode = false
-						// label в хотзоне = базовый action, act = action:вариант.
-						if label != "" && strings.HasPrefix(act, label+":") {
-							selectValue[label] = act[len(label)+1:]
-						}
-						execAction(act, output)
-						break
-					}
-					// Меню открыто, клик НЕ по варианту и НЕ по другому select —
-					// промах: закрыть список и НЕ трогать элементы под ним
-					// (поле ввода/кнопки под меню не срабатывают).
-					if selectMode && kind != "select" {
-						selectMode = false
 						break
 					}
 					// Клик не по активному полю — завершаем ввод.

@@ -82,6 +82,22 @@ func HitTest(x, y int) (kind, action, href, label, output, options string) {
 	return "", "", "", "", "", ""
 }
 
+// HitSelect ищет вариант выпадающего меню select по координатам клика.
+// Пока меню открыто, карта экрана ПОЛНОСТЬЮ отключена — клик обрабатывается
+// только по вариантам меню (хотзоны "selopt"). Всё, что лежит под меню
+// (поле ввода, кнопки, сам элемент select), не срабатывает вообще.
+func HitSelect(x, y int) (kind, action, label, output string) {
+	for _, hz := range hotzones {
+		if hz.Kind != "selopt" {
+			continue
+		}
+		if x >= hz.X && x < hz.X+hz.W && y >= hz.Y && y < hz.Y+hz.H {
+			return hz.Kind, hz.Action, hz.Label, hz.Output
+		}
+	}
+	return "", "", "", ""
+}
+
 // RenderHTML рендерит HTML-дерево в буфер тайла, собирая хотзоны.
 // ox, oy — смещение тайла на экране (чтобы хотзоны были абсолютными).
 // Цвета текста/фона по умолчанию берутся из темы (ключи fg/bg).
