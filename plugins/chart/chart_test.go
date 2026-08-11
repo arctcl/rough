@@ -13,6 +13,7 @@ func TestChartAxisRight(t *testing.T) {
 	engine.SetWindowSize(40, 14)
 	defer engine.SetWindowSize(0, 0)
 	delete(series, "") // серия для пустого ключа — только текущий тест
+	delete(lastAdd, "")
 
 	out, err := engine.RunSteps([]string{"chart:0:100:bars:1:2"}, []string{"50"})
 	if err != nil {
@@ -39,6 +40,7 @@ func TestChartCandleColor(t *testing.T) {
 	engine.SetWindowSize(40, 14)
 	defer engine.SetWindowSize(0, 0)
 	delete(series, "") // серия для пустого ключа — только текущий тест
+	delete(lastAdd, "")
 
 	// Бычья свеча: open=10 close=15 high=20 low=5.
 	out, err := engine.RunSteps([]string{"chart:0:100:japanse:1:2"}, []string{"10 20 5 15"})
@@ -59,6 +61,7 @@ func TestChartCandleColor(t *testing.T) {
 	}
 
 	// Медвежья свеча: close < open.
+	delete(lastAdd, "")
 	out, err = engine.RunSteps([]string{"chart:0:100:japanse:1:2"}, []string{"15 20 5 10"})
 	if err != nil {
 		t.Fatal(err)
@@ -81,4 +84,23 @@ func dump(rows []string) string {
 		sb.WriteByte('\n')
 	}
 	return sb.String()
+}
+
+// TestChartSeriesGrows — серия свечей должна РАСТИ: каждый вызов добавляет
+// новую свечу, а не перезаписывает одну и ту же.
+func TestChartSeriesGrows(t *testing.T) {
+	engine.SetWindowSize(40, 14)
+	defer engine.SetWindowSize(0, 0)
+	delete(series, "")
+	delete(lastAdd, "")
+
+	for i := 0; i < 3; i++ {
+		if _, err := engine.RunSteps([]string{"chart:0:100:japanse:1:2"}, []string{"10 20 5 15"}); err != nil {
+			t.Fatal(err)
+		}
+		delete(lastAdd, "") // каждый вызов — как новый тик (свеча добавляется)
+	}
+	if n := len(series[""]); n != 3 {
+		t.Fatalf("серия должна расти: len=%d, ждали 3\n%v", n, series[""])
+	}
 }

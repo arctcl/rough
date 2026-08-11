@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rivo/uniseg"
 
@@ -50,6 +51,10 @@ const man_chart = `chart — живой график: обычные столб�
 // series — история точек по сигнатуре плагина (серии): точка = []float64
 // (1 число для bars, 4 числа OHLC для japanse).
 var series = map[string][][]float64{}
+
+// lastAdd — время последнего добавления точки по серии (свечи добавляются
+// не чаще, чем СЕКУНД на столбик, даже если движок дёргает плагин каждый кадр).
+var lastAdd = map[string]time.Time{}
 
 func init() {
 	rough.AddMan("chart", man_chart)
@@ -107,10 +112,17 @@ func init() {
 			pt = []float64{nums[len(nums)-1]}
 		}
 
-		// История: новый столбик/свеча добавляется, старые уходят влево.
-		key := engine.PluginKey()
-		series[key] = append(series[key], pt)
-		s := series[key]
+		// История: новая точка добавляется (не чаще СЕКУНД), старые уходят влево.
+		// Ключ серии — название графика (стабильно), иначе сигнатура движка.
+		skey := engine.PluginKey()
+		if title != "" {
+			skey = title
+		}
+		if t, ok := lastAdd[skey]; !ok || time.Since(t) >= time.Duration(secPer)*time.Second {
+			series[skey] = append(series[skey], pt)
+			lastAdd[skey] = time.Now()
+		}
+		s := series[skey]
 
 		w, h := engine.Window()
 		// Область графика — между верхней и нижней линиями.
@@ -139,7 +151,7 @@ func init() {
 		if len(s) > cols {
 			s = s[len(s)-cols:]
 		}
-		series[key] = s
+		series[skey] = s
 
 		// Цвета свечей по колонкам (бычья G / медвежья R).
 		var colColor []byte
