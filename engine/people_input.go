@@ -196,6 +196,10 @@ func Run(fsys fs.FS) error {
 				if e.Buttons()&tcell.Button1 != 0 {
 					x, y := e.Position()
 					kind, act, href, label, output := HitTest(x, y)
+					// Клик не по активному полю — завершаем ввод.
+					if inputMode && !(kind == "input" && act == inputAction && label == inputLabel) {
+						inputMode = false
+					}
 					if href != "" {
 						if _, ok := pages[href]; ok {
 							route = href
@@ -204,7 +208,7 @@ func Run(fsys fs.FS) error {
 					if act == "" {
 						break
 					}
-					// Поле ввода: открываем окно, юзер введёт значение.
+					// Поле ввода: активируем, ввод идёт прямо в поле.
 					if kind == "input" {
 						inputMode = true
 						inputAction = act
@@ -272,10 +276,7 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 		bg.SetString(0, statusY, statusMsg, Style{Bold: true, Fg: statusFg})
 	}
 
-	// Окна ввода/подтверждения рисуются поверх всего.
-	if inputMode {
-		drawInputModal(bg, w, h)
-	}
+	// Окно подтверждения рисуется поверх всего (ввод идёт прямо в поле, без модалки).
 	if confirmMode {
 		drawConfirmModal(bg, w, h)
 	}

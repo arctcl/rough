@@ -229,9 +229,9 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(label) + 2, H: 1, Href: href, Kind: "nav"})
 		f.nl(b)
 	case "input":
-		// Поле ввода: обведённое рамкой, как HTML-инпут. По клику движок
-		// открывает окно ввода, юзер вводит значение и жмёт Enter → движок
-		// дописывает ":значение" к действию, результат идёт в output (если задан).
+		// Поле ввода: обведённое рамкой, как HTML-инпут. Клик — активирует поле,
+		// ввод идёт ПРЯМО в него (внутри рамки), Enter — выполняет action,
+		// результат — в output (если задан). Никакой модалки по центру.
 		f.nl(b)
 		label := n.Attrs["label"]
 		if label == "" {
@@ -241,9 +241,21 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		il := curTheme.Sym("input_l", "[")
 		ir := curTheme.Sym("input_r", "]")
 		ic := curTheme.Sym("input_icon", "✎")
+		// Активное поле: показываем введённое значение и курсор внутри рамки.
+		val := ""
+		cursor := false
+		if inputMode && inputAction == act && inputLabel == label {
+			val = inputBuf
+			cursor = true
+		}
 		x0, y0 := f.x, f.y
-		f.put(b, string(il)+" "+string(ic)+" "+label+" "+string(ir))
-		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(label) + 6, H: 1, Action: act, Kind: "input", Label: label, Output: n.Attrs["output"]})
+		s := string(il) + " " + string(ic) + " " + label + " " + val
+		if cursor {
+			s += string(curTheme.Sym("cursor", "█"))
+		}
+		s += " " + string(ir)
+		f.put(b, s)
+		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act, Kind: "input", Label: label, Output: n.Attrs["output"]})
 		f.nl(b)
 	case "plugin":
 		f.nl(b)
