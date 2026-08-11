@@ -6,6 +6,7 @@
 package bars
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -33,7 +34,13 @@ const man_bars = `bars — полосковый график из чисел (с
 func init() {
 	rough.AddMan("bars", man_bars)
 	rough.AddPlugin("bars", func(in []string, args []string) ([]string, error) {
-		vals := engine.ApplyMask(in, strings.Join(args, ":"))
+		// Числа: с маской — через регулярку (группа), без маски — первое число в строке.
+		var vals []float64
+		if mask := strings.Join(args, ":"); mask != "" {
+			vals = engine.ApplyMask(in, mask)
+		} else {
+			vals = numbersIn(in)
+		}
 		w, h := engine.Window()
 		if len(vals) == 0 {
 			return []string{"нет чисел"}, nil
@@ -61,4 +68,18 @@ func init() {
 		}
 		return out, nil
 	})
+}
+
+// numbersIn извлекает числа из строк без маски — первое число в каждой строке.
+func numbersIn(lines []string) []float64 {
+	re := regexp.MustCompile(`\d+(?:\.\d+)?`)
+	var out []float64
+	for _, ln := range lines {
+		if m := re.FindString(ln); m != "" {
+			if f, err := strconv.ParseFloat(m, 64); err == nil {
+				out = append(out, f)
+			}
+		}
+	}
+	return out
 }

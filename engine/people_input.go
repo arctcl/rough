@@ -48,6 +48,7 @@ var (
 	selectAction string
 	selectLabel  string
 	selectOutput string
+	selectX, selectY int // позиция элемента — выпадающее меню рисуется под ним
 )
 
 // Состояние окна подтверждения (шаг "| confirm" в action).
@@ -294,6 +295,10 @@ func Run(fsys fs.FS) error {
 				// Левый клик — hit-test по хотзонам.
 				if e.Buttons()&tcell.Button1 != 0 {
 					x, y := e.Position()
+					// Клик закрывает выпадающее меню select, если оно открыто.
+					if selectMode {
+						selectMode = false
+					}
 					kind, act, href, label, output, options := HitTest(x, y)
 					// Кнопка «Закрыть» — закрыть строку вывода (не выход из приложения).
 					if kind == "quit" {
@@ -324,7 +329,7 @@ func Run(fsys fs.FS) error {
 						debugLines = nil
 						break
 					}
-					// Селект: открываем меню выбора.
+					// Селект: открываем выпадающее меню ПОД элементом (как в HTML).
 					if kind == "select" {
 						selectMode = true
 						selectAction = act
@@ -337,8 +342,21 @@ func Run(fsys fs.FS) error {
 								selectOpts = append(selectOpts, o)
 							}
 						}
+						// Запоминаем позицию элемента — меню рисуется под ним.
+						selectX, selectY = x, y
+						for _, hz := range hotzones {
+							if hz.Kind == "select" && x >= hz.X && x < hz.X+hz.W && y >= hz.Y && y < hz.Y+hz.H {
+								selectX, selectY = hz.X, hz.Y
+								break
+							}
+						}
 						statusMsg = ""
 						debugLines = nil
+						break
+					}
+					// Вариант выпадающего меню — клик выбирает.
+					if kind == "selopt" {
+						execAction(act, output)
 						break
 					}
 					execAction(act, output)
@@ -402,9 +420,9 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 	if confirmMode {
 		drawConfirmModal(bg, w, h)
 	}
-	// Меню выбора select — поверх всего.
+	// Выпадающее меню select — поверх всего, под самим элементом.
 	if selectMode {
-		drawSelectModal(bg, w, h)
+		drawSelectMenu(bg, &hotzones, w, h)
 	}
 
 	// Квадратик под курсором мыши и подсветка сфокусированной хотзоны.
@@ -449,41 +467,57 @@ func drawConfirmModal(b *Buffer, w, h int) {
 	b.SetString(x0, y0, line, Style{Fg: inFg})
 }
 
-// drawSelectModal рисует меню выбора (select) по центру экрана.
-func drawSelectModal(b *Buffer, w, h int) {
+// drawSelectMenu рисует выпадающее меню select ПОД самим элементом (как в HTML),
+// а не по центру экрана. Не влезло вниз — рисует над элементом. Варианты —
+// хотзоны "selopt": клик выбирает.
+func drawSelectMenu(b *Buffer, out *[]Hotzone, w, h int) {
 	title := "▼ " + selectLabel
-	height := len(selectOpts) + 2
-	if height > h-4 {
-		height = h - 4
-	}
-	width := uniseg.StringWidth(title) + 4
+	// Ширина меню: под самый длинный вариант + рамка.
+	mw := uniseg.StringWidth(title)
 	for _, o := range selectOpts {
-		if lw := uniseg.StringWidth(o) + 4; lw > width {
-			width = lw
+		if lw := uniseg.StringWidth(o); lw > mw {
+			mw = lw
 		}
 	}
-	if width > w-4 {
-		width = w - 4
+	mw += 2
+	// Высота: заголовок + варианты.
+	height := 1 + len(selectOpts)
+	if height > h {
+		height = h
 	}
-	x0 := (w - width) / 2
-	y0 := h/2 - height/2
-	if y0 < 1 {
-		y0 = 1
+	// Позиция: под элементом; не влезло вниз — над ним; прижимаем к краям экрана.
+	x0 := selectX
+	if x0+mw > w {
+		x0 = w - mw
 	}
+	if x0 < 0 {
+		x0 = 0
+	}
+	y0 := selectY + 1
+	if y0+height > h {
+		y0 = selectY - height
+	}
+	if y0 < 0 {
+		y0 = 0
+	}
+
 	titleBg := curTheme.ResolveColor(themeColor("header_bg"), tcell.ColorDarkBlue)
 	titleFg := curTheme.ResolveColor(themeColor("header_fg"), tcell.ColorWhite)
 	inFg := curTheme.ResolveColor(themeColor("input_fg"), tcell.ColorGreen)
 
-	drawFrame(b, x0-1, y0-1, width+2, height+2)
-	b.SetString(x0, y0-1, " "+title+" ", Style{Bg: titleBg, Fg: titleFg})
-	for i := 0; i < height-2 && i < len(selectOpts); i++ {
+	// Рамка + заголовок.
+	drawFrame(b, x0, y0, mw, height)
+	b.SetString(x0+1, y0, " "+title+" ", Style{Bg: titleBg, Fg: titleFg})
+	for i := 0; i < height-1 && i < len(selectOpts); i++ {
 		st := Style{Fg: inFg}
 		if i == selectIdx {
 			st = Style{Fg: tcell.ColorBlack, Bg: inFg, Bold: true}
 		}
-		b.SetString(x0, y0+i, selectOpts[i], st)
+		opt := " " + selectOpts[i] + " "
+		ox := x0 + 1
+		b.SetString(ox, y0+1+i, opt, st)
+		*out = append(*out, Hotzone{X: ox, Y: y0 + 1 + i, W: uniseg.StringWidth(opt), H: 1, Kind: "selopt", Action: selectAction + ":" + selectOpts[i], Output: selectOutput})
 	}
-	b.SetString(x0, y0+height-2, " Enter — выбрать, Esc — отмена", Style{Fg: titleBg})
 }
 
 // drawInputModal рисует модальное окно ввода по центру экрана.
