@@ -54,6 +54,10 @@ func LoadPages(fsys fs.FS) (Pages, error) {
 		if key == "theme" {
 			continue
 		}
+		// Ключ "menu" — вкладки (пары [имя, роут]), это не страница.
+		if key == "menu" {
+			continue
+		}
 
 		items, ok := val.([]any)
 		if !ok {
