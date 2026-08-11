@@ -1,0 +1,21 @@
+<!-- Таблица, append, img (PPM) и вывод в тайл. -->
+<row>
+  <div width="5%"></div>
+  <div>
+    <div align="center">
+      <h1>Сервисы</h1>
+      <table>
+        <tr><th>Сервис</th><th>Статус</th></tr>
+        <tr><td>api</td><td>работает</td></tr>
+        <tr><td>db</td><td>работает</td></tr>
+        <tr><td>queue</td><td>стоп</td></tr>
+      </table>
+      <hr/>
+      <button action="append:app.conf:note=добавлено" output="out">append в conf</button>
+      <button action="cat:app.conf" output="out">cat:app.conf</button>
+      <img src="logo.ppm"/>
+      <div id="out"></div>
+    </div>
+  </div>
+  <div width="5%"></div>
+</row>

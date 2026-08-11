@@ -1,0 +1,14 @@
+<!-- Фильтры: эмулятор лога + grep/tail/wc, справка man. Результат → тайл out2. -->
+<row>
+  <div width="5%"></div>
+  <div>
+    <h1>Фильтры</h1>
+    <button action="emu_log | grep:ERROR" output="out2">log | grep:ERROR</button>
+    <button action="emu_log | tail:4" output="out2">log | tail:4</button>
+    <button action="emu_log | wc" output="out2">log | wc</button>
+    <button action="man:ssh | head:6" output="out2">man:ssh | head</button>
+    <button action="man" output="out2">man (список)</button>
+    <input action="man:" output="out2" label="Пакет"/>
+  </div>
+  <div width="5%"></div>
+</row>

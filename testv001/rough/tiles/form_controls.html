@@ -1,0 +1,17 @@
+<!-- Формы: чекбоксы, селект, поле ввода, hr, pre. Конфиг — app.conf (создаётся main.go). -->
+<row>
+  <div width="5%"></div>
+  <div>
+    <div align="center">
+      <h1>Настройки</h1>
+      <checkbox action="toggle:app.conf:debug">Отладка</checkbox>
+      <checkbox action="toggle:app.conf:logging">Логирование</checkbox>
+      <select action="set:app.conf:loglevel" options="info:debug:trace" label="Уровень"/>
+      <input action="man:" output="out" label="Справка"/>
+      <hr/>
+      <pre>  pre: моноширинный блок
+  вторая строка пре</pre>
+    </div>
+  </div>
+  <div width="5%"></div>
+</row>

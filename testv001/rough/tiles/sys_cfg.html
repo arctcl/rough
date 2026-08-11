@@ -1,4 +1,14 @@
-<h1>Файлы</h1>
-<button action="cat:/etc/os-release">os-release</button>
-<button action="cat:/etc/os-release | grep:^ID">ID дистрибутива</button>
-<button action="cat:/etc/os-release | wc">Строк в файле</button>
+<!-- Конфиг: set/toggle/cat по app.conf (файл на диске, создаётся main.go). -->
+<row>
+  <div width="5%"></div>
+  <div>
+    <div align="center">
+      <h1>Конфиг</h1>
+      <button action="cat:app.conf" output="cfg_out">Показать конфиг</button>
+      <button action="set:app.conf:max_users:100" output="cfg_out">max_users=100</button>
+      <button action="toggle:app.conf:debug" output="cfg_out">Переключить debug</button>
+      <div id="cfg_out"></div>
+    </div>
+  </div>
+  <div width="5%"></div>
+</row>

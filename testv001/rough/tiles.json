@@ -1,18 +1,29 @@
 {
   "theme": "default",
-  "menu": [["Справка", "/man"], ["Инструменты", "/tools"], ["Система", "/sys"]],
-  "паттерн": ["id", "x", "y", "w", "h", "файл"],
-  "/man": [
-    ["in",  "0%",  "0%",  "40%", "100%", "tiles/man_in.html"],
-    ["out", "40%", "0%",  "60%", "100%", "tiles/man_out.html"]
+  "menu": [
+    ["Графики", "/plot"],
+    ["Текст", "/text"],
+    ["Формы", "/form"],
+    ["Система", "/sys"]
   ],
-  "/tools": [
-    ["clock", "0%",  "0%",  "50%", "50%", "tiles/tools_clock.html"],
-    ["bars",  "50%", "0%",  "50%", "50%", "tiles/tools_bars.html"]
+  "паттерн": ["id", "x", "y", "w", "h", "файл"],
+  "/plot": [
+    ["clock", "0%",  "0%",  "30%", "100%", "tiles/plot_clock.html"],
+    ["cpu",   "30%", "0%",  "35%", "100%", "tiles/plot_cpu.html"],
+    ["mem",   "65%", "0%",  "35%", "100%", "tiles/plot_mem.html"]
+  ],
+  "/text": [
+    ["btns1", "0%",  "0%",  "30%", "50%", "tiles/text_btns1.html"],
+    ["out1",  "30%", "0%",  "70%", "50%", "tiles/text_out1.html"],
+    ["btns2", "0%",  "50%", "30%", "50%", "tiles/text_btns2.html"],
+    ["out2",  "30%", "50%", "70%", "50%", "tiles/text_out2.html"]
+  ],
+  "/form": [
+    ["form",  "0%", "0%", "50%", "100%", "tiles/form_controls.html"],
+    ["table", "50%", "0%", "50%", "100%", "tiles/form_table.html"]
   ],
   "/sys": [
-    ["info", "0%",  "0%",  "50%", "50%", "tiles/sys_info.html"],
-    ["net",  "50%", "0%",  "50%", "50%", "tiles/sys_net.html"],
-    ["cfg",  "0%",  "50%", "100%", "50%", "tiles/sys_cfg.html"]
+    ["sys", "0%",  "0%",  "50%", "100%", "tiles/sys_info.html"],
+    ["cfg", "50%", "0%",  "50%", "100%", "tiles/sys_cfg.html"]
   ]
 }
