@@ -6,10 +6,20 @@
 package plugins
 
 import (
+	_ "rough/plugins/append"
+	_ "rough/plugins/bars"
 	_ "rough/plugins/cat"
+	_ "rough/plugins/clock"
 	_ "rough/plugins/curl"
+	_ "rough/plugins/grep"
+	_ "rough/plugins/head"
 	_ "rough/plugins/hello"
+	_ "rough/plugins/line"
 	_ "rough/plugins/man"
 	_ "rough/plugins/nyan"
+	_ "rough/plugins/set"
 	_ "rough/plugins/ssh"
+	_ "rough/plugins/tail"
+	_ "rough/plugins/toggle"
+	_ "rough/plugins/wc"
 )
