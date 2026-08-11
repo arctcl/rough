@@ -1,9 +1,14 @@
 {
   "theme": "default",
+  "menu": [["Главная", "/main"], ["Справка", "/man"], ["Нян", "/nyan"]],
   "паттерн": ["id", "x", "y", "w", "h", "файл"],
   "/main": [
     ["hello", "0%",  "0%",  "40%", "40%", "tiles/hello.html"],
     ["cfg",   "40%", "0%",  "60%", "100%", "tiles/cfg.html"]
+  ],
+  "/man": [
+    ["in",  "0%",  "0%",  "40%", "100%", "tiles/man_in.html"],
+    ["out", "40%", "0%",  "60%", "100%", "tiles/man_out.html"]
   ],
   "/nyan": [
     ["nyan", "0%", "0%", "100%", "100%", "tiles/nyan.html"]
