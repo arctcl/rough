@@ -486,7 +486,13 @@ func renderCenteredDiv(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotz
 		}
 	}
 	h := usedHeight(cb)
-	yOff := (b.H - h) / 2
+	// Центрируем по видимой высоте тайла, а не по запасному буферу скролла
+	// (иначе контент уезжает вниз за экран). curViewH ставит renderTile.
+	vh := b.H
+	if curViewH > 0 && curViewH < vh {
+		vh = curViewH
+	}
+	yOff := (vh - h) / 2
 	if yOff < 0 {
 		yOff = 0
 	}

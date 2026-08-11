@@ -28,6 +28,7 @@
     "header_fg": "#d4d4d4",
     "title_fg": "#4ec9b0",
     "status_fg": "#dcdcaa",
+    "status_bg": "#1e1e1e",
     "input_fg": "#9cdcfe"
   }
 }

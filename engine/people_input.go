@@ -620,8 +620,19 @@ func drawStatus(b *Buffer, w, h int, hasTabs bool) {
 
 	frameFg := curTheme.ResolveColor(themeColor("frame"), tcell.ColorGray)
 	statusFg := curTheme.ResolveColor(themeColor("status_fg"), tcell.ColorYellow)
-	frame := Style{Fg: frameFg}
-	text := Style{Bold: true, Fg: statusFg}
+	// Фон статуса: ключ status_bg, фоллбэк — bg темы, затем чёрный.
+	statusBg := curTheme.ResolveColor(themeColor("status_bg"),
+		curTheme.ResolveColor(themeColor("bg"), tcell.ColorBlack))
+	frame := Style{Fg: frameFg, Bg: statusBg}
+	text := Style{Bold: true, Fg: statusFg, Bg: statusBg}
+
+	// Заливаем весь блок фоном — чтобы сквозь статус не просвечивали тайлы.
+	fill := Style{Bg: statusBg}
+	for y := top; y <= bottom; y++ {
+		for x := 0; x < w; x++ {
+			b.Set(x, y, ' ', fill)
+		}
+	}
 
 	// Символы рамки: status_* или запасные tile_* (углы/линии тайла).
 	tl := curTheme.Sym("status_tl", string(curTheme.Sym("tile_tl", "┌")))
@@ -766,6 +777,8 @@ func renderTile(root *Node, inner *Buffer, id string, ox, oy, viewH int, out *[]
 	}
 	big := NewBuffer(inner.W, bigH)
 	var hz []Hotzone
+	// Видимая высота — чтобы align="center" центрировал по окну, а не по запасу.
+	curViewH = viewH
 	RenderHTML(root, big, ox, oy, &hz)
 
 	contentH := usedHeight(big)

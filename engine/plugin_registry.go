@@ -158,6 +158,10 @@ func Window() (int, int) {
 // curW, curH — размер окна тайла для рисовалок (глобал, как curTheme).
 var curW, curH int
 
+// curViewH — видимая высота тайла. Нужна для вертикального центрирования
+// <div align="center"> внутри запасного буфера скролла (ставит renderTile).
+var curViewH int
+
 // ApplyMask извлекает числа из строк по регулярке (первая группа захвата).
 func ApplyMask(lines []string, mask string) []float64 {
 	if mask == "" {
