@@ -31,8 +31,32 @@ func init() {
 		if len(args) < 3 {
 			return nil, errors.New("set: нужен файл, ключ и значение")
 		}
+		// Режим чтения: set:файл:ключ:get — вернуть текущее значение (для select).
+		if args[2] == "get" {
+			return readKey(args[0], args[1])
+		}
 		return setKey(args[0], args[1], strings.Join(args[2:], ":"))
 	})
+}
+
+// readKey возвращает текущее значение ключа (для select). Ключа нет — "?".
+func readKey(file, key string) ([]string, error) {
+	b, err := os.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+	for _, ln := range strings.Split(string(b), "\n") {
+		trim := strings.TrimSpace(ln)
+		if trim == "" || strings.HasPrefix(trim, "#") {
+			continue
+		}
+		eq := strings.Index(trim, "=")
+		if eq < 0 || strings.TrimSpace(trim[:eq]) != key {
+			continue
+		}
+		return []string{strings.TrimSpace(trim[eq+1:])}, nil
+	}
+	return []string{"?"}, nil
 }
 
 // setKey ставит значение ключа в файле (ключ отсутствует — добавляет).

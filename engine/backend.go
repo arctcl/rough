@@ -139,6 +139,11 @@ func (f *flowState) put(b *Buffer, s string) {
 		}
 	}
 	for _, r := range s {
+		// Перевод строки внутри текста (например в <pre>).
+		if r == '\n' {
+			f.nl(b)
+			continue
+		}
 		if f.x >= b.W {
 			f.nl(b)
 			if f.center {
@@ -324,7 +329,8 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		}
 		act := n.Attrs["action"]
 		sl := curTheme.Sym("select_icon", "▼")
-		s := string(sl) + " " + label
+		// Подпись — отдельное слово, рядом — текущее выбранное значение.
+		s := label + "  " + string(sl) + " " + currentSelect(act)
 		x0, y0 := f.drawX(b, s), f.y
 		f.put(b, s)
 		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act, Kind: "select", Label: label, Output: n.Attrs["output"], Options: n.Attrs["options"]})
@@ -365,6 +371,15 @@ func textContent(n *Node) string {
 
 // renderPlugin обрабатывает тег <plugin>: собирает пайп из атрибутов,
 // выполняет его и выводит строки результата в тайл.
+// pluginCache — кэш результатов <plugin>: не перезапускается чаще interval.
+var pluginCache = map[string]pluginEntry{}
+
+// pluginEntry — кэшированный результат плагина и время последнего запуска.
+type pluginEntry struct {
+	at    time.Time
+	lines []string
+}
+
 func renderPlugin(n *Node, b *Buffer, f *flowState) {
 	// Размер окна тайла — чтобы рисовалки (bars и т.п.) адаптировались.
 	curW, curH = b.W, b.H
@@ -374,12 +389,25 @@ func renderPlugin(n *Node, b *Buffer, f *flowState) {
 		f.put(b, "ошибка: пустой плагин")
 		return
 	}
-	out, err := RunSteps(steps, nil)
-	if err != nil {
-		f.put(b, "ошибка: "+err.Error())
-		return
+	// Интервал обновления: не задан → дефолт 2 секунды (не дёргаем чаще).
+	iv := parseDur(n.Attrs["interval"])
+	if iv <= 0 {
+		iv = 2 * time.Second
 	}
-	for _, ln := range out {
+	key := strings.Join(steps, "|")
+	var lines []string
+	if c, ok := pluginCache[key]; ok && time.Since(c.at) < iv {
+		lines = c.lines // ещё не время — показываем прошлый результат
+	} else {
+		out, err := RunSteps(steps, nil)
+		if err != nil {
+			lines = []string{"ошибка: " + err.Error()}
+		} else {
+			lines = out
+		}
+		pluginCache[key] = pluginEntry{at: time.Now(), lines: lines}
+	}
+	for _, ln := range lines {
 		f.put(b, ln)
 		f.nl(b)
 	}
@@ -567,6 +595,9 @@ func renderTable(n *Node, b *Buffer, f *flowState) {
 	}
 	// Рисуем: текст + отступ до ширины колонки + разделитель.
 	old := *f
+	// Таблица — фиксированная сетка: отключаем центрирование ячеек,
+	// иначе каждая ячейка рисуется с центра и обрезается.
+	f.center = false
 	for _, row := range grid {
 		for i := 0; i < cols; i++ {
 			var c cell
@@ -619,6 +650,25 @@ func checkboxOn(act string) bool {
 	}
 	v := strings.TrimSpace(out[len(out)-1])
 	return v == "1" || strings.EqualFold(v, "on") || strings.EqualFold(v, "true") || strings.EqualFold(v, "yes")
+}
+
+// selectValue — выбранные значения select по action (для показа в подписи).
+var selectValue = map[string]string{}
+
+// currentSelect возвращает текущее значение select: сначала — выбранное в сессии,
+// затем пробует прочитать через плагин (последний шаг action + ":get", как у
+// toggle/set). Если не знаем — "?".
+func currentSelect(act string) string {
+	if v, ok := selectValue[act]; ok && v != "" {
+		return v
+	}
+	steps := SplitSteps(act)
+	if len(steps) > 0 {
+		if out, err := RunSteps([]string{steps[len(steps)-1] + ":get"}, nil); err == nil && len(out) > 0 {
+			return strings.TrimSpace(out[len(out)-1])
+		}
+	}
+	return "?"
 }
 
 // ppmImage — растровое изображение PPM (P6), RGB-пиксели.

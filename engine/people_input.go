@@ -23,6 +23,9 @@ func SetDebug(lines []string) { debugLines = lines }
 // statusScroll — сдвиг прокрутки внутри статус-блока (если строк больше 3).
 var statusScroll int
 
+// statusShownAt — когда статус показан в последний раз (авто-скрытие через 10 с).
+var statusShownAt time.Time
+
 // statusRect — прямоугольник статус-блока на экране (для прокрутки колесом).
 var statusRectX, statusRectY, statusRectW, statusRectH int
 
@@ -69,9 +72,10 @@ var (
 // target — id блока для вывода (output="..."), пусто = статус-строка.
 // Если в action есть "| confirm" — открывает окно подтверждения и ждёт.
 func execAction(raw, target string) {
-	// Новое действие — убираем отладочный вывод и скролл статуса прошлого раза.
+	// Новое действие — убираем отладочный вывод, скролл статуса и сбрасываем таймер.
 	debugLines = nil
 	statusScroll = 0
+	statusShownAt = time.Now()
 	steps, need := PrepareAction(raw)
 	if need {
 		confirmMode = true
@@ -201,6 +205,7 @@ func Run(fsys fs.FS) error {
 					case tcell.KeyEnter:
 						selectMode = false
 						if selectIdx >= 0 && selectIdx < len(selectOpts) {
+							selectValue[selectAction] = selectOpts[selectIdx]
 							execAction(selectAction+":"+selectOpts[selectIdx], selectOutput)
 						}
 					case tcell.KeyEscape:
@@ -217,6 +222,7 @@ func Run(fsys fs.FS) error {
 					case tcell.KeyEnter:
 						confirmMode = false
 						debugLines = nil
+						statusShownAt = time.Now()
 						runStepsAndShow(pendingSteps, pendingOutput)
 					case tcell.KeyEscape:
 						confirmMode = false
@@ -228,6 +234,7 @@ func Run(fsys fs.FS) error {
 						case 'y', 'Y':
 							confirmMode = false
 							debugLines = nil
+							statusShownAt = time.Now()
 							runStepsAndShow(pendingSteps, pendingOutput)
 						case 'n', 'N':
 							confirmMode = false
@@ -375,6 +382,10 @@ func Run(fsys fs.FS) error {
 					}
 					// Вариант выпадающего меню — клик выбирает.
 					if kind == "selopt" {
+						// label в хотзоне = базовый action, act = action:вариант.
+						if label != "" && strings.HasPrefix(act, label+":") {
+							selectValue[label] = act[len(label)+1:]
+						}
 						execAction(act, output)
 						break
 					}
@@ -390,6 +401,13 @@ func Run(fsys fs.FS) error {
 // renderFrame рисует текущий кадр: фон, заголовок, тайлы, вкладки и статус.
 func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, h int, fsys fs.FS) {
 	hotzones = hotzones[:0]
+
+	// Авто-скрытие статус-блока через 10 секунд после последнего действия.
+	if (statusMsg != "" || len(debugLines) > 0) && time.Since(statusShownAt) > 10*time.Second {
+		statusMsg = ""
+		debugLines = nil
+		statusScroll = 0
+	}
 
 	bg := NewBuffer(w, h)
 	// Фон экрана и цвет текста по умолчанию — из темы (ключи bg/fg).
@@ -535,7 +553,7 @@ func drawSelectMenu(b *Buffer, out *[]Hotzone, w, h int) {
 		opt := " " + selectOpts[i] + " "
 		ox := x0 + 1
 		b.SetString(ox, y0+1+i, opt, st)
-		*out = append(*out, Hotzone{X: ox, Y: y0 + 1 + i, W: uniseg.StringWidth(opt), H: 1, Kind: "selopt", Action: selectAction + ":" + selectOpts[i], Output: selectOutput})
+		*out = append(*out, Hotzone{X: ox, Y: y0 + 1 + i, W: uniseg.StringWidth(opt), H: 1, Kind: "selopt", Action: selectAction + ":" + selectOpts[i], Label: selectAction, Output: selectOutput})
 	}
 }
 

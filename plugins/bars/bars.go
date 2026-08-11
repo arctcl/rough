@@ -41,9 +41,14 @@ func init() {
 		} else {
 			vals = numbersIn(in)
 		}
-		w, h := engine.Window()
 		if len(vals) == 0 {
 			return []string{"нет чисел"}, nil
+		}
+		w, _ := engine.Window()
+		// Спарклайн: одна строка из блоков ▁▂▃▄▅▆▇█ по ширине окна.
+		cols := w - 1
+		if cols < 1 {
+			cols = 1
 		}
 		max := 0.0
 		for _, v := range vals {
@@ -54,19 +59,32 @@ func init() {
 		if max <= 0 {
 			max = 1
 		}
-		rows := len(vals)
-		if rows > h-1 {
-			rows = h - 1
-		}
-		out := make([]string, 0, rows)
-		for i := 0; i < rows; i++ {
-			barW := int(vals[i] / max * float64(w-1))
-			if barW > w-1 {
-				barW = w - 1
+		levels := "▁▂▃▄▅▆▇█"
+		line := make([]rune, cols)
+		for x := 0; x < cols; x++ {
+			lo := x * len(vals) / cols
+			hi := (x + 1) * len(vals) / cols
+			if hi <= lo {
+				hi = lo + 1
 			}
-			out = append(out, strings.Repeat("█", barW)+" "+strconv.FormatFloat(vals[i], 'f', 1, 64))
+			if hi > len(vals) {
+				hi = len(vals)
+			}
+			avg := 0.0
+			for i := lo; i < hi; i++ {
+				avg += vals[i]
+			}
+			avg /= float64(hi - lo)
+			lvl := int(avg / max * 7)
+			if lvl < 0 {
+				lvl = 0
+			}
+			if lvl > 7 {
+				lvl = 7
+			}
+			line[x] = rune(levels[lvl])
 		}
-		return out, nil
+		return []string{string(line)}, nil
 	})
 }
 
