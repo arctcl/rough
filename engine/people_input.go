@@ -251,7 +251,9 @@ func Run(fsys fs.FS) error {
 					moveFocus(1)
 				case tcell.KeyEnter:
 					if focusIdx >= 0 && focusIdx < len(hotzones) {
-						activateFocus(&pages, &route)
+						if activateFocus(&pages, &route) {
+							return nil
+						}
 					}
 				}
 				// Вкладки: как в хроме — Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+цифры;
@@ -286,6 +288,10 @@ func Run(fsys fs.FS) error {
 				if e.Buttons()&tcell.Button1 != 0 {
 					x, y := e.Position()
 					kind, act, href, label, output, options := HitTest(x, y)
+					// Кнопка «Закрыть» — выход из приложения (как клавиша q).
+					if kind == "quit" {
+						return nil
+					}
 					// Клик не по активному полю — завершаем ввод.
 					if inputMode && !(kind == "input" && act == inputAction && label == inputLabel) {
 						inputMode = false
@@ -376,6 +382,8 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 	if len(menu) > 0 {
 		drawTabs(bg, menu, route, &hotzones)
 	}
+	// Кнопка «Закрыть» — на правом краю нижней строки, рядом с вкладками.
+	drawQuit(bg, &hotzones)
 
 	// Окно подтверждения рисуется поверх всего (ввод идёт прямо в поле, без модалки).
 	if confirmMode {
@@ -541,16 +549,36 @@ func drawTabs(b *Buffer, menu [][]string, route string, out *[]Hotzone) {
 		x += lw + 1 // пробел в 1 клетку между вкладками
 	}
 }
+
+// drawQuit рисует кнопку «Закрыть» на правом краю нижней строки (рядом с вкладками).
+// Это хотзона Kind "quit": клик или Enter закрывают приложение (как клавиша q).
+// Скобки — из темы (button_l/button_r), цвета — как у вкладок.
+func drawQuit(b *Buffer, out *[]Hotzone) {
+	tabFg := curTheme.ResolveColor(themeColor("header_fg"), tcell.ColorWhite)
+	tabBg := curTheme.ResolveColor(themeColor("header_bg"), tcell.ColorDarkBlue)
+	bl := curTheme.Sym("button_l", "⟨")
+	br := curTheme.Sym("button_r", "⟩")
+	text := string(bl) + " Закрыть " + string(br)
+	tw := uniseg.StringWidth(text)
+	x := b.W - tw
+	if x < 0 {
+		x = 0
+	}
+	b.SetString(x, b.H-1, text, Style{Fg: tabFg, Bg: tabBg})
+	*out = append(*out, Hotzone{X: x, Y: b.H - 1, W: tw, H: 1, Kind: "quit"})
+}
+
 // drawStatus рисует статус-сообщение внизу в рамке из темы.
-// Блок: верх рамки + 2 строки текста (перенос по ширине) + низ рамки.
+// Блок: верх рамки + 3 строки текста (перенос по ширине) + низ рамки.
 // Рисуется поверх тайлов, над вкладками, если они есть. Символы рамки —
 // status_* из темы (фоллбэк на tile_*), цвет — frame/status_fg.
 func drawStatus(b *Buffer, w, h int, hasTabs bool) {
 	if statusMsg == "" {
 		return
 	}
-	// Высота блока: рамка + 2 строки текста = 4 строки.
-	total := 4
+	// Высота блока: рамка + 3 строки текста = 5 строк.
+	const textRows = 3
+	total := textRows + 2
 	if h < total+1 {
 		return
 	}
@@ -558,7 +586,7 @@ func drawStatus(b *Buffer, w, h int, hasTabs bool) {
 	if hasTabs {
 		bottom = h - 2 // освобождаем последнюю строку под вкладки
 	}
-	top := bottom - (total - 1) // = bottom-3
+	top := bottom - (total - 1) // = bottom-4
 
 	frameFg := curTheme.ResolveColor(themeColor("frame"), tcell.ColorGray)
 	statusFg := curTheme.ResolveColor(themeColor("status_fg"), tcell.ColorYellow)
@@ -586,45 +614,41 @@ func drawStatus(b *Buffer, w, h int, hasTabs bool) {
 		b.Set(w-1, y, vv, frame)
 	}
 
-	// Текст: переносим на 2 строки по ширине w-2 (минус рамки).
-	l1, l2 := wrapStatus(statusMsg, w-2)
+	// Текст: переносим по ширине w-2 (минус рамки), берём первые textRows строк.
+	lines := wrapStatus(statusMsg, w-2)
 	if w-2 > 0 {
-		b.SetString(1, top+1, l1, text)
-		if l2 != "" {
-			b.SetString(1, top+2, l2, text)
+		for i := 0; i < textRows && i < len(lines); i++ {
+			b.SetString(1, top+1+i, lines[i], text)
 		}
 	}
 }
 
-// wrapStatus разбивает текст на 2 строки по ширине (перенос по рунам,
-// ширина считается через uniseg). Вторая строка заполняется до предела,
-// остаток обрезается.
-func wrapStatus(text string, width int) (string, string) {
+// wrapStatus разбивает текст на строки по ширине (перенос по рунам,
+// ширина считается через uniseg). Возвращает все строки; вызывающий берёт
+// столько, сколько влезает в блок статуса.
+func wrapStatus(text string, width int) []string {
 	if width < 1 {
-		return "", ""
+		return nil
 	}
-	var line1, line2 []rune
+	var lines []string
+	var cur []rune
 	w := 0
-	fill := 0 // какая строка заполняется: 0 — первая, 1 — вторая
 	for _, r := range text {
 		rw := uniseg.StringWidth(string(r))
 		if w+rw > width {
-			if fill == 0 {
-				fill = 1
-				w = 0
-			} else {
-				break // вторая строка заполнена — остаток обрезаем
-			}
+			lines = append(lines, string(cur))
+			cur = nil
+			w = 0
 		}
-		if fill == 0 {
-			line1 = append(line1, r)
-		} else {
-			line2 = append(line2, r)
-		}
+		cur = append(cur, r)
 		w += rw
 	}
-	return string(line1), string(line2)
+	if len(cur) > 0 {
+		lines = append(lines, string(cur))
+	}
+	return lines
 }
+
 // nextRoute — следующая/предыдущая вкладка относительно текущего роута (шаг ±1).
 func nextRoute(menu [][]string, route string, step int) string {
 	if len(menu) == 0 {
@@ -659,14 +683,19 @@ func moveFocus(dir int) {
 }
 
 // activateFocus активирует сфокусированную хотзону (как клик): переход по ссылке,
-// активация поля ввода или выполнение действия.
-func activateFocus(pages *Pages, route *string) {
+// активация поля ввода или выполнение действия. Возвращает true, если нужно
+// выйти из приложения (кнопка «Закрыть»).
+func activateFocus(pages *Pages, route *string) bool {
 	hz := hotzones[focusIdx]
+	// Кнопка «Закрыть» — выход (как клавиша q).
+	if hz.Kind == "quit" {
+		return true
+	}
 	if hz.Href != "" {
 		if _, ok := (*pages)[hz.Href]; ok {
 			*route = hz.Href
 		}
-		return
+		return false
 	}
 	if hz.Kind == "input" {
 		inputMode = true
@@ -675,11 +704,12 @@ func activateFocus(pages *Pages, route *string) {
 		inputOutput = hz.Output
 		inputBuf = ""
 		statusMsg = ""
-		return
+		return false
 	}
 	if hz.Action != "" {
 		execAction(hz.Action, hz.Output)
 	}
+	return false
 }
 
 // renderTile рендерит содержимое тайла в inner с поддержкой скролла:
