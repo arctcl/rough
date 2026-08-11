@@ -13,6 +13,8 @@
     "cursor": "█"
   },
   "colors": {
+    "bg": "#1e1e1e",
+    "fg": "#d4d4d4",
     "frame": "#569cd6",
     "header_bg": "#1e1e1e",
     "header_fg": "#d4d4d4",
