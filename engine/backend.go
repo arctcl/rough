@@ -229,19 +229,21 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(label) + 2, H: 1, Href: href, Kind: "nav"})
 		f.nl(b)
 	case "input":
-		// Поле ввода: по клику движок открывает окно ввода,
-		// юзер вводит значение и жмёт Enter → движок дописывает
-		// "=значение" к последнему аргументу action и вызывает плагин.
+		// Поле ввода: обведённое рамкой, как HTML-инпут. По клику движок
+		// открывает окно ввода, юзер вводит значение и жмёт Enter → движок
+		// дописывает ":значение" к действию, результат идёт в output (если задан).
 		f.nl(b)
 		label := n.Attrs["label"]
 		if label == "" {
 			label = strings.TrimSpace(textContent(n))
 		}
 		act := n.Attrs["action"]
+		il := curTheme.Sym("input_l", "[")
+		ir := curTheme.Sym("input_r", "]")
 		ic := curTheme.Sym("input_icon", "✎")
 		x0, y0 := f.x, f.y
-		f.put(b, string(ic)+" "+label)
-		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(label) + 2, H: 1, Action: act, Kind: "input", Label: label, Output: n.Attrs["output"]})
+		f.put(b, string(il)+" "+string(ic)+" "+label+" "+string(ir))
+		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(label) + 6, H: 1, Action: act, Kind: "input", Label: label, Output: n.Attrs["output"]})
 		f.nl(b)
 	case "plugin":
 		f.nl(b)
