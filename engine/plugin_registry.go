@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -32,6 +33,36 @@ func AddPlugin(name string, fn PluginFunc) {
 
 // HasPlugin проверяет наличие плагина в реестре.
 func HasPlugin(name string) bool { _, ok := plugins[name]; return ok }
+
+// mans — реестр справок (man): имя плагина → текст описания.
+// У каждого плагина внутри лежит переменная man_<имя> (см. контракт в
+// systemprompt.md), и init() регистрирует её здесь через AddMan.
+var mans = map[string]string{}
+
+// AddMan регистрирует справку по плагину (юникс-like man).
+// Обязательный вызов из init() плагина — рядом с AddPlugin.
+func AddMan(name, text string) {
+	if name == forbiddenName {
+		return
+	}
+	mans[name] = text
+}
+
+// ManText возвращает справку по имени плагина.
+func ManText(name string) (string, bool) {
+	t, ok := mans[name]
+	return t, ok
+}
+
+// ManNames возвращает отсортированный список имён, у которых есть справка.
+func ManNames() []string {
+	names := make([]string, 0, len(mans))
+	for n := range mans {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	return names
+}
 
 // SplitAction разбирает "имя:арг1:арг2" на имя и аргументы.
 func SplitAction(raw string) (string, []string) {

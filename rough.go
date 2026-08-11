@@ -59,3 +59,14 @@ type PluginFunc = engine.PluginFunc
 // AddPlugin регистрирует плагин (юникс-команда: строки → строки).
 // Из HTML вызывается как action="имя:арг" или в пайпе "имя:арг | ...".
 func AddPlugin(name string, fn engine.PluginFunc) { engine.AddPlugin(name, fn) }
+
+// AddMan регистрирует справку по плагину (юникс-like man).
+// Обязательный вызов из init() плагина — рядом с AddPlugin. Внутри плагина
+// справка лежит в переменной man_<имя> и передаётся сюда целиком.
+func AddMan(name, text string) { engine.AddMan(name, text) }
+
+// ManText возвращает справку по плагину.
+func ManText(name string) (string, bool) { return engine.ManText(name) }
+
+// ManNames возвращает отсортированный список плагинов со справкой.
+func ManNames() []string { return engine.ManNames() }
