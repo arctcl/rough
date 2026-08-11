@@ -19,6 +19,9 @@ var mouseX, mouseY = -1, -1
 // focusIdx — индекс сфокусированной хотзоны (навигация стрелками, -1 — нет фокуса).
 var focusIdx = -1
 
+// scrollOff — вертикальный скролл внутри тайла (id тайла → смещение строк).
+var scrollOff = map[string]int{}
+
 // Состояние окна ввода: пока inputMode включён, клавиши идут в буфер,
 // а Enter дописывает значение к действию и выполняет его.
 var (
@@ -27,6 +30,17 @@ var (
 	inputLabel  string // подпись (что редактируем, например MAX_USERS)
 	inputBuf    string // набранное значение
 	inputOutput string // id блока, куда направить результат (output="...")
+)
+
+// Состояние меню выбора (select): пока selectMode включён, стрелки выбирают,
+// Enter выполняет action с выбранным вариантом.
+var (
+	selectMode   bool
+	selectOpts   []string
+	selectIdx    int
+	selectAction string
+	selectLabel  string
+	selectOutput string
 )
 
 // Состояние окна подтверждения (шаг "| confirm" в action).
@@ -147,6 +161,30 @@ func Run(fsys fs.FS) error {
 					}
 					break
 				}
+				// Меню выбора: стрелки — вариант, Enter — применить, Esc — отмена.
+				if selectMode {
+					switch e.Key() {
+					case tcell.KeyUp:
+						if selectIdx > 0 {
+							selectIdx--
+						}
+					case tcell.KeyDown:
+						if selectIdx < len(selectOpts)-1 {
+							selectIdx++
+						}
+					case tcell.KeyEnter:
+						selectMode = false
+						if selectIdx >= 0 && selectIdx < len(selectOpts) {
+							execAction(selectAction+":"+selectOpts[selectIdx], selectOutput)
+						}
+					case tcell.KeyEscape:
+						selectMode = false
+						statusMsg = "выбор отменён"
+					case tcell.KeyCtrlC:
+						return nil
+					}
+					break
+				}
 				// Окно подтверждения: Enter — да, Esc — нет.
 				if confirmMode {
 					switch e.Key() {
@@ -235,10 +273,19 @@ func Run(fsys fs.FS) error {
 			case *tcell.EventMouse:
 				// Позиция мыши — для подсветки квадратика под курсором.
 				mouseX, mouseY = e.Position()
+				// Колесо — скролл тайла под курсором.
+				if e.Buttons()&tcell.WheelUp != 0 {
+					scrollTile(pages, route, mouseX, mouseY, w, h, -1)
+					break
+				}
+				if e.Buttons()&tcell.WheelDown != 0 {
+					scrollTile(pages, route, mouseX, mouseY, w, h, 1)
+					break
+				}
 				// Левый клик — hit-test по хотзонам.
 				if e.Buttons()&tcell.Button1 != 0 {
 					x, y := e.Position()
-					kind, act, href, label, output := HitTest(x, y)
+					kind, act, href, label, output, options := HitTest(x, y)
 					// Клик не по активному полю — завершаем ввод.
 					if inputMode && !(kind == "input" && act == inputAction && label == inputLabel) {
 						inputMode = false
@@ -258,6 +305,22 @@ func Run(fsys fs.FS) error {
 						inputLabel = label
 						inputOutput = output
 						inputBuf = ""
+						statusMsg = ""
+						break
+					}
+					// Селект: открываем меню выбора.
+					if kind == "select" {
+						selectMode = true
+						selectAction = act
+						selectLabel = label
+						selectOutput = output
+						selectIdx = 0
+						selectOpts = nil
+						for _, o := range strings.Split(options, ":") {
+							if o != "" {
+								selectOpts = append(selectOpts, o)
+							}
+						}
 						statusMsg = ""
 						break
 					}
@@ -300,7 +363,7 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 		if t.File != "" {
 			if f, err := fsys.Open(t.File); err == nil {
 				if root, perr := ParseHTML(f); perr == nil {
-					RenderHTML(root, inner, x+1, y+1, &hotzones)
+					renderTile(root, inner, t.ID, x+1, y+1, th-2, &hotzones)
 				}
 				f.Close()
 			}
@@ -322,6 +385,10 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 	// Окно подтверждения рисуется поверх всего (ввод идёт прямо в поле, без модалки).
 	if confirmMode {
 		drawConfirmModal(bg, w, h)
+	}
+	// Меню выбора select — поверх всего.
+	if selectMode {
+		drawSelectModal(bg, w, h)
 	}
 
 	// Квадратик под курсором мыши и подсветка сфокусированной хотзоны.
@@ -364,6 +431,43 @@ func drawConfirmModal(b *Buffer, w, h int) {
 	drawFrame(b, x0-1, y0-1, width+2, 3)
 	b.SetString(x0, y0-1, " "+title+" ", Style{Bg: titleBg, Fg: titleFg})
 	b.SetString(x0, y0, line, Style{Fg: inFg})
+}
+
+// drawSelectModal рисует меню выбора (select) по центру экрана.
+func drawSelectModal(b *Buffer, w, h int) {
+	title := "▼ " + selectLabel
+	height := len(selectOpts) + 2
+	if height > h-4 {
+		height = h - 4
+	}
+	width := uniseg.StringWidth(title) + 4
+	for _, o := range selectOpts {
+		if lw := uniseg.StringWidth(o) + 4; lw > width {
+			width = lw
+		}
+	}
+	if width > w-4 {
+		width = w - 4
+	}
+	x0 := (w - width) / 2
+	y0 := h/2 - height/2
+	if y0 < 1 {
+		y0 = 1
+	}
+	titleBg := curTheme.ResolveColor(themeColor("header_bg"), tcell.ColorDarkBlue)
+	titleFg := curTheme.ResolveColor(themeColor("header_fg"), tcell.ColorWhite)
+	inFg := curTheme.ResolveColor(themeColor("input_fg"), tcell.ColorGreen)
+
+	drawFrame(b, x0-1, y0-1, width+2, height+2)
+	b.SetString(x0, y0-1, " "+title+" ", Style{Bg: titleBg, Fg: titleFg})
+	for i := 0; i < height-2 && i < len(selectOpts); i++ {
+		st := Style{Fg: inFg}
+		if i == selectIdx {
+			st = Style{Fg: tcell.ColorBlack, Bg: inFg, Bold: true}
+		}
+		b.SetString(x0, y0+i, selectOpts[i], st)
+	}
+	b.SetString(x0, y0+height-2, " Enter — выбрать, Esc — отмена", Style{Fg: titleBg})
 }
 
 // drawInputModal рисует модальное окно ввода по центру экрана.
@@ -497,5 +601,64 @@ func activateFocus(pages *Pages, route *string) {
 	}
 	if hz.Action != "" {
 		execAction(hz.Action, hz.Output)
+	}
+}
+
+// renderTile рендерит содержимое тайла в inner с поддержкой скролла:
+// контент рисуется в большой буфер (запас по высоте), окно копируется
+// со сдвигом scrollOff[id]; хотзоны сдвигаются так же.
+func renderTile(root *Node, inner *Buffer, id string, ox, oy, viewH int, out *[]Hotzone) {
+	bigH := viewH * 4
+	if bigH < 40 {
+		bigH = 40
+	}
+	big := NewBuffer(inner.W, bigH)
+	var hz []Hotzone
+	RenderHTML(root, big, ox, oy, &hz)
+
+	contentH := usedHeight(big)
+	if contentH < 1 {
+		contentH = 1
+	}
+	maxOff := contentH - viewH
+	if maxOff < 0 {
+		maxOff = 0
+	}
+	off := scrollOff[id]
+	if off > maxOff {
+		off = maxOff
+	}
+	scrollOff[id] = off
+
+	// Копируем видимое окно (со сдвигом) в inner.
+	for yy := 0; yy < viewH && yy+off < big.H; yy++ {
+		for xx := 0; xx < big.W; xx++ {
+			c := big.cells[yy+off][xx]
+			if c.Rune != 0 {
+				inner.Set(xx, yy, c.Rune, c.Style)
+			}
+		}
+	}
+	// Хотзоны: сдвигаем на -off, отбрасываем те, что вне окна.
+	for _, z := range hz {
+		z.Y -= off
+		if z.Y+z.H <= oy || z.Y >= oy+viewH {
+			continue
+		}
+		*out = append(*out, z)
+	}
+}
+
+// scrollTile меняет скролл тайла под курсором (колесо мыши).
+func scrollTile(pages Pages, route string, x, y, w, h, dir int) {
+	for _, t := range pages[route] {
+		tx, ty, tw, th := t.Rect(w, h)
+		if x >= tx && x < tx+tw && y >= ty && y < ty+th {
+			scrollOff[t.ID] += dir
+			if scrollOff[t.ID] < 0 {
+				scrollOff[t.ID] = 0
+			}
+			return
+		}
 	}
 }

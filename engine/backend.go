@@ -1,7 +1,10 @@
 package engine
 
 import (
+	"errors"
 	"io"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -56,9 +59,10 @@ type Hotzone struct {
 	X, Y, W, H int
 	Action     string // что выполнить по клику
 	Href       string // куда перейти (роут)
-	Kind       string // вид зоны: "" (действие), "nav" (ссылка), "input" (поле ввода)
+	Kind       string // вид зоны: "" (действие), "nav" (ссылка), "input" (поле ввода), "select"
 	Label      string // подпись для окна ввода
 	Output     string // id блока, куда направить вывод (пусто = статус-строка)
+	Options    string // варианты для select (через ":")
 }
 
 // hotzones — хотзоны последнего кадра, по ним делаем hit-test мыши.
@@ -69,13 +73,13 @@ var hotzones []Hotzone
 var outputCache = map[string][]string{}
 
 // HitTest ищет хотзону по координатам клика.
-func HitTest(x, y int) (kind, action, href, label, output string) {
+func HitTest(x, y int) (kind, action, href, label, output, options string) {
 	for _, hz := range hotzones {
 		if x >= hz.X && x < hz.X+hz.W && y >= hz.Y && y < hz.Y+hz.H {
-			return hz.Kind, hz.Action, hz.Href, hz.Label, hz.Output
+			return hz.Kind, hz.Action, hz.Href, hz.Label, hz.Output, hz.Options
 		}
 	}
-	return "", "", "", "", ""
+	return "", "", "", "", "", ""
 }
 
 // RenderHTML рендерит HTML-дерево в буфер тайла, собирая хотзоны.
@@ -211,6 +215,41 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		}
 		*f = old
 		f.nl(b)
+	case "hr":
+		// Горизонтальная линия на всю ширину тайла.
+		f.nl(b)
+		hh := curTheme.Sym("tile_h", "─")
+		for x := f.x; x < b.W; x++ {
+			b.Set(x, f.y, hh, f.style())
+		}
+		f.nl(b)
+	case "pre":
+		// Моноширинный блок: блок-абзац без стилей, как есть.
+		f.nl(b)
+		old := *f
+		for _, c := range n.Children {
+			renderNode(c, b, f, ox, oy, out)
+		}
+		*f = old
+		f.nl(b)
+	case "checkbox":
+		// Чекбокс [x]/[ ]: состояние читается у плагина (action + ":get").
+		f.nl(b)
+		label := strings.TrimSpace(textContent(n))
+		act := n.Attrs["action"]
+		mark := "[ ]"
+		if checkboxOn(act) {
+			mark = "[x]"
+		}
+		x0, y0 := f.x, f.y
+		s := mark + " " + label
+		f.put(b, s)
+		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act})
+		f.nl(b)
+	case "table":
+		f.nl(b)
+		renderTable(n, b, f)
+		f.nl(b)
 	case "row":
 		f.nl(b)
 		renderRow(n, b, f, ox, oy, out)
@@ -258,6 +297,26 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		s += " " + string(ir)
 		f.put(b, s)
 		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act, Kind: "input", Label: label, Output: n.Attrs["output"]})
+		f.nl(b)
+	case "select":
+		// Выпадающий список: клик открывает меню выбора, выбор выполняет action
+		// с выбранным значением (дописывается ":вариант").
+		f.nl(b)
+		label := n.Attrs["label"]
+		if label == "" {
+			label = strings.TrimSpace(textContent(n))
+		}
+		act := n.Attrs["action"]
+		sl := curTheme.Sym("select_icon", "▼")
+		x0, y0 := f.x, f.y
+		s := string(sl) + " " + label
+		f.put(b, s)
+		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act, Kind: "select", Label: label, Output: n.Attrs["output"], Options: n.Attrs["options"]})
+		f.nl(b)
+	case "img":
+		// Картинка PPM (P6): рисуется половинчатыми блоками ▀▄█.
+		f.nl(b)
+		renderImg(n, b, f)
 		f.nl(b)
 	case "plugin":
 		f.nl(b)
@@ -448,4 +507,231 @@ func usedHeight(b *Buffer) int {
 		}
 	}
 	return 0
+}
+
+// renderTable рисует <table>: строки <tr>, ячейки <td>/<th> (th — жирный).
+// Колонки выравниваются по максимальной ширине, разделяются "│".
+func renderTable(n *Node, b *Buffer, f *flowState) {
+	type cell struct {
+		text string
+		bold bool
+	}
+	rows := tableRows(n)
+	if len(rows) == 0 {
+		return
+	}
+	grid := make([][]cell, 0, len(rows))
+	cols := 0
+	for _, tr := range rows {
+		var row []cell
+		for _, td := range tr.Children {
+			if td.Tag == "td" || td.Tag == "th" {
+				row = append(row, cell{text: strings.TrimSpace(textContent(td)), bold: td.Tag == "th"})
+			}
+		}
+		if len(row) > cols {
+			cols = len(row)
+		}
+		grid = append(grid, row)
+	}
+	// Ширины колонок — по самой широкой ячейке.
+	widths := make([]int, cols)
+	for _, row := range grid {
+		for i, c := range row {
+			if w := uniseg.StringWidth(c.text); w > widths[i] {
+				widths[i] = w
+			}
+		}
+	}
+	// Рисуем: текст + отступ до ширины колонки + разделитель.
+	old := *f
+	for _, row := range grid {
+		for i := 0; i < cols; i++ {
+			var c cell
+			if i < len(row) {
+				c = row[i]
+			}
+			wasBold := f.bold
+			f.bold = c.bold
+			f.put(b, c.text)
+			f.bold = wasBold
+			for p := uniseg.StringWidth(c.text); p < widths[i]; p++ {
+				f.put(b, " ")
+			}
+			if i < cols-1 {
+				f.put(b, " │ ")
+			}
+		}
+		f.nl(b)
+	}
+	*f = old
+}
+
+// tableRows собирает все <tr> внутри таблицы (парсер HTML может обернуть их в tbody).
+func tableRows(n *Node) []*Node {
+	var rows []*Node
+	var walk func(x *Node)
+	walk = func(x *Node) {
+		if x.Tag == "tr" {
+			rows = append(rows, x)
+			return
+		}
+		for _, c := range x.Children {
+			walk(c)
+		}
+	}
+	walk(n)
+	return rows
+}
+
+// checkboxOn читает состояние чекбокса: вызывает action с ":get" — плагин
+// (например toggle) возвращает текущее значение; true — если включено.
+func checkboxOn(act string) bool {
+	steps := SplitSteps(act)
+	if len(steps) == 0 {
+		return false
+	}
+	out, err := RunSteps([]string{steps[len(steps)-1] + ":get"}, nil)
+	if err != nil || len(out) == 0 {
+		return false
+	}
+	v := strings.TrimSpace(out[len(out)-1])
+	return v == "1" || strings.EqualFold(v, "on") || strings.EqualFold(v, "true") || strings.EqualFold(v, "yes")
+}
+
+// ppmImage — растровое изображение PPM (P6), RGB-пиксели.
+type ppmImage struct {
+	w, h int
+	data []byte // w*h*3 байт RGB
+}
+
+// pixel возвращает цвет пикселя (px, py).
+func (img *ppmImage) pixel(px, py int) tcell.Color {
+	i := (py*img.w + px) * 3
+	if i+2 >= len(img.data) {
+		return tcell.ColorDefault
+	}
+	return tcell.NewRGBColor(int32(img.data[i]), int32(img.data[i+1]), int32(img.data[i+2]))
+}
+
+// renderImg рисует PPM-картинку половинчатыми блоками ▀▄█ (2 пикселя в блок).
+// Масштаб по ширине тайла, цвета — как в картинке.
+func renderImg(n *Node, b *Buffer, f *flowState) {
+	path := n.Attrs["src"]
+	if path == "" {
+		f.put(b, "img: нет src")
+		return
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		f.put(b, "img: "+err.Error())
+		return
+	}
+	img, err := decodePPM(data)
+	if err != nil {
+		f.put(b, "img: "+err.Error())
+		return
+	}
+	// Масштаб: сколько пикселей по горизонтали в одном блоке (минимум 1).
+	sx := img.w / b.W
+	if sx < 1 {
+		sx = 1
+	}
+	for row := 0; row < b.H-1; row++ {
+		top := row * 2
+		if top >= img.h {
+			break
+		}
+		f.x = 0
+		for x := 0; x < b.W; x++ {
+			px := x * sx
+			if px >= img.w {
+				break
+			}
+			tc := img.pixel(px, top)
+			bc := tc
+			if top+1 < img.h {
+				bc = img.pixel(px, top+1)
+			}
+			tb := colorLum(tc) >= 128
+			bb := colorLum(bc) >= 128
+			var r rune
+			var col tcell.Color
+			switch {
+			case tb && bb:
+				r = '█'
+				col = midColor(tc, bc)
+			case tb:
+				r = '▀'
+				col = tc
+			case bb:
+				r = '▄'
+				col = bc
+			default:
+				r = ' '
+				col = midColor(tc, bc)
+			}
+			b.Set(f.x, f.y, r, Style{Fg: col, Bg: col})
+			f.x++
+		}
+		f.nl(b)
+	}
+}
+
+// decodePPM разбирает PPM P6: "P6 W H MAX" + RGB-байты.
+func decodePPM(b []byte) (*ppmImage, error) {
+	pos := 0
+	next := func() (string, error) {
+		for pos < len(b) {
+			if b[pos] == '#' {
+				for pos < len(b) && b[pos] != '\n' {
+					pos++
+				}
+				continue
+			}
+			if b[pos] == ' ' || b[pos] == '\t' || b[pos] == '\n' || b[pos] == '\r' {
+				pos++
+				continue
+			}
+			break
+		}
+		start := pos
+		for pos < len(b) && b[pos] != ' ' && b[pos] != '\t' && b[pos] != '\n' && b[pos] != '\r' {
+			pos++
+		}
+		return string(b[start:pos]), nil
+	}
+	magic, _ := next()
+	if magic != "P6" {
+		return nil, errors.New("нужен PPM P6")
+	}
+	ws, _ := next()
+	hs, _ := next()
+	next() // max (обычно 255)
+	w, _ := strconv.Atoi(ws)
+	h, _ := strconv.Atoi(hs)
+	if w <= 0 || h <= 0 {
+		return nil, errors.New("PPM: плохой размер")
+	}
+	if pos < len(b) && (b[pos] == ' ' || b[pos] == '\n' || b[pos] == '\t' || b[pos] == '\r') {
+		pos++
+	}
+	need := w * h * 3
+	if pos+need > len(b) {
+		return nil, errors.New("PPM: не хватает данных")
+	}
+	return &ppmImage{w: w, h: h, data: b[pos : pos+need]}, nil
+}
+
+// colorLum — яркость цвета (0..255).
+func colorLum(c tcell.Color) int {
+	r, g, b := c.RGB()
+	return (int(r) + int(g) + int(b)) / 3
+}
+
+// midColor — средний цвет двух.
+func midColor(a, b tcell.Color) tcell.Color {
+	r1, g1, b1 := a.RGB()
+	r2, g2, b2 := b.RGB()
+	return tcell.NewRGBColor((r1+r2)/2, (g1+g2)/2, (b1+b2)/2)
 }
