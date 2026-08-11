@@ -65,10 +65,17 @@ func ManNames() []string {
 }
 
 // SplitAction разбирает "имя:арг1:арг2" на имя и аргументы.
+// Флаги "--name=value" идут через пробел после имени (без двоеточий):
+// "имя --а=1 --б=2" → имя + ["--а=1 --б=2"] (разбор флагов — в ParseArgs).
 func SplitAction(raw string) (string, []string) {
 	raw = strings.TrimSpace(raw)
 	i := strings.Index(raw, ":")
 	if i < 0 {
+		// Двоеточий нет: имя до первого пробела, остальное — аргументы
+		// (иначе флаги ушли бы в имя).
+		if j := strings.IndexAny(raw, " \t"); j > 0 {
+			return raw[:j], []string{strings.TrimSpace(raw[j:])}
+		}
 		return raw, nil
 	}
 	name := raw[:i]
@@ -86,6 +93,149 @@ func SplitSteps(raw string) []string {
 		}
 	}
 	return steps
+}
+
+// Param — описание одного параметра плагина (гибридный ввод).
+// Порядок объявления = позиция при вводе двоеточиями; Name — имя для
+// флага --name=value; Default — значение по умолчанию (пусто = нет дефолта);
+// Required — обязательный (ошибка, если не задан и нет дефолта).
+type Param struct {
+	Name     string
+	Default  string
+	Required bool
+}
+
+// ParseArgs разбирает аргументы вызова плагина по объявленным параметрам.
+// Принимает три формы и их микс:
+//
+//	имя:а:б:в          — позиционные, по порядку объявления;
+//	имя --а=1 --в=3    — именованные флаги (порядок не важен, в одном
+//	                      аргументе может быть несколько через пробел);
+//	имя::б --а=1       — микс: пустой слот ":" — подставится флаг/дефолт.
+//
+// Последний объявленный параметр «глотает» остаток двоеточий (как в
+// ssh:host:команда или set:файл:ключ:значение:с:двоеточиями). Неизвестный
+// флаг — ошибка; обязательный параметр без значения — ошибка.
+// Возвращает карту имя→значение для всех параметров.
+func ParseArgs(args []string, params []Param) (map[string]string, error) {
+	// Отделяем флаги --name=value от позиционных слотов. В одном аргументе
+	// может быть всё сразу: "" (пустой слот), "10", "нет --смазка=нет",
+	// "--место=зад --время=7" — поэтому режем каждый аргумент по пробелам.
+	flags := map[string]string{}
+	var pos []string
+	for _, a := range args {
+		if strings.TrimSpace(a) == "" {
+			// Пустой слот ":" — берётся флагом/дефолтом.
+			pos = append(pos, "")
+			continue
+		}
+		var plain []string
+		for _, tok := range strings.Fields(a) {
+			if strings.HasPrefix(tok, "--") {
+				kv := strings.TrimPrefix(tok, "--")
+				if i := strings.Index(kv, "="); i >= 0 {
+					flags[kv[:i]] = kv[i+1:]
+				} else {
+					return nil, fmt.Errorf("флаг %s требует =значение", tok)
+				}
+				continue
+			}
+			plain = append(plain, tok)
+		}
+		// Позиционная часть аргумента — не-флаговые токены через пробел.
+		// Аргумент, состоящий только из флагов, слота НЕ даёт.
+		if len(plain) > 0 {
+			pos = append(pos, strings.Join(plain, " "))
+		}
+	}
+	// Неизвестный флаг — ошибка (опечатка не проходит молча).
+	known := map[string]bool{}
+	for _, p := range params {
+		known[p.Name] = true
+	}
+	for name := range flags {
+		if !known[name] {
+			return nil, fmt.Errorf("неизвестный параметр --%s", name)
+		}
+	}
+	// Слот i ↔ параметр i; пустой слот пропускаем (возьмётся флагом/дефолтом).
+	vals := map[string]string{}
+	for i, p := range params {
+		if i < len(pos) && pos[i] != "" {
+			vals[p.Name] = pos[i]
+		}
+		if v, ok := flags[p.Name]; ok {
+			vals[p.Name] = v
+		}
+	}
+	// Последний параметр глотает остаток двоеточий (лишние слоты).
+	if len(params) > 0 && len(pos) > len(params) {
+		last := params[len(params)-1].Name
+		var parts []string
+		for _, t := range pos[len(params)-1:] {
+			if t != "" {
+				parts = append(parts, t)
+			}
+		}
+		if len(parts) > 0 {
+			if cur, ok := vals[last]; ok && cur != "" {
+				vals[last] = cur + ":" + strings.Join(parts, ":")
+			} else {
+				vals[last] = strings.Join(parts, ":")
+			}
+		}
+	}
+	// Дефолты и проверка обязательных.
+	var missing []string
+	for _, p := range params {
+		if _, ok := vals[p.Name]; !ok {
+			if p.Default != "" {
+				vals[p.Name] = p.Default
+			} else if p.Required {
+				missing = append(missing, p.Name)
+			} else {
+				vals[p.Name] = "" // необязательный без дефолта — пусто
+			}
+		}
+	}
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("не заданы параметры: %s", strings.Join(missing, ", "))
+	}
+	return vals, nil
+}
+
+// ParamsUsage собирает для man обе формы ввода параметров плагина:
+//
+//	chart:МИН:МАКС[:ШИРИНА[:СЕКУНД[:ЗАГОЛОВОК]]]
+//	chart [--мин=ЗНАЧ] [--макс=ЗНАЧ] [--ширина=ЗНАЧ] [--секунд=ЗНАЧ] [--заголовок=ЗНАЧ]
+//
+// Микс: позиционные слоты + флаги, пустой слот ":" — берётся флаг или дефолт.
+func ParamsUsage(name string, params []Param) string {
+	up := func(s string) string { return strings.ToUpper(s) }
+	var required, optional []string
+	for _, p := range params {
+		if p.Required && p.Default == "" {
+			required = append(required, up(p.Name))
+		} else {
+			optional = append(optional, up(p.Name))
+		}
+	}
+	// Позиционная форма: имя:ОБЯЗ... + вложенные [:] для опциональных.
+	posForm := name
+	for _, r := range required {
+		posForm += ":" + r
+	}
+	tail := ""
+	for i := len(optional) - 1; i >= 0; i-- {
+		tail = "[:" + optional[i] + tail + "]"
+	}
+	posForm += tail
+	// Флаговая форма: все параметры по имени.
+	flagForm := name
+	for _, p := range params {
+		flagForm += " [--" + p.Name + "=ЗНАЧ]"
+	}
+	return posForm + "\n  " + flagForm
 }
 
 // PrepareAction разбирает action на шаги и отделяет confirm-гейт.

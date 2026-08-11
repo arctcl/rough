@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/rivo/uniseg"
@@ -19,26 +18,37 @@ import (
 	"rough/engine"
 )
 
-// man_chart — справка по плагину (для man).
-const man_chart = `chart — живой столбчатый график (rolling).
+// chartParams — параметры плагина (гибрид: позиционные двоеточиями + --флаги).
+// Порядок = позиции; мин/макс обязательные, остальные с дефолтами.
+var chartParams = []engine.Param{
+	{Name: "мин", Required: true},  // диапазон снизу
+	{Name: "макс", Required: true}, // диапазон сверху
+	{Name: "ширина", Default: "1"}, // ширина столбика в клетках
+	{Name: "секунд", Default: "2"}, // секунд на столбик (подпись времени)
+	{Name: "заголовок"},            // название графика (необязательный)
+}
 
-Использование:
-  часть пайпа: ... | chart:МИН:МАКС[:ШИРИНА[:СЕКУНД[:ЗАГОЛОВОК]]]
-
-Аргументы:
-  МИН, МАКС — диапазон значений (например 0:100 для CPU в процентах).
-  ШИРИНА    — ширина столбика в клетках (по умолчанию 1).
-  СЕКУНД    — секунд на столбик (для подписи времени, по умолчанию 2).
-  ЗАГОЛОВОК — название графика (в разрыве верхней линии).
-
-Новый столбик появляется справа (у оси), старые уходят влево. Ось Y — справа:
-сверху — максимум, в перекрестии снизу — минимум; на нижней линии в разрыве —
-сколько столбиков и сколько это времени. Сверху — линия с названием графика.
-Высота зоны задаётся в HTML (height на <plugin>), обновление — через interval.
-
-Примеры:
-  <plugin pipe="emu_cpu | chart:0:100:1:2:CPU" height="14" interval="2s"/>
-  <plugin pipe="emu_mem | chart:0:100:1:2:MEM" height="14" interval="2s"/>`
+// man_chart — справка по плагину (для man). Строки использования генерируются
+// из chartParams через engine.ParamsUsage — обе формы входа (двоеточия и
+// --флаги) всегда в синхроне с кодом.
+var man_chart = "chart — живой столбчатый график (rolling).\n\n" +
+	"Использование (гибрид: двоеточия по порядку или --флаги, можно микс):\n" +
+	"  ... | " + engine.ParamsUsage("chart", chartParams) + "\n\n" +
+	"Параметры:\n" +
+	"  МИН, МАКС — диапазон значений, обязательные (например 0:100 для CPU).\n" +
+	"  ШИРИНА    — ширина столбика в клетках (по умолчанию 1).\n" +
+	"  СЕКУНД    — секунд на столбик (для подписи времени, по умолчанию 2).\n" +
+	"  ЗАГОЛОВОК — название графика (в разрыве верхней линии).\n\n" +
+	"Пустой слот \":\" — параметр берётся из флага или дефолта. Последний\n" +
+	"параметр глотает остаток двоеточий. Микс: chart::1:2:CPU --мин=0 --макс=100.\n\n" +
+	"Новый столбик появляется справа (у оси), старые уходят влево. Ось Y — справа:\n" +
+	"сверху — максимум, в перекрестии снизу — минимум; на нижней линии в разрыве —\n" +
+	"сколько столбиков и сколько это времени. Сверху — линия с названием графика.\n" +
+	"Высота зоны задаётся в HTML (height на <plugin>), обновление — через interval.\n\n" +
+	"Примеры:\n" +
+	"  <plugin pipe=\"emu_cpu | chart:0:100:1:2:CPU\" height=\"14\" interval=\"2s\"/>\n" +
+	"  <plugin pipe=\"emu_mem | chart:0:100:1:2:MEM\" height=\"14\" interval=\"2s\"/>\n" +
+	"  <plugin pipe=\"emu_cpu | chart --мин=0 --макс=100 --заголовок=CPU\" height=\"14\" interval=\"2s\"/>"
 
 // series — история значений по названию графика (серии).
 var series = map[string][]float64{}
@@ -49,31 +59,26 @@ var lastAdd = map[string]time.Time{}
 func init() {
 	rough.AddMan("chart", man_chart)
 	rough.AddPlugin("chart", func(in []string, args []string) ([]string, error) {
-		if len(args) < 2 {
-			return nil, errors.New("chart: нужны мин и макс")
+		// Гибридный разбор параметров: двоеточия по порядку или --флаги (и микс).
+		vals, err := engine.ParseArgs(args, chartParams)
+		if err != nil {
+			return nil, err
 		}
-		lo, err1 := strconv.ParseFloat(args[0], 64)
-		hi, err2 := strconv.ParseFloat(args[1], 64)
+		lo, err1 := strconv.ParseFloat(vals["мин"], 64)
+		hi, err2 := strconv.ParseFloat(vals["макс"], 64)
 		if err1 != nil || err2 != nil || hi <= lo {
 			return nil, errors.New("chart: нужен диапазон мин<макс")
 		}
 		colW := 1
-		if len(args) > 2 {
-			if v, err := strconv.Atoi(args[2]); err == nil && v > 0 {
-				colW = v
-			}
+		if v, err := strconv.Atoi(vals["ширина"]); err == nil && v > 0 {
+			colW = v
 		}
 		secPer := 2
-		if len(args) > 3 {
-			if v, err := strconv.Atoi(args[3]); err == nil && v > 0 {
-				secPer = v
-			}
+		if v, err := strconv.Atoi(vals["секунд"]); err == nil && v > 0 {
+			secPer = v
 		}
-		// Название графика — в разрыве верхней линии (остаток аргументов).
-		title := ""
-		if len(args) > 4 {
-			title = strings.Join(args[4:], ":")
-		}
+		// Название графика — в разрыве верхней линии (остаток двоеточий глотает).
+		title := vals["заголовок"]
 
 		// Значение: последнее число из входа (текущая точка).
 		nums := chartNumbers(in)
