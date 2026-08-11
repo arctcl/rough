@@ -241,17 +241,14 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		il := curTheme.Sym("input_l", "[")
 		ir := curTheme.Sym("input_r", "]")
 		ic := curTheme.Sym("input_icon", "✎")
-		// Активное поле: показываем введённое значение и курсор внутри рамки.
-		val := ""
-		cursor := false
-		if inputMode && inputAction == act && inputLabel == label {
-			val = inputBuf
-			cursor = true
-		}
+		// Активное поле: лейбл заменяется вводом — карандаш и скобки остаются.
+		// Покой: [ ✎ Пакет ]  →  Ввод: [ ✎ ssh█ ]
 		x0, y0 := f.x, f.y
-		s := string(il) + " " + string(ic) + " " + label + " " + val
-		if cursor {
-			s += string(curTheme.Sym("cursor", "█"))
+		s := string(il) + " " + string(ic) + " "
+		if inputMode && inputAction == act && inputLabel == label {
+			s += inputBuf + string(curTheme.Sym("cursor", "█"))
+		} else {
+			s += label
 		}
 		s += " " + string(ir)
 		f.put(b, s)

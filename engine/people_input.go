@@ -174,6 +174,24 @@ func Run(fsys fs.FS) error {
 					}
 					break
 				}
+				// Печать символа при наличии поля ввода — активируем первое поле:
+				// 'q'/'Esc' идут в ввод, а не выходят из приложения.
+				if r := e.Rune(); r != 0 {
+					for _, hz := range hotzones {
+						if hz.Kind == "input" {
+							inputMode = true
+							inputAction = hz.Action
+							inputLabel = hz.Label
+							inputOutput = hz.Output
+							inputBuf = string(r)
+							statusMsg = ""
+							break
+						}
+					}
+					if inputMode {
+						break
+					}
+				}
 				if e.Key() == tcell.KeyCtrlC || e.Key() == tcell.KeyEscape {
 					return nil
 				}
