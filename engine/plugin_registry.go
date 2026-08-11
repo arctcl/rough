@@ -158,6 +158,13 @@ func Window() (int, int) {
 // curW, curH — размер окна тайла для рисовалок (глобал, как curTheme).
 var curW, curH int
 
+// curPluginKey — сигнатура текущего <plugin> (для stateful-плагинов вроде chart).
+var curPluginKey string
+
+// PluginKey возвращает сигнатуру текущего выполняемого <plugin> (пайп).
+// Нужна stateful-плагинам (chart), чтобы хранить свою серию отдельно.
+func PluginKey() string { return curPluginKey }
+
 // curViewH — видимая высота тайла. Нужна для вертикального центрирования
 // <div align="center"> внутри запасного буфера скролла (ставит renderTile).
 var curViewH int

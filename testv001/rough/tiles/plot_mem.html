@@ -4,8 +4,8 @@
   <div>
     <div align="center">
       <h1>Память</h1>
-      <plugin pipe="emu_mem | bars" interval="2s"/>
-      <p>emu_mem → bars</p>
+      <plugin pipe="emu_mem | chart:0:100" height="14" interval="2s"/>
+      <p>emu_mem → chart:0:100</p>
     </div>
   </div>
   <div width="5%"></div>

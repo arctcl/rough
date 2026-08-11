@@ -4,8 +4,8 @@
   <div>
     <div align="center">
       <h1>Нагрузка CPU</h1>
-      <plugin pipe="emu_cpu | bars" interval="2s"/>
-      <p>emu_cpu → bars</p>
+      <plugin pipe="emu_cpu | chart:0:100" height="14" interval="2s"/>
+      <p>emu_cpu → chart:0:100</p>
     </div>
   </div>
   <div width="5%"></div>

@@ -382,7 +382,13 @@ type pluginEntry struct {
 
 func renderPlugin(n *Node, b *Buffer, f *flowState) {
 	// Размер окна тайла — чтобы рисовалки (bars и т.п.) адаптировались.
+	// height на <plugin> — высота зоны графика (chart рисует на ней).
 	curW, curH = b.W, b.H
+	if hv := n.Attrs["height"]; hv != "" {
+		if hh := parseLen(hv, b.H); hh > 0 {
+			curH = hh
+		}
+	}
 
 	steps := pluginSteps(n)
 	if len(steps) == 0 {
@@ -395,6 +401,7 @@ func renderPlugin(n *Node, b *Buffer, f *flowState) {
 		iv = 2 * time.Second
 	}
 	key := strings.Join(steps, "|")
+	curPluginKey = key // сигнатура для stateful-плагинов (chart)
 	var lines []string
 	if c, ok := pluginCache[key]; ok && time.Since(c.at) < iv {
 		lines = c.lines // ещё не время — показываем прошлый результат

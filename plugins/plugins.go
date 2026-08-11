@@ -9,6 +9,7 @@ import (
 	_ "rough/plugins/append"
 	_ "rough/plugins/bars"
 	_ "rough/plugins/cat"
+	_ "rough/plugins/chart"
 	_ "rough/plugins/clock"
 	_ "rough/plugins/curl"
 	_ "rough/plugins/grep"
