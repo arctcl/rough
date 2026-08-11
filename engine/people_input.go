@@ -321,16 +321,26 @@ func Run(fsys fs.FS) error {
 				// Левый клик — hit-test по хотзонам.
 				if e.Buttons()&tcell.Button1 != 0 {
 					x, y := e.Position()
-					// Клик закрывает выпадающее меню select, если оно открыто.
-					if selectMode {
-						selectMode = false
-					}
 					kind, act, href, label, output, options := HitTest(x, y)
 					// Кнопка «Закрыть» — закрыть строку вывода (не выход из приложения).
 					if kind == "quit" {
 						statusMsg = ""
 						debugLines = nil
 						break
+					}
+					// Вариант выпадающего меню — клик выбирает (до закрытия меню).
+					if kind == "selopt" {
+						selectMode = false
+						// label в хотзоне = базовый action, act = action:вариант.
+						if label != "" && strings.HasPrefix(act, label+":") {
+							selectValue[label] = act[len(label)+1:]
+						}
+						execAction(act, output)
+						break
+					}
+					// Клик мимо меню — закрыть его.
+					if selectMode {
+						selectMode = false
 					}
 					// Клик не по активному полю — завершаем ввод.
 					if inputMode && !(kind == "input" && act == inputAction && label == inputLabel) {
@@ -357,36 +367,14 @@ func Run(fsys fs.FS) error {
 					}
 					// Селект: открываем выпадающее меню ПОД элементом (как в HTML).
 					if kind == "select" {
-						selectMode = true
-						selectAction = act
-						selectLabel = label
-						selectOutput = output
-						selectIdx = 0
-						selectOpts = nil
-						for _, o := range strings.Split(options, ":") {
-							if o != "" {
-								selectOpts = append(selectOpts, o)
-							}
-						}
-						// Запоминаем позицию элемента — меню рисуется под ним.
-						selectX, selectY = x, y
+						openSelect(act, label, output, options, x, y)
+						// Точная позиция элемента — из хотзоны.
 						for _, hz := range hotzones {
 							if hz.Kind == "select" && x >= hz.X && x < hz.X+hz.W && y >= hz.Y && y < hz.Y+hz.H {
 								selectX, selectY = hz.X, hz.Y
 								break
 							}
 						}
-						statusMsg = ""
-						debugLines = nil
-						break
-					}
-					// Вариант выпадающего меню — клик выбирает.
-					if kind == "selopt" {
-						// label в хотзоне = базовый action, act = action:вариант.
-						if label != "" && strings.HasPrefix(act, label+":") {
-							selectValue[label] = act[len(label)+1:]
-						}
-						execAction(act, output)
 						break
 					}
 					execAction(act, output)
@@ -429,8 +417,6 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 		drawFrame(bg, x, y, tw, th)
 
 		inner := NewBuffer(tw-2, th-2)
-		titleFg := curTheme.ResolveColor(themeColor("title_fg"), tcell.ColorGreen)
-		inner.SetString(1, 0, t.ID, Style{Bold: true, Fg: titleFg})
 
 		if t.File != "" {
 			if f, err := fsys.Open(t.File); err == nil {
@@ -441,6 +427,14 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 			}
 		}
 		bg.Copy(inner, x+1, y+1)
+
+		// Название тайла — НА верхней рамке (поверх линии), как в модалках.
+		titleFg := curTheme.ResolveColor(themeColor("title_fg"), tcell.ColorGreen)
+		hdrBg := curTheme.ResolveColor(themeColor("header_bg"), tcell.ColorDarkBlue)
+		title := " " + t.ID + " "
+		if x+1+uniseg.StringWidth(title) <= x+tw-1 {
+			bg.SetString(x+1, y, title, Style{Bold: true, Fg: titleFg, Bg: hdrBg})
+		}
 	}
 
 	// Статус — внизу, обведён рамкой из темы (поверх тайлов). Вкладки — под ним.
@@ -859,6 +853,25 @@ func moveFocus(dir int) {
 	focusIdx = (focusIdx + dir + len(hotzones)) % len(hotzones)
 }
 
+// openSelect открывает выпадающее меню select под элементом (как при клике).
+// x, y — позиция элемента (для позиционирования меню).
+func openSelect(act, label, output, options string, x, y int) {
+	selectMode = true
+	selectAction = act
+	selectLabel = label
+	selectOutput = output
+	selectIdx = 0
+	selectOpts = nil
+	for _, o := range strings.Split(options, ":") {
+		if o != "" {
+			selectOpts = append(selectOpts, o)
+		}
+	}
+	selectX, selectY = x, y
+	statusMsg = ""
+	debugLines = nil
+}
+
 // activateFocus активирует сфокусированную хотзону (как клик): переход по ссылке,
 // активация поля ввода или выполнение действия. Возвращает true, если нужно
 // выйти из приложения (кнопка «Закрыть»).
@@ -884,6 +897,11 @@ func activateFocus(pages *Pages, route *string) bool {
 		inputBuf = ""
 		statusMsg = ""
 		debugLines = nil
+		return false
+	}
+	// Селект: Enter открывает выпадающее меню под элементом.
+	if hz.Kind == "select" {
+		openSelect(hz.Action, hz.Label, hz.Output, hz.Options, hz.X, hz.Y)
 		return false
 	}
 	if hz.Action != "" {

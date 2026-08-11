@@ -125,41 +125,7 @@ func init() {
 			"Время:     " + time.Now().Format("02.01.2006 15:04:05"),
 		}, nil
 	})
-
-	// emu_candle — эмуляция японских свечей: непрерывный мартингейл.
-	// За вызов генерирует 16 точек (в 8 раз больше, чем обновление раз в 2с),
-	// агрегирует их в OHLC: open — первая цена, close — последняя, high/low —
-	// экстремумы. open следующей = close предыдущей → свечи стыкуются без гепов.
-	rough.AddMan("emu_candle", `emu_candle — эмуляция OHLC для свечей (тестовый плагин).
-
-Использование:
-  часть пайпа: emu_candle | chart:0:100:japanse
-
-Примеры:
-  <plugin pipe="emu_candle | chart:0:100:japanse:1:2:ETH" height="14" interval="2s"/>`)
-
-	rough.AddPlugin("emu_candle", func(in []string, args []string) ([]string, error) {
-		open := emuCandleLast
-		high, low := open, open
-		prev := open
-		for i := 0; i < 16; i++ {
-			next := prev + 6*rand.Float64() - 3
-			if next > high {
-				high = next
-			}
-			if next < low {
-				low = next
-			}
-			prev = next
-		}
-		close := prev
-		emuCandleLast = close
-		return []string{fmt.Sprintf("%.2f %.2f %.2f %.2f", open, high, low, close)}, nil
-	})
 }
-
-// emuCandleLast — последняя цена (open следующей свечи = close предыдущей).
-var emuCandleLast = 50.0
 
 func main() {
 	// Тестовые файлы на диске (рядом с exe): конфиг для toggle/set/append и PPM для img.

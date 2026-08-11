@@ -415,45 +415,8 @@ func renderPlugin(n *Node, b *Buffer, f *flowState) {
 		pluginCache[key] = pluginEntry{at: time.Now(), lines: lines}
 	}
 	for _, ln := range lines {
-		putPluginLine(f, b, ln)
+		f.put(b, ln)
 		f.nl(b)
-	}
-}
-
-// putPluginLine рисует строку вывода плагина с поддержкой цветовых маркеров
-// \x01X: G — зелёный, R — красный, D — дефолт. Маркер сам не печатается.
-// Нужно для свечей chart (бычья зелёная, медвежья красная). Цвет строки
-// сбрасывается в конце (следующая строка — обычным цветом).
-func putPluginLine(f *flowState, b *Buffer, line string) {
-	if !strings.ContainsRune(line, '\x01') {
-		f.put(b, line)
-		return
-	}
-	orig := f.fg
-	defer func() { f.fg = orig }()
-	rest := line
-	for {
-		i := strings.IndexRune(rest, '\x01')
-		if i < 0 {
-			f.put(b, rest)
-			return
-		}
-		if i > 0 {
-			f.put(b, rest[:i])
-		}
-		rest = rest[i+1:]
-		if rest == "" {
-			return
-		}
-		switch rest[0] {
-		case 'G':
-			f.fg = tcell.ColorGreen
-		case 'R':
-			f.fg = tcell.ColorRed
-		case 'D':
-			f.fg = curTheme.ResolveColor(themeColor("fg"), tcell.ColorDefault)
-		}
-		rest = rest[1:]
 	}
 }
 
