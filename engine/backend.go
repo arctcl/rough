@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/uniseg"
 	"golang.org/x/net/html"
 )
 
@@ -105,9 +106,12 @@ func (f *flowState) style() Style {
 }
 
 // put рисует строку с переносом по ширине буфера.
+// Сдвиг — по реальной ширине руны (uniseg): кириллица/иероглифы занимают 2 клетки,
+// иначе буквы наезжают друг на друга.
 func (f *flowState) put(b *Buffer, s string) {
+	sw := uniseg.StringWidth(s)
 	if f.center {
-		f.x = (b.W - len([]rune(s))) / 2
+		f.x = (b.W - sw) / 2
 		if f.x < 0 {
 			f.x = 0
 		}
@@ -116,14 +120,14 @@ func (f *flowState) put(b *Buffer, s string) {
 		if f.x >= b.W {
 			f.nl(b)
 			if f.center {
-				f.x = (b.W - len([]rune(s))) / 2
+				f.x = (b.W - sw) / 2
 				if f.x < 0 {
 					f.x = 0
 				}
 			}
 		}
 		b.Set(f.x, f.y, r, f.style())
-		f.x++
+		f.x += uniseg.StringWidth(string(r))
 	}
 }
 
@@ -210,7 +214,7 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		br := curTheme.Sym("button_r", "⟩")
 		x0, y0 := f.x, f.y
 		f.put(b, string(bl)+" "+label+" "+string(br))
-		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: len([]rune(label)) + 4, H: 1, Action: act, Output: n.Attrs["output"]})
+		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(label) + 4, H: 1, Action: act, Output: n.Attrs["output"]})
 		f.nl(b)
 	case "a":
 		f.nl(b)
@@ -218,7 +222,7 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		href := n.Attrs["href"]
 		x0, y0 := f.x, f.y
 		f.put(b, "→ "+label)
-		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: len([]rune(label)) + 2, H: 1, Href: href, Kind: "nav"})
+		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(label) + 2, H: 1, Href: href, Kind: "nav"})
 		f.nl(b)
 	case "input":
 		// Поле ввода: по клику движок открывает окно ввода,
@@ -233,7 +237,7 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		ic := curTheme.Sym("input_icon", "✎")
 		x0, y0 := f.x, f.y
 		f.put(b, string(ic)+" "+label)
-		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: len([]rune(label)) + 2, H: 1, Action: act, Kind: "input", Label: label, Output: n.Attrs["output"]})
+		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(label) + 2, H: 1, Action: act, Kind: "input", Label: label, Output: n.Attrs["output"]})
 		f.nl(b)
 	case "plugin":
 		f.nl(b)

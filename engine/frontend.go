@@ -1,6 +1,9 @@
 package engine
 
-import "github.com/gdamore/tcell/v2"
+import (
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/uniseg"
+)
 
 // Style — стиль клетки (цвета и атрибуты).
 type Style struct {
@@ -47,9 +50,11 @@ func (b *Buffer) Set(x, y int, r rune, st Style) {
 }
 
 // SetString рисует строку слева направо без переноса.
+// Сдвиг — по реальной ширине руны (uniseg), чтобы кириллица не наезжала.
 func (b *Buffer) SetString(x, y int, s string, st Style) {
-	for i, r := range s {
-		b.Set(x+i, y, r, st)
+	for _, r := range s {
+		b.Set(x, y, r, st)
+		x += uniseg.StringWidth(string(r))
 	}
 }
 

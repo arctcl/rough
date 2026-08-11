@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/uniseg"
 )
 
 // statusMsg — последний результат действия/ошибка для нижней строки.
@@ -283,8 +284,8 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 func drawConfirmModal(b *Buffer, w, h int) {
 	title := "Подтверждение"
 	line := confirmMsg + "  (Enter — да, Esc — нет)"
-	width := len([]rune(line)) + 4
-	if tw := len([]rune(title)) + 4; tw > width {
+	width := uniseg.StringWidth(line) + 4
+	if tw := uniseg.StringWidth(title) + 4; tw > width {
 		width = tw
 	}
 	if width > w-4 {
@@ -308,8 +309,8 @@ func drawConfirmModal(b *Buffer, w, h int) {
 func drawInputModal(b *Buffer, w, h int) {
 	title := "✎ " + inputLabel
 	line := inputLabel + " = " + inputBuf
-	width := len([]rune(line)) + 4
-	if tw := len([]rune(title)) + 4; tw > width {
+	width := uniseg.StringWidth(line) + 4
+	if tw := uniseg.StringWidth(title) + 4; tw > width {
 		width = tw
 	}
 	if width > w-4 {
@@ -329,7 +330,7 @@ func drawInputModal(b *Buffer, w, h int) {
 	drawFrame(b, x0-1, y0-1, width+2, 4)
 	b.SetString(x0, y0-1, " "+title+" ", Style{Bg: titleBg, Fg: titleFg})
 	b.SetString(x0, y0, line, Style{Fg: inFg})
-	b.Set(x0+len([]rune(line)), y0, curTheme.Sym("cursor", "█"), Style{Fg: inFg})
+	b.Set(x0+uniseg.StringWidth(line), y0, curTheme.Sym("cursor", "█"), Style{Fg: inFg})
 	b.SetString(x0, y0+1, " Enter — применить, Esc — отмена", Style{Fg: frameFg})
 }
 
@@ -370,13 +371,14 @@ func drawTabs(b *Buffer, menu [][]string, route string, out *[]Hotzone) {
 	x := 0
 	for _, m := range menu {
 		label := " " + m[0] + " "
+		lw := uniseg.StringWidth(label)
 		st := Style{Fg: tabFg, Bg: tabBg}
 		if m[1] == route {
 			st = Style{Fg: tabFg, Bg: actBg, Bold: true}
 		}
 		b.SetString(x, b.H-1, label, st)
-		*out = append(*out, Hotzone{X: x, Y: b.H - 1, W: len([]rune(label)), H: 1, Href: m[1], Kind: "nav"})
-		x += len([]rune(label))
+		*out = append(*out, Hotzone{X: x, Y: b.H - 1, W: lw, H: 1, Href: m[1], Kind: "nav"})
+		x += lw
 	}
 }
 
