@@ -103,11 +103,12 @@ func main() { rough.TUI(roughDir) }
 `ssh` гонит по каждому команду с ключами из папки:
 
 ```html
-<button action="loop:172.0.0.1:25 | ssh:root:-i:/root/keys:apt update && apt upgrade -y | confirm">Раскатать апдейт</button>
+<button action="loop:172.0.0.[1-127] | ssh:root:-i:/root/keys:apt update && apt upgrade -y | confirm">Раскатать апдейт</button>
 ```
 
-`loop` выдаёт адреса `172.0.0.1..172.0.0.25`, `ssh` по каждому выполняет
-`apt update && apt upgrade -y` (ключи из `/root/keys`), `| confirm` — спросит
+`loop` разворачивает шаблон `172.0.0.[1-127]` в адреса `172.0.0.1..172.0.0.127`,
+`ssh` по каждому выполняет `apt update && apt upgrade -y` (ключи из `/root/keys`),
+`| confirm` — спросит
 перед раскаткой.
 
 **Любая автоматика.** Графики по таймеру, аварийные кнопки:
