@@ -236,11 +236,21 @@ func Run(fsys fs.FS) error {
 						break
 					}
 				}
-				if e.Key() == tcell.KeyCtrlC || e.Key() == tcell.KeyEscape {
+				// Ctrl+C — всегда выход. Esc — закрыть строку вывода, если она открыта,
+				// иначе выход (стандартный способ закрыть терминальное приложение).
+				if e.Key() == tcell.KeyCtrlC {
 					return nil
 				}
+				if e.Key() == tcell.KeyEscape {
+					if statusMsg != "" {
+						statusMsg = ""
+					} else {
+						return nil
+					}
+				}
+				// q — закрыть строку вывода (всплывающее окошко), НЕ выход из приложения.
 				if e.Rune() == 'q' || e.Rune() == 'Q' {
-					return nil
+					statusMsg = ""
 				}
 				// Стрелки — фокус по элементам, Enter — активировать (как клик).
 				ctrl := e.Modifiers()&tcell.ModCtrl != 0
@@ -288,9 +298,10 @@ func Run(fsys fs.FS) error {
 				if e.Buttons()&tcell.Button1 != 0 {
 					x, y := e.Position()
 					kind, act, href, label, output, options := HitTest(x, y)
-					// Кнопка «Закрыть» — выход из приложения (как клавиша q).
+					// Кнопка «Закрыть» — закрыть строку вывода (не выход из приложения).
 					if kind == "quit" {
-						return nil
+						statusMsg = ""
+						break
 					}
 					// Клик не по активному полю — завершаем ввод.
 					if inputMode && !(kind == "input" && act == inputAction && label == inputLabel) {
@@ -382,8 +393,10 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 	if len(menu) > 0 {
 		drawTabs(bg, menu, route, &hotzones)
 	}
-	// Кнопка «Закрыть» — на правом краю нижней строки, рядом с вкладками.
-	drawQuit(bg, &hotzones)
+	// Кнопка «Закрыть» — ТОЛЬКО при открытой строке вывода, на правом краю нижней строки.
+	if statusMsg != "" {
+		drawQuit(bg, &hotzones)
+	}
 
 	// Окно подтверждения рисуется поверх всего (ввод идёт прямо в поле, без модалки).
 	if confirmMode {
@@ -551,7 +564,8 @@ func drawTabs(b *Buffer, menu [][]string, route string, out *[]Hotzone) {
 }
 
 // drawQuit рисует кнопку «Закрыть» на правом краю нижней строки (рядом с вкладками).
-// Это хотзона Kind "quit": клик или Enter закрывают приложение (как клавиша q).
+// Показывается ТОЛЬКО когда открыта строка вывода (statusMsg != ""). Это хотзона
+// Kind "quit": клик или Enter закрывают строку вывода (как клавиша q).
 // Скобки — из темы (button_l/button_r), цвета — как у вкладок.
 func drawQuit(b *Buffer, out *[]Hotzone) {
 	tabFg := curTheme.ResolveColor(themeColor("header_fg"), tcell.ColorWhite)
@@ -687,9 +701,10 @@ func moveFocus(dir int) {
 // выйти из приложения (кнопка «Закрыть»).
 func activateFocus(pages *Pages, route *string) bool {
 	hz := hotzones[focusIdx]
-	// Кнопка «Закрыть» — выход (как клавиша q).
+	// Кнопка «Закрыть» — закрыть строку вывода (не выход из приложения).
 	if hz.Kind == "quit" {
-		return true
+		statusMsg = ""
+		return false
 	}
 	if hz.Href != "" {
 		if _, ok := (*pages)[hz.Href]; ok {
