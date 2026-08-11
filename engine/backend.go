@@ -62,7 +62,9 @@ type Hotzone struct {
 	Kind       string // вид зоны: "" (действие), "nav" (ссылка), "input" (поле ввода), "select"
 	Label      string // подпись для окна ввода
 	Output     string // id блока, куда направить вывод (пусто = статус-строка)
-	Options    string // варианты для select (через ":")
+	Options    string // варианты для select (через ":", подменю — в [квадратных скобках])
+	SelLevel   int    // уровень меню select (для хотзон вариантов "selopt")
+	SelIdx     int    // индекс варианта в уровне меню select
 }
 
 // hotzones — хотзоны последнего кадра, по ним делаем hit-test мыши.
@@ -86,16 +88,18 @@ func HitTest(x, y int) (kind, action, href, label, output, options string) {
 // Пока меню открыто, карта экрана ПОЛНОСТЬЮ отключена — клик обрабатывается
 // только по вариантам меню (хотзоны "selopt"). Всё, что лежит под меню
 // (поле ввода, кнопки, сам элемент select), не срабатывает вообще.
-func HitSelect(x, y int) (kind, action, label, output string) {
-	for _, hz := range hotzones {
+// Возвращает уровень и индекс варианта в стеке меню (ok=false — промах).
+func HitSelect(x, y int) (level, idx int, ok bool) {
+	for i := range hotzones {
+		hz := &hotzones[i]
 		if hz.Kind != "selopt" {
 			continue
 		}
 		if x >= hz.X && x < hz.X+hz.W && y >= hz.Y && y < hz.Y+hz.H {
-			return hz.Kind, hz.Action, hz.Label, hz.Output
+			return hz.SelLevel, hz.SelIdx, true
 		}
 	}
-	return "", "", "", ""
+	return 0, 0, false
 }
 
 // RenderHTML рендерит HTML-дерево в буфер тайла, собирая хотзоны.

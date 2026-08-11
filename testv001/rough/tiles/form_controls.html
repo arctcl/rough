@@ -7,6 +7,8 @@
       <checkbox action="toggle:app.conf:debug">Отладка</checkbox>
       <checkbox action="toggle:app.conf:logging">Логирование</checkbox>
       <select action="set:app.conf:loglevel" options="info:debug:trace" label="Уровень"/>
+      <select action="set:app.conf:theme" options="Тёмная:Светлая:Цветная [Красная:Зелёная:Синяя [Тёмно-синяя:Небесная]]" label="Тема"/>
+      <select action="set:app.conf:profile" options="Профиль 01:Профиль 02:Профиль 03:Профиль 04:Профиль 05:Профиль 06:Профиль 07:Профиль 08:Профиль 09:Профиль 10:Профиль 11:Профиль 12:Профиль 13:Профиль 14:Профиль 15:Профиль 16" label="Профиль"/>
       <input action="man:" output="out" label="Справка"/>
       <button action="cat:app.conf | tobotom:pass | wc" output="out">conf | tob:pass | wc</button>
       <hr/>

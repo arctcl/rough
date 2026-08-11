@@ -76,6 +76,40 @@ func TestRenderSelect(t *testing.T) {
 	}
 }
 
+// parseSelTree: плоский список, подменю и вложенные подменю.
+func TestParseSelTree(t *testing.T) {
+	// Плоский список — без подменю.
+	flat := parseSelTree("a:b:c")
+	if len(flat) != 3 {
+		t.Fatalf("плоский список: %d вариантов, нужно 3", len(flat))
+	}
+	for i, n := range flat {
+		if n.label != string(rune('a'+i)) || len(n.children) != 0 {
+			t.Fatalf("плоский вариант %d: %+v", i, n)
+		}
+	}
+	// Подменю в квадратных скобках.
+	nested := parseSelTree("Цвет [red:green]:Просто")
+	if len(nested) != 2 {
+		t.Fatalf("подменю: %d корневых, нужно 2", len(nested))
+	}
+	if nested[0].label != "Цвет" || len(nested[0].children) != 2 {
+		t.Fatalf("родитель: %+v", nested[0])
+	}
+	if nested[0].children[1].label != "green" || len(nested[0].children[1].children) != 0 {
+		t.Fatalf("ребёнок: %+v", nested[0].children[1])
+	}
+	// Вложенные подменю (глубина 2).
+	deep := parseSelTree("А [Б [В1:В2]:Б2]")
+	if len(deep) != 1 || len(deep[0].children) != 2 {
+		t.Fatalf("глубина: %+v", deep)
+	}
+	sub := deep[0].children[0]
+	if sub.label != "Б" || len(sub.children) != 2 || sub.children[1].label != "В2" {
+		t.Fatalf("вложенное подменю: %+v", sub)
+	}
+}
+
 // decodePPM: парсит P6, пиксели читаются.
 func TestDecodePPM(t *testing.T) {
 	ppm := append([]byte("P6\n2 2\n255\n"),
