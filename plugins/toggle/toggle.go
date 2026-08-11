@@ -31,8 +31,32 @@ func init() {
 		if len(args) < 2 {
 			return nil, errors.New("toggle: нужен файл и ключ")
 		}
+		// Режим чтения: toggle:файл:ключ:get — вернуть текущее значение (для checkbox).
+		if len(args) >= 3 && args[2] == "get" {
+			return readValue(args[0], args[1])
+		}
 		return toggleKey(args[0], args[1])
 	})
+}
+
+// readValue возвращает текущее значение ключа (для checkbox). Ключа нет — "0".
+func readValue(file, key string) ([]string, error) {
+	b, err := os.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+	for _, ln := range strings.Split(string(b), "\n") {
+		trim := strings.TrimSpace(ln)
+		if trim == "" || strings.HasPrefix(trim, "#") {
+			continue
+		}
+		eq := strings.Index(trim, "=")
+		if eq < 0 || strings.TrimSpace(trim[:eq]) != key {
+			continue
+		}
+		return []string{strings.TrimSpace(trim[eq+1:])}, nil
+	}
+	return []string{"0"}, nil
 }
 
 // toggleKey инвертирует значение ключа в файле и пишет обратно.
