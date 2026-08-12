@@ -185,6 +185,29 @@ func TestSplitActionFlags(t *testing.T) {
 	}
 }
 
+// Паникующий плагин не валит движок: пайп останавливается, ошибка с трассой.
+func TestRunStepsPanicRecover(t *testing.T) {
+	AddPlugin("boom", func(in []string, args []string) ([]string, error) {
+		panic("кривой параметр")
+	})
+	defer delete(plugins, "boom")
+
+	out, err := RunSteps([]string{"boom:x"}, nil)
+	if err == nil {
+		t.Fatal("нужна ошибка от паникующего плагина")
+	}
+	if out != nil {
+		t.Fatalf("выход не должен быть: %v", out)
+	}
+	if !strings.Contains(err.Error(), "паника") {
+		t.Fatalf("ошибка без слова «паника»: %v", err)
+	}
+	// Пайп не дошёл до следующего шага — сам не упал.
+	if _, err := RunSteps([]string{"boom:x | boom:y"}, nil); err == nil {
+		t.Fatal("пайп из двух паникующих шагов должен дать ошибку")
+	}
+}
+
 // Полный путь: SplitAction (пайп) → ParseArgs → значения.
 func TestRunStepsFlags(t *testing.T) {
 	// Плагин-заглушка, читающий гибридные параметры.

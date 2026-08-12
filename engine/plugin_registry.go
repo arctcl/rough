@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"regexp"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -261,6 +262,8 @@ func PrepareAction(raw string) (steps []string, needConfirm bool) {
 }
 
 // RunSteps выполняет пайп: выход одного шага — вход следующего.
+// Каждый шаг защищён от паники (callSafe): падение одного плагина не валит
+// весь интерфейс — пайп останавливается, а трасса уходит в ошибку.
 func RunSteps(steps []string, in []string) ([]string, error) {
 	cur := in
 	for _, s := range steps {
@@ -272,7 +275,7 @@ func RunSteps(steps []string, in []string) ([]string, error) {
 		if !ok {
 			return nil, fmt.Errorf("нет такого плагина: %s", name)
 		}
-		out, err := fn(cur, args)
+		out, err := callSafe(fn, cur, args, name)
 		if err != nil {
 			// Плагин отладки попросил остановить пайп — это не ошибка, вывод уже в статусе.
 			if errors.Is(err, ErrStop) {
@@ -283,6 +286,19 @@ func RunSteps(steps []string, in []string) ([]string, error) {
 		cur = out
 	}
 	return cur, nil
+}
+
+// callSafe вызывает плагин с защитой от паники. Паника (кривой параметр,
+// пустая переменная, выход за границы) превращается в обычную ошибку с
+// трассой — пайп останавливается, но интерфейс живёт, а где косяк — видно.
+func callSafe(fn PluginFunc, in []string, args []string, name string) (out []string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			out = nil
+			err = fmt.Errorf("паника: %v\n%s", r, debug.Stack())
+		}
+	}()
+	return fn(in, args)
 }
 
 // ErrNeedConfirm — сигнал движку: в action есть confirm, нужна модалка.

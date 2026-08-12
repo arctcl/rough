@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -143,7 +145,16 @@ func putOutput(out []string, target string) {
 
 // Run запускает движок: читает всё из вшитой папки (fs.FS), рисует интерфейс,
 // обрабатывает ввод. Работает, пока пользователь не нажмёт q / Esc / Ctrl+C.
-func Run(fsys fs.FS) error {
+// Верхнеуровневый перехват паники: пишет crash.log (Windows не затирает
+// панику из консоли), возвращает ошибку вместо мгновенной смерти терминала.
+func Run(fsys fs.FS) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			crash := fmt.Sprintf("panic: %v\n%s", r, debug.Stack())
+			_ = os.WriteFile("crash.log", []byte(crash), 0o644)
+			err = fmt.Errorf("вылет: %v (детали в crash.log)", r)
+		}
+	}()
 	// Единый загрузчик: страницы (tiles.json) + тема — всё из папки /rough.
 	ui, err := LoadUI(fsys)
 	if err != nil {
