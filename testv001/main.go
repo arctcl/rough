@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"rough"
+	"rough/engine"
 	_ "testv001/rough/plugins"
 )
 
@@ -124,6 +125,27 @@ func init() {
 			"Ядер CPU:  " + strconv.Itoa(runtime.NumCPU()),
 			"Время:     " + time.Now().Format("02.01.2006 15:04:05"),
 		}, nil
+	})
+
+	// boom — ТЕСТОВАЯ паника: изоляция пайпов ловит её, интерфейс жив.
+	rough.AddMan("boom", `boom — ТЕСТОВАЯ паника плагина (для проверки изоляции пайпов).
+Движок ловит панику в callSafe: пайп останавливается, трасса показывается
+в всплывающем окошке, интерфейс продолжает работать.
+action="boom:x"`)
+
+	rough.AddPlugin("boom", func(in []string, args []string) ([]string, error) {
+		panic("тестовая паника: параметр " + args[0])
+	})
+
+	// crash — ТЕСТОВЫЙ краш интерфейса: паника ВНЕ изоляции пайпов, верхнеуровневый
+	// перехват в Run пишет crash.log и возвращает ошибку (интерфейс вылетает).
+	rough.AddMan("crash", `crash — ТЕСТОВЫЙ краш интерфейса (для проверки crash.log).
+Паника происходит вне изоляции пайпов — движок пишет crash.log и выходит.
+action="crash"`)
+
+	rough.AddPlugin("crash", func(in []string, args []string) ([]string, error) {
+		engine.Crash()
+		return []string{"краш на следующем кадре…"}, nil
 	})
 }
 

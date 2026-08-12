@@ -156,6 +156,15 @@ func putOutput(out []string, target string) {
 	statusMsg = strings.Join(out, " | ")
 }
 
+// crashNow — флаг тестового краша (кнопка «Краш» в демо). Ставится плагином
+// crash через Crash(), проверяется главным циклом ВНЕ изоляции пайпов — чтобы
+// паника дошла до верхнеуровневого перехвата в Run и записалась в crash.log.
+var crashNow bool
+
+// Crash поднимает флаг тестового краша. Намеренный сбой для проверки crash.log:
+// интерфейс вылетит на следующем кадре, а не мгновенно в пайпе.
+func Crash() { crashNow = true }
+
 // Run запускает движок: читает всё из вшитой папки (fs.FS), рисует интерфейс,
 // обрабатывает ввод. Работает, пока пользователь не нажмёт q / Esc / Ctrl+C.
 // Верхнеуровневый перехват паники: пишет crash.log (Windows не затирает
@@ -211,6 +220,11 @@ func Run(fsys fs.FS) (err error) {
 	defer tick.Stop()
 
 	for {
+		// Тестовый краш (кнопка «Краш» в демо): паника ВНЕ изоляции пайпов —
+		// верхнеуровневый перехват в Run пишет crash.log и возвращает ошибку.
+		if crashNow {
+			panic("crash: тестовый краш (см. crash.log)")
+		}
 		renderFrame(s, pages, route, menu, w, h, fsys)
 		select {
 		case ev := <-evCh:
