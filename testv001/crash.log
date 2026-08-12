@@ -1,0 +1,16 @@
+panic: crash: тестовый краш (см. crash.log)
+goroutine 1 [running]:
+runtime/debug.Stack()
+	C:/Program Files/Go/src/runtime/debug/stack.go:26 +0x5e
+rough/engine.Run.func1()
+	C:/Users/designer2/Documents/GitHub/rough/engine/people_input.go:175 +0x3d
+panic({0x7ff67ef408a0?, 0x7ff67f003be0?})
+	C:/Program Files/Go/src/runtime/panic.go:860 +0x13a
+rough/engine.Run({0x7ff67f006720, 0x3b4eeed17620})
+	C:/Users/designer2/Documents/GitHub/rough/engine/people_input.go:226 +0x20f0
+rough.Run({0x7ff67f0063c0?, 0x7ff67f018be0?})
+	C:/Users/designer2/Documents/GitHub/rough/rough.go:53 +0x3f
+rough.TUI({0x7ff67f0063c0?, 0x7ff67f018be0?})
+	C:/Users/designer2/Documents/GitHub/rough/rough.go:29 +0x9b
+main.main()
+	C:/Users/designer2/Documents/GitHub/rough/testv001/main.go:157 +0x2b
