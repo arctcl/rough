@@ -123,10 +123,23 @@ func runStepsAndShow(steps []string, target string) {
 		return
 	}
 	if err != nil {
-		statusMsg = "ошибка: " + err.Error()
+		showError(err)
 		return
 	}
 	putOutput(out, target)
+}
+
+// showError показывает ошибку в всплывающем окошке. Многострочная трасса
+// (паника плагина) рисуется построчно со скроллом — как отладочный вывод,
+// чтобы стек был читаем, а интерфейс оставался рабочим.
+func showError(err error) {
+	msg := err.Error()
+	if strings.Contains(msg, "\n") {
+		debugLines = strings.Split(msg, "\n")
+		statusMsg = ""
+		return
+	}
+	statusMsg = "ошибка: " + msg
 }
 
 // putOutput направляет результат действия: в блок вывода (по id) или в статус-строку.
