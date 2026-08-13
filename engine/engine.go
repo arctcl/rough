@@ -29,6 +29,9 @@ func execAction(raw, target string) {
 	debugLines = nil
 	statusScroll = 0
 	statusShownAt = time.Now()
+	// Действие могло изменить файл (toggle/set/...) — сбрасываем кэш состояния
+	// чекбоксов/селектов, чтобы следующий кадр перечитал актуальное значение.
+	clearStateCache()
 	steps, need := PrepareAction(raw)
 	if need {
 		confirmMode = true

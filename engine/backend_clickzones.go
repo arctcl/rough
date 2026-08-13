@@ -50,18 +50,35 @@ func HitSelect(x, y int) (level, idx int, ok bool) {
 	return 0, 0, false
 }
 
+// stateCache — кэш состояния чекбоксов/селектов (action+get → значение).
+// Плагин :get вызывается ОДИН раз и не дёргается на каждый кадр; кэш
+// сбрасывается при выполнении действия (execAction) — после этого состояние
+// перечитывается. Для сверхлёгкой отрисовки.
+var stateCache = map[string]string{}
+
+// clearStateCache сбрасывает кэш состояния (вызывается при действии).
+func clearStateCache() {
+	stateCache = map[string]string{}
+}
+
 // checkboxOn читает состояние чекбокса: вызывает action с ":get" — плагин
 // (например toggle) возвращает текущее значение; true — если включено.
+// Значение кэшируется (см. stateCache).
 func checkboxOn(act string) bool {
 	steps := SplitSteps(act)
 	if len(steps) == 0 {
 		return false
 	}
-	out, err := RunSteps([]string{steps[len(steps)-1] + ":get"}, nil)
-	if err != nil || len(out) == 0 {
-		return false
+	key := steps[len(steps)-1] + ":get"
+	v, ok := stateCache[key]
+	if !ok {
+		out, err := RunSteps([]string{key}, nil)
+		if err != nil || len(out) == 0 {
+			return false
+		}
+		v = strings.TrimSpace(out[len(out)-1])
+		stateCache[key] = v
 	}
-	v := strings.TrimSpace(out[len(out)-1])
 	return v == "1" || strings.EqualFold(v, "on") || strings.EqualFold(v, "true") || strings.EqualFold(v, "yes")
 }
 
@@ -69,16 +86,22 @@ func checkboxOn(act string) bool {
 var selectValue = map[string]string{}
 
 // currentSelect возвращает текущее значение select: сначала — выбранное в сессии,
-// затем пробует прочитать через плагин (последний шаг action + ":get", как у
-// toggle/set). Если не знаем — "?".
+// затем — из кэша состояния, и только если ничего нет — читает через плагин
+// (последний шаг action + ":get", как у toggle/set). Если не знаем — "?".
 func currentSelect(act string) string {
 	if v, ok := selectValue[act]; ok && v != "" {
 		return v
 	}
 	steps := SplitSteps(act)
 	if len(steps) > 0 {
-		if out, err := RunSteps([]string{steps[len(steps)-1] + ":get"}, nil); err == nil && len(out) > 0 {
-			return strings.TrimSpace(out[len(out)-1])
+		key := steps[len(steps)-1] + ":get"
+		if v, ok := stateCache[key]; ok {
+			return v
+		}
+		if out, err := RunSteps([]string{key}, nil); err == nil && len(out) > 0 {
+			v := strings.TrimSpace(out[len(out)-1])
+			stateCache[key] = v
+			return v
 		}
 	}
 	return "?"

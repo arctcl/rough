@@ -133,6 +133,27 @@ func TestLoadTileCache(t *testing.T) {
 	}
 }
 
+// stateCache: состояние checkbox кэшируется — плагин :get не дёргается на каждый
+// кадр (сверхлёгкая отрисовка).
+func TestCheckboxStateCache(t *testing.T) {
+	calls := 0
+	AddPlugin("fake_toggle", func(in []string, args []string) ([]string, error) {
+		calls++
+		return []string{"1"}, nil
+	})
+	defer delete(plugins, "fake_toggle")
+	stateCache = map[string]string{}
+	if !checkboxOn("fake_toggle:a:b") {
+		t.Fatal("должно быть on")
+	}
+	if !checkboxOn("fake_toggle:a:b") {
+		t.Fatal("должно быть on (кэш)")
+	}
+	if calls != 1 {
+		t.Fatalf("плагин :get вызван %d раз, ждали 1 (кэш)", calls)
+	}
+}
+
 // decodePPM: парсит P6, пиксели читаются.
 func TestDecodePPM(t *testing.T) {
 	ppm := append([]byte("P6\n2 2\n255\n"),
