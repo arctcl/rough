@@ -268,3 +268,27 @@ func TestParseArgsGreedyLastNoDup(t *testing.T) {
 		t.Fatalf("команда = %q, ждали cat:/a:b (без дубля)", v["команда"])
 	}
 }
+
+// SplitSteps: "|" внутри кавычек не разделяет шаги (экранирование ввода).
+func TestSplitStepsQuoted(t *testing.T) {
+	steps := SplitSteps("a | b | 'c | d'")
+	if len(steps) != 3 || steps[0] != "a" || steps[1] != "b" || steps[2] != "'c | d'" {
+		t.Fatalf("SplitSteps с кавычками = %v", steps)
+	}
+}
+
+// Инъекция через поле ввода: ввод оборачивается в кавычки, "|" внутри не
+// создаёт новый шаг — произвольная команда не выполняется.
+func TestInputInjectionBlocked(t *testing.T) {
+	injected := "cat | ssh:root:evil::reboot"
+	act := "man:'" + injected + "'"
+	steps, _ := PrepareAction(act)
+	if len(steps) != 1 {
+		t.Fatalf("инъекция: пайп из %d шагов, ждали 1: %v", len(steps), steps)
+	}
+	// Единственный шаг — один литеральный аргумент плагина man.
+	name, args := SplitAction(steps[0])
+	if name != "man" || len(args) != 1 || args[0] != injected {
+		t.Fatalf("инъекция не заблокирована: имя=%q args=%v", name, args)
+	}
+}

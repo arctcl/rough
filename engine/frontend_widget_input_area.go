@@ -27,7 +27,17 @@ func widgetInputKey(e *tcell.EventKey) {
 		if !strings.HasSuffix(act, ":") {
 			act += ":"
 		}
-		act += inputBuf
+		// Ввод из поля — ЛИТЕРАЛ: оборачиваем в кавычки, чтобы спецсимволы
+		// (пайп |, двоеточие :, подстановка $) не трактовались как синтаксис
+		// action. Так через поле ввода нельзя протащить произвольную команду
+		// (инъекция: "cat | ssh:..." останется ОДНИМ значением, а не пайпом).
+		if strings.Contains(inputBuf, "'") {
+			// Кавычка в значении конфликтует с обёрткой — безопасно отклоняем.
+			inputMode = false
+			statusMsg = "ввод содержит кавычку ' — недопустимо"
+			return
+		}
+		act += "'" + inputBuf + "'"
 		inputMode = false
 		execAction(act, inputOutput)
 	case tcell.KeyEscape:

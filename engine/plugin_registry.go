@@ -153,14 +153,39 @@ func stripQuotes(s string) string {
 }
 
 // SplitSteps разбирает пайп "шаг1 | шаг2 | шаг3" на шаги.
+// "|" внутри кавычек ('...' / "...") — часть шага, не разделитель:
+// так ввод из поля ввода (обёрнутый в кавычки) не создаёт новый шаг
+// (защита от инъекций: поле не может протащить произвольную команду).
 func SplitSteps(raw string) []string {
 	var steps []string
-	for _, s := range strings.Split(raw, "|") {
-		s = strings.TrimSpace(s)
+	var cur strings.Builder
+	var quote rune
+	flush := func() {
+		s := strings.TrimSpace(cur.String())
 		if s != "" {
 			steps = append(steps, s)
 		}
+		cur.Reset()
 	}
+	for _, r := range raw {
+		if quote != 0 {
+			if r == quote {
+				quote = 0
+			}
+			cur.WriteRune(r)
+			continue
+		}
+		switch r {
+		case '\'', '"':
+			quote = r
+			cur.WriteRune(r)
+		case '|':
+			flush()
+		default:
+			cur.WriteRune(r)
+		}
+	}
+	flush()
 	return steps
 }
 
