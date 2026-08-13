@@ -1,9 +1,9 @@
 // Плагин ssh — выполнить команду на удалённом сервере по SSH.
-// Юникс-лайк: `ssh user@host команда` — так же и здесь:
-// action="ssh:user@host:команда" (команда — остаток после второго «:»).
+// Юникс-лайк: `ssh user@host команда` — здесь единые quick-параметры:
+// action="ssh:user:host::команда" (порт — пустой слот или --port, дефолт 22).
 // Нативно в Go (golang.org/x/crypto/ssh) — никаких внешних ssh-бинарников,
-// работает в любом контейнере. Аутентификация: ssh-agent + стандартные ключи ~/.ssh,
-// проверка хоста — по known_hosts (если файл есть).
+// работает в любом контейнере. Аутентификация: ssh-agent + стандартные ключи ~/.ssh
+// (или --keys=ПУТЬ), проверка хоста — по known_hosts (если файл есть).
 package ssh
 
 import (
@@ -15,116 +15,88 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/knownhosts"
 
 	"rough"
+	"rough/engine"
 )
 
 // man_ssh — справка по плагину (для man).
 const man_ssh = `ssh — выполнить команду на удалённом сервере по SSH.
 
-Использование:
-  action="ssh:user@host:команда"
-  action="ssh:user@host:-i:ПУТЬ:команда"   — с указанием папки или файла ключей
-  пайп:  ... | ssh:user:[ -i ПУТЬ ]:команда   — хост из каждой строки входа (loop)
+Использование (единые quick-параметры: позиционные или флаги, можно микс):
+  action="ssh:user:host::команда"             — порт по дефолту 22
+  action="ssh:user:host:2222:команда"         — порт позиционно
+  action="ssh:user:host::команда --port=2222" — порт флагом
+  action="ssh:user:host::команда --keys=ПУТЬ" — свои ключи
 
 Аргументы:
-  user@host   — куда подключаться.
-  -i ПУТЬ     — папка с ключами или конкретный файл ключа (как у настоящего ssh).
-                Если не указан — ключи ищутся в ~/.ssh (дефолт ssh).
-  команда     — что выполнить (склеивается из остатка через «:»).
+  user    — пользователь на сервере.
+  host    — адрес сервера.
+  port    — порт (по умолчанию 22): пустой слот, позиционно или флаг --port.
+  команда — что выполнить (остаток через «:»).
+  --keys=ПУТЬ — папка с ключами или конкретный файл ключа (иначе ~/.ssh).
 
-Аутентификация: ssh-agent (SSH_AUTH_SOCK), затем ключи из указанной папки
-или ~/.ssh по дефолту: id_ed25519, id_rsa, id_ecdsa. Проверка хоста —
-по known_hosts (если файл есть).
+Аутентификация: ssh-agent (SSH_AUTH_SOCK), затем ключи из --keys или ~/.ssh:
+id_ed25519, id_rsa, id_ecdsa. Проверка хоста — по known_hosts (если файл есть).
 
 Примеры:
-  action="ssh:root@srv1:systemctl status nginx"
-  action="ssh:root@srv1:uptime"
-  action="ssh:root@srv1:-i:/root/keys:hostname"          — ключи из папки /root/keys
-  action="ssh:root@srv1:-i:~/.ssh/id_rsa:uptime"         — конкретный файл ключа
-  action="ssh:root@srv1:df -h | grep:/data"              — вывод идёт в пайп
-  action="ssh:root@srv1:-i:/root/keys:df -h | head:3"    — ключи + пайп
-  action="loop:172.0.0.1:25 | ssh:root:apt update && apt upgrade -y"  — апдейт по всем хостам
-  action="loop:172.0.0.1:25 | ssh:root:-i:/root/keys:uptime"          — ключи из папки по циклу`
+  action="ssh:root:srv1:uptime"
+  action="ssh:root:srv1::systemctl status nginx"
+  action="ssh:root:srv1:2222:uptime"
+  action="ssh:root:srv1::hostname --keys=/root/keys"
+  action="ssh:root:srv1::df -h | grep:/data"`
+
+// sshParams — единые quick-параметры ssh. Порядок = позиции:
+// user, host, port (дефолт 22), cmd (глотает остаток).
+var sshParams = []engine.Param{
+	{Name: "user"},
+	{Name: "host"},
+	{Name: "port", Default: "22"},
+	{Name: "cmd"},
+}
 
 func init() {
-	// ssh: user@host [ -i ПУТЬ ] : команда (команда склеивается через «:» обратно)
 	rough.AddMan("ssh", man_ssh)
 
 	rough.AddPlugin("ssh", func(in []string, args []string) ([]string, error) {
-		if len(args) < 2 {
-			return nil, errors.New("ssh: нужен user@host и команда")
-		}
-		// Пайп-режим: ssh:user:команда — хост берётся из строк входа (например loop).
-		if !strings.Contains(args[0], "@") {
-			return sshPipe(in, args)
-		}
-		// Обычный: ssh:user@host:команда (и опционально -i:путь).
-		addr := args[0]
-		rest := args[1:]
-
-		// Необязательный флаг -i: папка с ключами или конкретный файл ключа.
-		// Не указан — ключи из ~/.ssh по дефолту (как у настоящего ssh).
+		// Ключи — флаг --keys=ПУТЬ. Вырезаем вручную, чтобы не занимал
+		// позиционный слот (иначе сдвинул бы user:host:port:cmd).
 		keyPath := ""
-		if len(rest) >= 2 && rest[0] == "-i" {
-			keyPath = rest[1]
-			rest = rest[2:]
+		rest := args[:0]
+		for _, a := range args {
+			if strings.HasPrefix(a, "--keys=") {
+				keyPath = strings.TrimPrefix(a, "--keys=")
+				continue
+			}
+			rest = append(rest, a)
 		}
-
-		cmd := strings.Join(rest, ":")
-		if cmd == "" {
-			return nil, errors.New("ssh: нужна команда")
+		// Остальное — единый разбор quick-параметров.
+		vals, err := engine.ParseArgs(rest, sshParams)
+		if err != nil {
+			return nil, err
 		}
-		return runSSH(addr, keyPath, cmd)
+		user, host, port, cmd := vals["user"], vals["host"], vals["port"], vals["cmd"]
+		if user == "" || host == "" || cmd == "" {
+			return nil, errors.New("ssh: нужен user, host и команда")
+		}
+		return runSSH(user, host, port, keyPath, cmd)
 	})
 }
 
-// sshPipe — пайп-режим: ssh:user:[ -i ПУТЬ ]:команда, хост из каждой строки входа.
-// Каждый адрес (строка in) — отдельный хост, для всех выполняется одна команда.
-func sshPipe(in []string, args []string) ([]string, error) {
-	user := args[0]
-	rest := args[1:]
-	keyPath := ""
-	if len(rest) >= 2 && rest[0] == "-i" {
-		keyPath = rest[1]
-		rest = rest[2:]
-	}
-	cmd := strings.Join(rest, ":")
-	if cmd == "" {
-		return nil, errors.New("ssh: нужна команда")
-	}
-	var out []string
-	for _, host := range in {
-		host = strings.TrimSpace(host)
-		if host == "" {
-			continue
-		}
-		res, err := runSSH(user+"@"+host, keyPath, cmd)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", host, err)
-		}
-		out = append(out, res...)
-	}
-	if len(out) == 0 {
-		return nil, errors.New("ssh: нет хостов во входе (нужен loop?)")
-	}
-	return out, nil
-}
-
 // runSSH подключается к серверу, выполняет команду и возвращает вывод построчно.
-func runSSH(addr, keyPath, cmd string) ([]string, error) {
-	user, host := splitHost(addr)
+func runSSH(user, host, port, keyPath, cmd string) ([]string, error) {
 	config := &ssh.ClientConfig{
 		User:            user,
 		Auth:            authMethods(keyPath),
 		HostKeyCallback: hostKeyCallback(),
-		Timeout:         10 * 1e9, // 10 секунд на установку соединения
+		Timeout:         10 * time.Second, // 10 секунд на установку соединения
 	}
-	conn, err := ssh.Dial("tcp", net.JoinHostPort(host, "22"), config)
+	conn, err := ssh.Dial("tcp", net.JoinHostPort(host, port), config)
 	if err != nil {
 		return nil, fmt.Errorf("ssh: %w", err)
 	}
@@ -145,19 +117,6 @@ func runSSH(addr, keyPath, cmd string) ([]string, error) {
 		return splitLines(buf.String()), fmt.Errorf("ssh %s: %v", cmd, err)
 	}
 	return splitLines(buf.String()), nil
-}
-
-// splitHost разбирает "user@host" на пользователя и хост (без порта).
-// Без «@» — текущий пользователь, хост как есть.
-func splitHost(addr string) (usr, host string) {
-	if i := strings.Index(addr, "@"); i >= 0 {
-		return addr[:i], addr[i+1:]
-	}
-	u, err := user.Current()
-	if err != nil {
-		return "", addr
-	}
-	return u.Username, addr
 }
 
 // authMethods собирает способы аутентификации: ssh-agent и ключи.
