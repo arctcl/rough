@@ -56,13 +56,12 @@ Run(fsys) → LoadUI (tiles.json → страницы/тайлы, тема)
 - `frontend_widget_selecter_list.go` — выпадающий список + подменю
 - `frontend_widget_modal_confirm.go` — модалка подтверждения
 - `frontend_widget_status_window.go` — статус-строка + показ ошибок
-- `frontend_widget_tabs.go` — вкладки + кнопка «Закрыть»
-
 **Фронт (раскладка и холст)**
 - `frontend_buffer.go` — холст: `Buffer`/`Style`/`Cell` (2D-буфер клеток → экран tcell)
 - `frontend_stretcher.go` — растягиватель: `renderFrame`, `renderTile`, `scrollTile`,
   `(Tile)Rect` — тайлы тянутся за ресайзом терминала
 - `frontend_tiles_borders.go` — рамки тайлов: `drawFrame`, `drawFrameStyled`
+- `frontend_tabs.go` — вкладки + кнопка «Закрыть»: `drawTabs`, `drawQuit`
 - `frontend_focus.go` — фокус: `focusIdx`, `moveFocus`, `activateFocus`
 
 **Сырой ввод от человека (people_input_*)**
