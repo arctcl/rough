@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"strconv"
-	"strings"
 )
 
 // Tile — один тайл на странице (позиция и размеры в % или px).
@@ -133,35 +131,4 @@ func LoadMenu(fsys fs.FS) [][]string {
 		}
 	}
 	return menu
-}
-
-// Rect считает координаты тайла в клетках терминала w×h.
-func (t Tile) Rect(w, h int) (x, y, tw, th int) {
-	x = parseLen(t.X, w)
-	y = parseLen(t.Y, h)
-	tw = parseLen(t.W, w)
-	th = parseLen(t.H, h)
-	return
-}
-
-// parseLen переводит "10%" / "20" / "50vw" / "30vh" в клетки.
-// % и vw — от ширины (total), vh — от высоты (тоже total, зависит от вызова).
-func parseLen(s string, total int) int {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return 0
-	}
-	if strings.HasSuffix(s, "%") {
-		return int(parseFloat(s[:len(s)-1]) * float64(total) / 100)
-	}
-	if strings.HasSuffix(s, "vw") || strings.HasSuffix(s, "vh") {
-		return int(parseFloat(s[:len(s)-2]) * float64(total) / 100)
-	}
-	return int(parseFloat(s))
-}
-
-// parseFloat — безопасный разбор числа (при ошибке — 0).
-func parseFloat(s string) float64 {
-	f, _ := strconv.ParseFloat(strings.TrimSpace(s), 64)
-	return f
 }

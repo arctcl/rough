@@ -5,7 +5,7 @@ var mouseX, mouseY = -1, -1
 
 // mouseBtn1 — зажата ли левая кнопка; mouseLastX/Y — прошлая позиция (для drag).
 var (
-	mouseBtn1               bool
+	mouseBtn1              bool
 	mouseLastX, mouseLastY int
 )
 
@@ -16,6 +16,6 @@ var (
 type MouseEvent struct {
 	X, Y  int
 	Left  bool
-	Wheel int // -1 вверх, +1 вниз, 0 нет
+	Wheel int  // -1 вверх, +1 вниз, 0 нет
 	Held  bool // кнопка уже была зажата (перетаскивание)
 }
