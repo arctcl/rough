@@ -19,6 +19,7 @@ import (
 	_ "rough/plugins/hello"
 	_ "rough/plugins/line"
 	_ "rough/plugins/man"
+	_ "rough/plugins/sed"
 	_ "rough/plugins/set"
 	_ "rough/plugins/ssh"
 	_ "rough/plugins/tail"

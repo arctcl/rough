@@ -18,29 +18,29 @@ import (
 const man_bars = `bars — полосковый график из чисел (спарклайн).
 
 Использование:
-  часть пайпа: ... | bars[:МАСКА]
+  часть пайпа: ... | bars[:ЦВЕТ]
 
 Аргументы:
-  МАСКА — регулярка с группой-числом (берётся первая группа).
-          Без маски — число из всей строки.
+  ЦВЕТ — имя ключа темы (color_5 и т.п.), опционально, в конце.
+         Нет аргумента — цвет из темы по умолчанию (color_2).
+
+Числа bars берёт сам (первое число из каждой строки). Для вытаскивания
+чисел из текста — отдельные плагины-обработчики (cut, awk, sed) перед bars.
 
 Ширина подстраивается под размер тайла/колонки (engine.Window()):
 поменял 50% на 40% — график сам стал уже.
 
 Примеры:
-  <plugin pipe="file:/tmp/cpu.log | bars:cpu=(\d+)" interval="1s"/>
-  action="ssh:root@srv:cat /proc/loadavg | bars"`
+  <plugin pipe="emu_cpu | bars" interval="1s"/>
+  action="cat:/proc/loadavg | bars"
+  action="cat:load.log | cut::2 | bars:color_3"`
 
 func init() {
 	rough.AddMan("bars", man_bars)
 	rough.AddPlugin("bars", func(in []string, args []string) ([]string, error) {
-		// Числа: с маской — через регулярку (группа), без маски — первое число в строке.
-		var vals []float64
-		if mask := strings.Join(args, ":"); mask != "" {
-			vals = engine.ApplyMask(in, mask)
-		} else {
-			vals = numbersIn(in)
-		}
+		// Числа: первое число из каждой строки (numbersIn). Обработку текста
+		// не делаем — для этого отдельные плагины (cut/awk/sed) перед bars.
+		vals := numbersIn(in)
 		if len(vals) == 0 {
 			return []string{"нет чисел"}, nil
 		}
@@ -84,8 +84,16 @@ func init() {
 			}
 			line[x] = rune(levels[lvl])
 		}
-		// Цвет из темы (color_2) — движковый putColored разбирает маркер.
-		return []string{"\x01{color_2}" + string(line) + "\x01{}"}, nil
+		// Цвет — опциональный аргумент в конце (имя ключа темы: color_5, ...).
+		// Нет аргумента — цвет из темы по умолчанию (color_2).
+		col := "color_2"
+		if len(args) > 0 {
+			if c := strings.TrimSpace(args[len(args)-1]); c != "" {
+				col = c
+			}
+		}
+		// Движковый putColored разбирает маркер, маркер не ломает ширину.
+		return []string{"\x01{" + col + "}" + string(line) + "\x01{}"}, nil
 	})
 }
 
