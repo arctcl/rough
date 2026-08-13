@@ -60,7 +60,7 @@ import _ "rough/plugins" // cat, hello, ssh, curl, man, grep, tail, head, wc, ..
 {
   "theme": "default",
   "menu": [["Главная", "/main"], ["Справка", "/man"]],
-  "паттерн": ["id", "x", "y", "w", "h", "файл"],
+  "pattern": ["id", "x", "y", "w", "h", "file"],
   "/main": [
     ["hello", "0%",  "0%",  "40%", "40%", "tiles/hello.html"],
     ["cfg",   "40%", "0%",  "60%", "100%", "tiles/cfg.html"]
@@ -69,7 +69,7 @@ import _ "rough/plugins" // cat, hello, ssh, curl, man, grep, tail, head, wc, ..
 ```
 
 - `"menu"` — вкладки внизу (пары [имя, роут]), переключение кликом / Tab / Ctrl+цифры;
-- `"паттерн"` — схема строк данных (один раз), дальше только массивы;
+- `"pattern"` — схема строк данных (один раз), дальше только массивы;
 - координаты: `%` (от экрана), `px` (клетки), `vw/vh` — доли окна;
 - `theme` — имя темы из `themes/`.
 

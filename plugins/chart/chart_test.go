@@ -41,7 +41,7 @@ func TestChartFlags(t *testing.T) {
 	delete(lastAdd, "CPU")
 
 	// Только флаги: мин/макс обязательные, заголовок по имени.
-	out, err := engine.RunSteps([]string{"chart --мин=0 --макс=100 --заголовок=CPU"}, []string{"50"})
+	out, err := engine.RunSteps([]string{"chart --min=0 --max=100 --title=CPU"}, []string{"50"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestChartFlags(t *testing.T) {
 	// Микс: позиционные + флаг, заголовок по имени.
 	delete(series, "MEM")
 	delete(lastAdd, "MEM")
-	out2, err := engine.RunSteps([]string{"chart:0:100:1:2 --заголовок=MEM"}, []string{"50"})
+	out2, err := engine.RunSteps([]string{"chart:0:100:1:2 --title=MEM"}, []string{"50"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestChartFlags(t *testing.T) {
 		t.Fatalf("микс: заголовок MEM не найден:\n%s", dump(out2))
 	}
 	// Ошибка: обязательный мин не задан.
-	if _, err := engine.RunSteps([]string{"chart --макс=100"}, []string{"50"}); err == nil {
+	if _, err := engine.RunSteps([]string{"chart --max=100"}, []string{"50"}); err == nil {
 		t.Fatal("нужна ошибка: обязательный параметр мин не задан")
 	}
 }

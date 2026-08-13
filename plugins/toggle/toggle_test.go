@@ -46,12 +46,12 @@ func TestToggleGetSpace(t *testing.T) {
 	}
 }
 
-// normSep: пусто и "=" → "=", "пробел" → пробел.
+// normSep: пусто и "=" → "=", "space" → пробел.
 func TestNormSep(t *testing.T) {
 	if normSep("") != "=" || normSep("=") != "=" {
 		t.Fatal("дефолт не '='")
 	}
-	if normSep("пробел") != " " {
-		t.Fatal("пробел не распознан")
+	if normSep("space") != " " {
+		t.Fatal("space не распознан")
 	}
 }

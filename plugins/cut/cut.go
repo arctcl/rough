@@ -1,6 +1,6 @@
 // Плагин cut — вырезать поля из строки (как cut -d -f).
 // Юникс-лайк: `cut -d'Д' -fN` — здесь единые quick-параметры:
-// ... | cut --разделитель=Д --поля=N   или   ... | cut::N (пробел по умолчанию).
+// ... | cut --sep=Д --fields=N   или   ... | cut::N (пробел по умолчанию).
 // Работает с текстом в пайпе: числа/поля для bars и chart вытаскиваются здесь,
 // а не внутри рисовалок (см. принцип «в одном плагине — одно дело»).
 package cut
@@ -18,22 +18,22 @@ import (
 const man_cut = `cut — вырезать поля из строки (как cut -d -f).
 
 Использование (единые quick-параметры):
-  часть пайпа: ... | cut --разделитель=Д --поля=N
+  часть пайпа: ... | cut --sep=Д --fields=N
                ... | cut::N        — разделитель по умолчанию (пробел)
 
 Аргументы:
-  разделитель — чем делить строку на поля (по умолчанию пробел).
-  поля        — номер поля (1-е = 1), диапазон N-M или список через запятую (1,3).
+  sep    — чем делить строку на поля (по умолчанию пробел).
+  fields — номер поля (1-е = 1), диапазон N-M или список через запятую (1,3).
 
 Примеры:
-  action="cat:app.conf | cut --разделитель== --поля=2"    — значения ключей (key=value)
-  action="cat:load.log | cut::2 | bars"                     — 2-е поле по пробелу → график
-  action="cat:x.log | cut --поля=2-4"                       — поля со 2-го по 4-е`
+  action="cat:app.conf | cut --sep== --fields=2"    — значения ключей (key=value)
+  action="cat:load.log | cut::2 | bars"              — 2-е поле по пробелу → график
+  action="cat:x.log | cut --fields=2-4"              — поля со 2-го по 4-е`
 
-// cutParams — параметры cut. Порядок = позиции: разделитель, поля.
+// cutParams — параметры cut. Порядок = позиции: sep, fields.
 var cutParams = []engine.Param{
-	{Name: "разделитель", Default: " "},
-	{Name: "поля"},
+	{Name: "sep", Default: " "},
+	{Name: "fields"},
 }
 
 func init() {
@@ -43,10 +43,10 @@ func init() {
 		if err != nil {
 			return nil, err
 		}
-		sep := vals["разделитель"]
-		fields := vals["поля"]
+		sep := vals["sep"]
+		fields := vals["fields"]
 		if fields == "" {
-			return nil, errors.New("cut: нужны поля (--поля=N или N-M)")
+			return nil, errors.New("cut: нужны поля (--fields=N или N-M)")
 		}
 		var out []string
 		for _, ln := range in {

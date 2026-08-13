@@ -1,7 +1,7 @@
 // Плагин set — поставить значение ключа в конфиге приложения.
 // Конфиги бывают двух форматов: ключ=значение и ключ значение (через пробел).
-// Какой символ отделяет ключ от значения — флаг --разделитель (по умолчанию "=").
-// Вызов: action="set:ФАЙЛ:КЛЮЧ:ЗНАЧЕНИЕ [--разделитель=СИМВОЛ]"
+// Какой символ отделяет ключ от значения — флаг --sep (по умолчанию "=").
+// Вызов: action="set:FILE:KEY:VALUE [--sep=CHAR]"
 package set
 
 import (
@@ -17,30 +17,30 @@ import (
 const man_set = `set — поставить значение ключа в конфиге приложения.
 
 Использование:
-  action="set:ФАЙЛ:КЛЮЧ:ЗНАЧЕНИЕ"
-  action="set:ФАЙЛ:КЛЮЧ:ЗНАЧЕНИЕ --разделитель=пробел"  — конфиг через пробел
+  action="set:FILE:KEY:VALUE"
+  action="set:FILE:KEY:VALUE --sep=space"  — конфиг через пробел
 
 Аргументы:
-  ФАЙЛ     — конфиг приложения.
-  КЛЮЧ     — какой ключ менять.
-  ЗНАЧЕНИЕ — новое значение (остаток, склеивается через «:»).
-  --разделитель=СИМВОЛ — что отделяет ключ от значения. По умолчанию "="
+  FILE  — конфиг приложения.
+  KEY   — какой ключ менять.
+  VALUE — новое значение (остаток, склеивается через «:»).
+  --sep=CHAR — что отделяет ключ от значения. По умолчанию "="
                 (конфиг вида ключ=значение). Для конфига вида "ключ значение"
-                укажи --разделитель=пробел.
+                укажи --sep=space.
 
 Примеры:
   action="set:app.conf:loglevel:debug"                    — ключ=значение
-  action="set:/etc/mailcow:limit:100 --разделитель=пробел" — ключ значение`
+  action="set:/etc/mailcow:limit:100 --sep=space" — ключ значение`
 
 func init() {
 	rough.AddMan("set", man_set)
 	rough.AddPlugin("set", func(in []string, args []string) ([]string, error) {
-		sep, args := engine.FlagValue(args, "разделитель")
+		sep, args := engine.FlagValue(args, "sep")
 		sep = normSep(sep)
 		if len(args) < 3 {
 			return nil, errors.New("set: нужен файл, ключ и значение")
 		}
-		// Режим чтения: set:файл:ключ:get — вернуть текущее значение (для select).
+		// Режим чтения: set:file:key:get — вернуть текущее значение (для select).
 		if args[2] == "get" {
 			return readKey(args[0], args[1], sep)
 		}
@@ -49,13 +49,13 @@ func init() {
 }
 
 // normSep нормализует разделитель ключ-значение: пусто/"=" → "=";
-// слово "пробел"/"space" → пробел.
+// слово "space" → пробел.
 func normSep(s string) string {
 	s = strings.TrimSpace(s)
 	switch strings.ToLower(s) {
 	case "", "=":
 		return "="
-	case "пробел", "space":
+	case "space":
 		return " "
 	}
 	return s

@@ -23,12 +23,12 @@ func TestSetDefaultEqual(t *testing.T) {
 // Конфиг через пробел: ключ значение.
 func TestSetSpaceSeparator(t *testing.T) {
 	f := filepath.Join(t.TempDir(), "c.conf")
-	os.WriteFile(f, []byte("ыыы 3\nхуй 5\n"), 0644)
-	if _, err := setKey(f, "хуй", "10", " "); err != nil {
+	os.WriteFile(f, []byte("foo 3\nbar 5\n"), 0644)
+	if _, err := setKey(f, "bar", "10", " "); err != nil {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(f)
-	if !strings.Contains(string(b), "хуй 10") {
+	if !strings.Contains(string(b), "bar 10") {
 		t.Fatalf("не записано через пробел:\n%s", b)
 	}
 }
@@ -36,8 +36,8 @@ func TestSetSpaceSeparator(t *testing.T) {
 // Чтение значения (для select) из пробельного конфига.
 func TestSetReadKeySpace(t *testing.T) {
 	f := filepath.Join(t.TempDir(), "c.conf")
-	os.WriteFile(f, []byte("ыыы 3\n"), 0644)
-	out, err := readKey(f, "ыыы", " ")
+	os.WriteFile(f, []byte("foo 3\n"), 0644)
+	out, err := readKey(f, "foo", " ")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,12 +46,12 @@ func TestSetReadKeySpace(t *testing.T) {
 	}
 }
 
-// normSep: пусто и "=" → "=", "пробел" → пробел.
+// normSep: пусто и "=" → "=", "space" → пробел.
 func TestNormSep(t *testing.T) {
 	if normSep("") != "=" || normSep("=") != "=" {
 		t.Fatal("дефолт не '='")
 	}
-	if normSep("пробел") != " " {
-		t.Fatal("пробел не распознан")
+	if normSep("space") != " " {
+		t.Fatal("space не распознан")
 	}
 }

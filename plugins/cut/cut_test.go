@@ -20,7 +20,7 @@ func TestCutFieldDefaultSep(t *testing.T) {
 // Разделитель через флаг: поля по ";". Диапазон N-M.
 // (Значение флага не должно содержать ":" — это разделитель аргументов в quick.)
 func TestCutSepAndRange(t *testing.T) {
-	out, err := engine.RunSteps([]string{"cut --разделитель=; --поля=2-3"}, []string{"u;host;port;x"})
+	out, err := engine.RunSteps([]string{"cut --sep=; --fields=2-3"}, []string{"u;host;port;x"})
 	if err != nil {
 		t.Fatal(err)
 	}

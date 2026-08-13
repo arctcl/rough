@@ -5,12 +5,12 @@ import (
 	"testing"
 )
 
-// Параметры для теста: как у гипотетического плагина fuck.
+// Параметры для теста: как у гипотетического плагина demo.
 var testParams = []Param{
-	{Name: "место", Required: true},  // обязательный, позиция 1
-	{Name: "время", Default: "10"},   // с дефолтом, позиция 2
-	{Name: "скорость", Default: "4"}, // с дефолтом, позиция 3
-	{Name: "смазка", Default: "да"},  // с дефолтом, позиция 4
+	{Name: "place", Required: true}, // обязательный, позиция 1
+	{Name: "time", Default: "10"},   // с дефолтом, позиция 2
+	{Name: "speed", Default: "4"},   // с дефолтом, позиция 3
+	{Name: "mode", Default: "on"},   // с дефолтом, позиция 4
 }
 
 // want проверяет карту значений по ожиданию.
@@ -28,77 +28,77 @@ func checkVals(t *testing.T, got map[string]string, want map[string]string) {
 
 // Позиционная форма: все параметры по порядку двоеточиями.
 func TestParseArgsPositional(t *testing.T) {
-	v, err := ParseArgs([]string{"зад", "5", "9", "нет"}, testParams)
+	v, err := ParseArgs([]string{"back", "5", "9", "off"}, testParams)
 	if err != nil {
 		t.Fatal(err)
 	}
 	checkVals(t, v, map[string]string{
-		"место": "зад", "время": "5", "скорость": "9", "смазка": "нет",
+		"place": "back", "time": "5", "speed": "9", "mode": "off",
 	})
 }
 
 // Именованные флаги: порядок не важен, дефолты не трогаем.
 func TestParseArgsFlags(t *testing.T) {
-	v, err := ParseArgs([]string{"--смазка=нет", "--место=рот", "--время=3"}, testParams)
+	v, err := ParseArgs([]string{"--mode=off", "--place=front", "--time=3"}, testParams)
 	if err != nil {
 		t.Fatal(err)
 	}
 	checkVals(t, v, map[string]string{
-		"место": "рот", "время": "3", "скорость": "4", "смазка": "нет",
+		"place": "front", "time": "3", "speed": "4", "mode": "off",
 	})
 }
 
 // Несколько флагов в одном аргументе через пробел.
 func TestParseArgsFlagsOneArg(t *testing.T) {
-	v, err := ParseArgs([]string{"--место=зад --время=7 --смазка=нет"}, testParams)
+	v, err := ParseArgs([]string{"--place=back --time=7 --mode=off"}, testParams)
 	if err != nil {
 		t.Fatal(err)
 	}
 	checkVals(t, v, map[string]string{
-		"место": "зад", "время": "7", "скорость": "4", "смазка": "нет",
+		"place": "back", "time": "7", "speed": "4", "mode": "off",
 	})
 }
 
 // Микс: пустой слот ":" + флаг, остальное позиционно.
 func TestParseArgsMix(t *testing.T) {
-	// fuck::10:4:no --место=зад → место из флага, остальное позиционно.
-	v, err := ParseArgs([]string{"", "10", "4", "no", "--место=зад"}, testParams)
+	// demo::10:4:off --place=back → место из флага, остальное позиционно.
+	v, err := ParseArgs([]string{"", "10", "4", "off", "--place=back"}, testParams)
 	if err != nil {
 		t.Fatal(err)
 	}
 	checkVals(t, v, map[string]string{
-		"место": "зад", "время": "10", "скорость": "4", "смазка": "no",
+		"place": "back", "time": "10", "speed": "4", "mode": "off",
 	})
 }
 
 // Дефолты подставляются, когда параметр не задан.
 func TestParseArgsDefaults(t *testing.T) {
-	v, err := ParseArgs([]string{"зад"}, testParams)
+	v, err := ParseArgs([]string{"back"}, testParams)
 	if err != nil {
 		t.Fatal(err)
 	}
 	checkVals(t, v, map[string]string{
-		"место": "зад", "время": "10", "скорость": "4", "смазка": "да",
+		"place": "back", "time": "10", "speed": "4", "mode": "on",
 	})
 }
 
-// Частичный ввод: fuck:ass — только первый параметр, остальные уходят в
+// Частичный ввод: demo:back — только первый параметр, остальные уходят в
 // дефолты (отсутствие разраб обрабатывает сам).
 func TestParseArgsPartial(t *testing.T) {
-	v, err := ParseArgs([]string{"зад"}, testParams)
+	v, err := ParseArgs([]string{"back"}, testParams)
 	if err != nil {
 		t.Fatal(err)
 	}
 	checkVals(t, v, map[string]string{
-		"место": "зад", "время": "10", "скорость": "4", "смазка": "да",
+		"place": "back", "time": "10", "speed": "4", "mode": "on",
 	})
 	// Частичный + дефолт «пустое»: необязательный без дефолта → пустая строка.
-	params := []Param{{Name: "место"}, {Name: "деталь"}}
-	v2, err := ParseArgs([]string{"зад"}, params)
+	params := []Param{{Name: "place"}, {Name: "detail"}}
+	v2, err := ParseArgs([]string{"back"}, params)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if v2["место"] != "зад" || v2["деталь"] != "" {
+	if v2["place"] != "back" || v2["detail"] != "" {
 		t.Fatalf("пустой дефолт: %v", v2)
 	}
 }
@@ -113,7 +113,7 @@ func TestParseArgsRequiredMissing(t *testing.T) {
 
 // Неизвестный флаг — ошибка (опечатка не проходит молча).
 func TestParseArgsUnknownFlag(t *testing.T) {
-	_, err := ParseArgs([]string{"--место=зад", "--хуйня=1"}, testParams)
+	_, err := ParseArgs([]string{"--place=back", "--junk=1"}, testParams)
 	if err == nil {
 		t.Fatal("нужна ошибка: неизвестный флаг")
 	}
@@ -121,7 +121,7 @@ func TestParseArgsUnknownFlag(t *testing.T) {
 
 // Флаг без "=значение" — ошибка.
 func TestParseArgsFlagNoValue(t *testing.T) {
-	_, err := ParseArgs([]string{"--место"}, testParams)
+	_, err := ParseArgs([]string{"--place"}, testParams)
 	if err == nil {
 		t.Fatal("нужна ошибка: флаг без значения")
 	}
@@ -130,36 +130,36 @@ func TestParseArgsFlagNoValue(t *testing.T) {
 // Последний параметр глотает остаток двоеточий (как ssh:host:команда).
 func TestParseArgsGreedyLast(t *testing.T) {
 	params := []Param{
-		{Name: "хост", Required: true},
-		{Name: "команда"}, // необязательный, глотает остаток
+		{Name: "host", Required: true},
+		{Name: "cmd"}, // необязательный, глотает остаток
 	}
 	v, err := ParseArgs([]string{"user@host", "cat /a:b"}, params)
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkVals(t, v, map[string]string{"хост": "user@host", "команда": "cat /a:b"})
+	checkVals(t, v, map[string]string{"host": "user@host", "cmd": "cat /a:b"})
 }
 
 // Позиционное значение с пробелом не режется (в отличие от флаг-региона).
 func TestParseArgsPosSpaces(t *testing.T) {
-	params := []Param{{Name: "команда"}}
+	params := []Param{{Name: "cmd"}}
 	v, err := ParseArgs([]string{"cat /etc/hostname"}, params)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if v["команда"] != "cat /etc/hostname" {
-		t.Fatalf("команда = %q", v["команда"])
+	if v["cmd"] != "cat /etc/hostname" {
+		t.Fatalf("команда = %q", v["cmd"])
 	}
 }
 
 // ParamsUsage строит обе формы ввода для man.
 func TestParamsUsage(t *testing.T) {
-	u := ParamsUsage("fuck", testParams)
+	u := ParamsUsage("demo", testParams)
 	// Обязательный — без скобок, опциональные — вложенными [:...].
-	// В флагах дефолты видны: --время=10, --скорость=4, --смазка=да.
+	// В флагах дефолты видны: --time=10, --speed=4, --mode=on.
 	for _, want := range []string{
-		"fuck:МЕСТО[:ВРЕМЯ[:СКОРОСТЬ[:СМАЗКА]]]",
-		"--место=ЗНАЧ", "--время=10", "--скорость=4", "--смазка=да",
+		"demo:PLACE[:TIME[:SPEED[:MODE]]]",
+		"--place=VAL", "--time=10", "--speed=4", "--mode=on",
 	} {
 		if !strings.Contains(u, want) {
 			t.Fatalf("в ParamsUsage нет %q:\n%s", want, u)
@@ -169,11 +169,11 @@ func TestParamsUsage(t *testing.T) {
 
 // SplitAction: флаги через пробел без двоеточий не уходят в имя.
 func TestSplitActionFlags(t *testing.T) {
-	name, args := SplitAction("fuck --место=зад --время=7")
-	if name != "fuck" {
-		t.Fatalf("имя = %q, нужно fuck", name)
+	name, args := SplitAction("demo --place=back --time=7")
+	if name != "demo" {
+		t.Fatalf("имя = %q, нужно demo", name)
 	}
-	if len(args) != 1 || !strings.Contains(args[0], "--место=зад") || !strings.Contains(args[0], "--время=7") {
+	if len(args) != 1 || !strings.Contains(args[0], "--place=back") || !strings.Contains(args[0], "--time=7") {
 		t.Fatalf("аргументы = %v", args)
 	}
 	// Старые формы не сломались.
@@ -211,18 +211,18 @@ func TestRunStepsPanicRecover(t *testing.T) {
 // Полный путь: SplitAction (пайп) → ParseArgs → значения.
 func TestRunStepsFlags(t *testing.T) {
 	// Плагин-заглушка, читающий гибридные параметры.
-	params := []Param{{Name: "мин", Required: true}, {Name: "макс", Required: true}}
+	params := []Param{{Name: "min", Required: true}, {Name: "max", Required: true}}
 	AddPlugin("hybrid", func(in []string, args []string) ([]string, error) {
 		v, err := ParseArgs(args, params)
 		if err != nil {
 			return nil, err
 		}
-		return []string{v["мин"] + "-" + v["макс"]}, nil
+		return []string{v["min"] + "-" + v["max"]}, nil
 	})
 	defer delete(plugins, "hybrid")
 
 	// Флаги через пробел.
-	out, err := RunSteps([]string{"hybrid --мин=0 --макс=100"}, nil)
+	out, err := RunSteps([]string{"hybrid --min=0 --max=100"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -230,7 +230,7 @@ func TestRunStepsFlags(t *testing.T) {
 		t.Fatalf("флаги: %v", out)
 	}
 	// Микс: позиционные + флаг в одном аргументе.
-	out, err = RunSteps([]string{"hybrid:0 --макс=50"}, nil)
+	out, err = RunSteps([]string{"hybrid:0 --max=50"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -251,21 +251,21 @@ func TestSplitActionQuoted(t *testing.T) {
 		t.Fatalf("sed:\":\":1 → имя=%q args=%v", name, args)
 	}
 	// Флаг со значением в кавычках: ":" внутри не режет имя действия.
-	name, args = SplitAction("cut --разделитель=':' --поля=1")
-	if name != "cut" || len(args) != 1 || !strings.Contains(args[0], "--разделитель=':'") {
+	name, args = SplitAction("cut --sep=':' --fields=1")
+	if name != "cut" || len(args) != 1 || !strings.Contains(args[0], "--sep=':'") {
 		t.Fatalf("флаг с ':' → имя=%q args=%v", name, args)
 	}
 }
 
 // Фикс Бага 1: лишние слоты НЕ дублируют последний параметр (был "cat:/a:b" → "cat:cat:/a:b").
 func TestParseArgsGreedyLastNoDup(t *testing.T) {
-	params := []Param{{Name: "хост"}, {Name: "команда"}}
+	params := []Param{{Name: "host"}, {Name: "cmd"}}
 	v, err := ParseArgs([]string{"user@host", "cat", "/a:b"}, params)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if v["команда"] != "cat:/a:b" {
-		t.Fatalf("команда = %q, ждали cat:/a:b (без дубля)", v["команда"])
+	if v["cmd"] != "cat:/a:b" {
+		t.Fatalf("команда = %q, ждали cat:/a:b (без дубля)", v["cmd"])
 	}
 }
 
@@ -277,16 +277,16 @@ func TestSplitStepsQuoted(t *testing.T) {
 	}
 }
 
-// FlagValue: вытаскивает флаг --имя=значение из args (для плагинов, которые
-// не используют ParseArgs — например set/toggle с --разделитель).
+// FlagValue: вытаскивает флаг --name=value из args (для плагинов, которые
+// не используют ParseArgs — например set/toggle с --sep).
 func TestFlagValue(t *testing.T) {
 	// Флаг «приклеен» к последнему позиционному аргументу через пробел.
-	val, rest := FlagValue([]string{"file", "key", "val --разделитель=пробел"}, "разделитель")
-	if val != "пробел" || len(rest) != 3 || rest[0] != "file" || rest[1] != "key" || rest[2] != "val" {
-		t.Fatalf("FlagValue = %q %v, ждали пробел [file key val]", val, rest)
+	val, rest := FlagValue([]string{"file", "key", "val --sep=space"}, "sep")
+	if val != "space" || len(rest) != 3 || rest[0] != "file" || rest[1] != "key" || rest[2] != "val" {
+		t.Fatalf("FlagValue = %q %v, ждали space [file key val]", val, rest)
 	}
 	// Флага нет — возвращаем аргументы как есть, значение пустое.
-	val, rest = FlagValue([]string{"a", "b"}, "разделитель")
+	val, rest = FlagValue([]string{"a", "b"}, "sep")
 	if val != "" || len(rest) != 2 {
 		t.Fatalf("без флага = %q %v", val, rest)
 	}

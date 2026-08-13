@@ -163,7 +163,7 @@ import _ "rough/plugins" // все готовые плагины репозит�
 ```json
 {
   "theme": "default",
-  "паттерн": ["id", "x", "y", "w", "h", "файл"],
+  "pattern": ["id", "x", "y", "w", "h", "file"],
   "/main": [
     ["hello", "0%", "0%", "40%", "40%", "tiles/hello.html"]
   ]

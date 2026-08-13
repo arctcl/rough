@@ -1,6 +1,6 @@
 // Плагин awk — обработка текста как упрощённый awk.
 // Юникс-лайк: `awk -F'Д' '/пат/{print $N}'` — здесь единые quick-параметры:
-// ... | awk --разделитель=Д --поля=N --фильтр=РЕГУЛЯРКА.
+// ... | awk --sep=Д --fields=N --filter=REGEX.
 // Умеет: фильтровать строки по регулярке и вырезать поля. Для чисел/полей
 // перед bars и chart — отдельный плагин (не рисует сам, только обрабатывает).
 package awk
@@ -18,24 +18,24 @@ import (
 const man_awk = `awk — обработка текста (упрощённый awk).
 
 Использование (единые quick-параметры):
-  часть пайпа: ... | awk --разделитель=Д --поля=N [--фильтр=РЕГУЛЯРКА]
+  часть пайпа: ... | awk --sep=Д --fields=N [--filter=REGEX]
 
 Аргументы:
-  разделитель — чем делить строку на поля (по умолчанию пробел).
-  поля        — номер поля (1-е = 1), диапазон N-M или список (1,3). Пусто — вся строка.
-  фильтр      — регулярка: оставить только строки, где она встречается (как awk '/пат/').
+  sep    — чем делить строку на поля (по умолчанию пробел).
+  fields — номер поля (1-е = 1), диапазон N-M или список (1,3). Пусто — вся строка.
+  filter — регулярка: оставить только строки, где она встречается (как awk '/пат/').
 
 Примеры:
-  action="cat:log | awk --фильтр=ERROR"                  — только строки с ERROR
-  action="cat:log | awk --фильтр=ERROR --поля=3"         — 3-е поле строк ERROR
-  action="cat:cpu.log | awk --поля=2 | bars"             — 2-е поле → график
-  action="cat:app.conf | awk --разделитель== --поля=2"     — значения ключей конфига`
+  action="cat:log | awk --filter=ERROR"                  — только строки с ERROR
+  action="cat:log | awk --filter=ERROR --fields=3"       — 3-е поле строк ERROR
+  action="cat:cpu.log | awk --fields=2 | bars"           — 2-е поле → график
+  action="cat:app.conf | awk --sep== --fields=2"           — значения ключей конфига`
 
-// awkParams — параметры awk. Порядок = позиции: разделитель, поля, фильтр.
+// awkParams — параметры awk. Порядок = позиции: sep, fields, filter.
 var awkParams = []engine.Param{
-	{Name: "разделитель", Default: " "},
-	{Name: "поля"},
-	{Name: "фильтр"},
+	{Name: "sep", Default: " "},
+	{Name: "fields"},
+	{Name: "filter"},
 }
 
 func init() {
@@ -45,9 +45,9 @@ func init() {
 		if err != nil {
 			return nil, err
 		}
-		sep := vals["разделитель"]
-		fields := vals["поля"]
-		filter := vals["фильтр"]
+		sep := vals["sep"]
+		fields := vals["fields"]
+		filter := vals["filter"]
 		var re *regexp.Regexp
 		if filter != "" {
 			re, err = regexp.Compile(filter)

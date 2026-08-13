@@ -1,7 +1,7 @@
 {
   "theme": "default",
   "menu": [["Главная", "/main"], ["Справка", "/man"]],
-  "паттерн": ["id", "x", "y", "w", "h", "файл"],
+  "pattern": ["id", "x", "y", "w", "h", "file"],
   "/main": [
     ["hello", "0%",  "0%",  "40%", "40%", "tiles/hello.html"],
     ["cfg",   "40%", "0%",  "60%", "100%", "tiles/cfg.html"]

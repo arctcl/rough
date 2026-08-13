@@ -99,19 +99,19 @@ rough.AddPlugin("toggle", func(in []string, args []string) ([]string, error) {
 
 Конфиги приложений бывают двух форматов: `ключ=значение` (по умолчанию) и
 `ключ значение` (через пробел — как у mailcow). Плагины `set` и `toggle`
-понимают необязательный флаг `--разделитель=СИМВОЛ`; для пробела укажи слово
-`пробел`:
+понимают необязательный флаг `--sep=CHAR`; для пробела укажи слово
+`space`:
 
 ```html
 <!-- конфиг вида "ключ=значение" — ничего добавлять не надо -->
 <button action="set:/etc/app.conf:loglevel:debug">Логи</button>
 <!-- конфиг вида "ключ значение" (через пробел) -->
-<button action="toggle:/etc/mailcow:debug --разделитель=пробел">Отладка</button>
+<button action="toggle:/etc/mailcow:debug --sep=space">Отладка</button>
 ```
 
 Флаг вырезается из аргументов функцией `engine.FlagValue`, значение
-нормализуется `normSep` (пусто/`=` → `=`, `пробел`/`space` → пробел). Такой же
-`--разделитель` понимает плагин `set` (и для чтения `...:ключ:get`).
+нормализуется `normSep` (пусто/`=` → `=`, `space` → пробел). Такой же
+`--sep` понимает плагин `set` (и для чтения `...:file:key:get`).
 
 ### Сетевой плагин (как curl) — нативно в Go
 
@@ -152,7 +152,7 @@ w, h := engine.Window() // размер тайла/колонки в клетк�
 
 Плагин объявляет параметры один раз, а `engine.ParseArgs` сам разберёт любую
 форму ввода. Порядок объявления = позиция при вводе двоеточиями, `Name` — имя
-для флага `--имя=значение`, `Default` — дефолт (пусто = нет), `Required` —
+для флага `--name=value`, `Default` — дефолт (пусто = нет), `Required` —
 обязательный.
 
 ```go
@@ -160,11 +160,11 @@ w, h := engine.Window() // размер тайла/колонки в клетк�
 import "rough/engine"
 
 var chartParams = []engine.Param{
-	{Name: "мин", Required: true},  // обязательный
-	{Name: "макс", Required: true}, // обязательный
-	{Name: "ширина", Default: "1"}, // дефолт, если не задан
-	{Name: "секунд", Default: "2"}, // дефолт
-	{Name: "заголовок"},            // необязательный, без дефолта
+	{Name: "min", Required: true},    // обязательный
+	{Name: "max", Required: true},    // обязательный
+	{Name: "width", Default: "1"},   // дефолт, если не задан
+	{Name: "seconds", Default: "2"}, // дефолт
+	{Name: "title"},                  // необязательный, без дефолта
 }
 
 rough.AddPlugin("chart", func(in []string, args []string) ([]string, error) {
@@ -172,10 +172,10 @@ rough.AddPlugin("chart", func(in []string, args []string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	lo, _ := strconv.ParseFloat(vals["мин"], 64)
-	hi, _ := strconv.ParseFloat(vals["макс"], 64)
-	colW, _ := strconv.Atoi(vals["ширина"])
-	title := vals["заголовок"]
+	lo, _ := strconv.ParseFloat(vals["min"], 64)
+	hi, _ := strconv.ParseFloat(vals["max"], 64)
+	colW, _ := strconv.Atoi(vals["width"])
+	title := vals["title"]
 	// ...
 })
 ```
@@ -184,13 +184,13 @@ rough.AddPlugin("chart", func(in []string, args []string) ([]string, error) {
 
 ```
 chart:0:100:1:2:CPU                             # двоеточия по порядку
-chart --мин=0 --макс=100 --заголовок=CPU        # флаги, порядок не важен
-chart:0:100:1:2 --заголовок=CPU                 # микс
-chart::1:2 --мин=0 --макс=100                   # пустой слот «:» — флаг/дефолт
+chart --min=0 --max=100 --title=CPU             # флаги, порядок не важен
+chart:0:100:1:2 --title=CPU                     # микс
+chart::1:2 --min=0 --max=100                    # пустой слот «:» — флаг/дефолт
 chart:0:100                                     # частичный ввод: остальное — дефолты
 ```
 
-Частичный ввод работает: `fuck:ass` — задаёшь только нужные первые параметры,
+Частичный ввод работает: `chart:0:100` — задаёшь только нужные первые параметры,
 остальные уходят в дефолты (или пустое). Что и в каком порядке ждёт плагин —
 определяет разраб, отсутствие остальных он тоже обрабатывает сам.
 
@@ -199,10 +199,10 @@ chart:0:100                                     # частичный ввод: �
 - Обязательный параметр без значения — ошибка; неизвестный флаг — ошибка
   (опечатка не проходит молча).
 - Последний объявленный параметр «глотает» остаток двоеточий
-  (как `ssh:host:команда`, `set:файл:ключ:значение:с:двоеточиями`).
+  (как `ssh:host:command`, `set:file:key:value:with:colons`).
 - В `man` обе формы собираются через `engine.ParamsUsage("chart", chartParams)`
   — строки использования не разъезжаются с кодом; во флагах виден дефолт
-  (`--ширина=1`), без дефолта — `--имя=ЗНАЧ`.
+  (`--width=1`), без дефолта — `--name=VAL`.
 - У каждого параметра в `man` пишется дефолтное значение, если применимо,
   иначе — «пустое».
 
@@ -236,9 +236,9 @@ c := engine.ThemeColor("color_2", tcell.ColorGreen)
 ```go
 import "rough/engine"
 
-engine.SetVar("имя", []string{"значение"})   // записать
-v, ok := engine.GetVar("имя")                // прочитать ([]string, есть ли)
-line := engine.VarLine("имя")                // одной строкой (для $подстановки)
+engine.SetVar("name", []string{"value"})   // записать
+v, ok := engine.GetVar("name")              // прочитать ([]string, есть ли)
+line := engine.VarLine("name")              // одной строкой (для $подстановки)
 ```
 
 В HTML это выглядит так:

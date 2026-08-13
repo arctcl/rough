@@ -1,8 +1,8 @@
 // Плагин toggle — переключить флаг в конфиге приложения (как перещелкнуть
 // выключатель). Инвертирует значение: 0↔1, on↔off, true↔false. Ключа нет —
 // добавляет включённым. Формат конфига (ключ=значение или ключ значение) —
-// флаг --разделитель (по умолчанию "=").
-// Вызов: action="toggle:ФАЙЛ:КЛЮЧ [--разделитель=СИМВОЛ]"
+// флаг --sep (по умолчанию "=").
+// Вызов: action="toggle:FILE:KEY [--sep=CHAR]"
 package toggle
 
 import (
@@ -18,30 +18,30 @@ import (
 const man_toggle = `toggle — переключить флаг в конфиге (как перещелкнуть выключатель).
 
 Использование:
-  action="toggle:ФАЙЛ:КЛЮЧ"
-  action="toggle:ФАЙЛ:КЛЮЧ --разделитель=пробел"  — конфиг через пробел
+  action="toggle:FILE:KEY"
+  action="toggle:FILE:KEY --sep=space"  — конфиг через пробел
 
 Аргументы:
-  ФАЙЛ — конфиг приложения (по строке на ключ).
-  КЛЮЧ — что переключить. Инвертирует: 0↔1, on↔off, true↔false.
-  --разделитель=СИМВОЛ — что отделяет ключ от значения. По умолчанию "="
+  FILE — конфиг приложения (по строке на ключ).
+  KEY  — что переключить. Инвертирует: 0↔1, on↔off, true↔false.
+  --sep=CHAR — что отделяет ключ от значения. По умолчанию "="
                 (конфиг вида ключ=значение). Для конфига вида "ключ значение"
-                укажи --разделитель=пробел.
+                укажи --sep=space.
 
 Примеры:
   action="toggle:/etc/app.conf:logging"
   <checkbox action="toggle:app.conf:debug">Отладка</checkbox>
-  <checkbox action="toggle:/etc/mailcow:debug --разделитель=пробел">Отладка</checkbox>`
+  <checkbox action="toggle:/etc/mailcow:debug --sep=space">Отладка</checkbox>`
 
 func init() {
 	rough.AddMan("toggle", man_toggle)
 	rough.AddPlugin("toggle", func(in []string, args []string) ([]string, error) {
-		sep, args := engine.FlagValue(args, "разделитель")
+		sep, args := engine.FlagValue(args, "sep")
 		sep = normSep(sep)
 		if len(args) < 2 {
 			return nil, errors.New("toggle: нужен файл и ключ")
 		}
-		// Режим чтения: toggle:файл:ключ:get — вернуть текущее значение (для checkbox).
+		// Режим чтения: toggle:file:key:get — вернуть текущее значение (для checkbox).
 		if len(args) >= 3 && args[2] == "get" {
 			return readValue(args[0], args[1], sep)
 		}
@@ -50,13 +50,13 @@ func init() {
 }
 
 // normSep нормализует разделитель ключ-значение: пусто/"=" → "=";
-// слово "пробел"/"space" → пробел.
+// слово "space" → пробел.
 func normSep(s string) string {
 	s = strings.TrimSpace(s)
 	switch strings.ToLower(s) {
 	case "", "=":
 		return "="
-	case "пробел", "space":
+	case "space":
 		return " "
 	}
 	return s

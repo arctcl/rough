@@ -15,7 +15,7 @@ type Tile struct {
 type Pages map[string][]Tile
 
 // defaultPattern — порядок полей в массиве тайла, если паттерн не задан.
-var defaultPattern = []string{"id", "x", "y", "w", "h", "файл"}
+var defaultPattern = []string{"id", "x", "y", "w", "h", "file"}
 
 // LoadPages читает tiles.json из вшитой папки интерфейса (fs.FS).
 // Пути внутри fs.FS — относительные: "tiles.json", "tiles/time.html".
@@ -34,7 +34,7 @@ func LoadPages(fsys fs.FS) (Pages, error) {
 	pages := Pages{}
 	for key, val := range raw {
 		// Ключ паттерна объявляет схему строк данных один раз.
-		if key == "паттерн" || key == "pattern" {
+		if key == "pattern" {
 			if arr, ok := val.([]any); ok {
 				p := make([]string, 0, len(arr))
 				for _, v := range arr {
@@ -84,7 +84,7 @@ func LoadPages(fsys fs.FS) (Pages, error) {
 					t.W = s
 				case "h":
 					t.H = s
-				case "файл", "file":
+				case "file":
 					t.File = s
 				}
 			}
