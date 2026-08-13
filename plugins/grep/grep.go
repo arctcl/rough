@@ -20,7 +20,7 @@ const man_grep = `grep — оставить строки, подходящие �
 
 Примеры:
   action="cat:/etc/x.conf | grep:^server"     — строки, начинающиеся с server
-  action="ssh:root@srv:uptime | grep:load"    — строка с load
+  action="ssh:root:srv1::uptime | grep:load"    — строка с load
   action="man:ssh | grep:-i"                  — где в справке упомянут -i`
 
 func init() {

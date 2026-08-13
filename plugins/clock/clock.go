@@ -16,7 +16,7 @@ const man_clock = `clock — текущие дата и время (живые �
 
 Примеры:
   <plugin name="clock" interval="1s"/>          — часы в тайле
-  <col width="50%"><plugin name="clock" interval="1s"/></col>  — часы в колонке`
+  <div width="50%"><plugin name="clock" interval="1s"/></div>  — часы в колонке`
 
 func init() {
 	rough.AddMan("clock", man_clock)

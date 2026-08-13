@@ -19,7 +19,7 @@ const man_tail = `tail — последние строки входа (как ta
 
 Примеры:
   action="cat:/var/log/app.log | tail:20"              — последние 20 строк лога
-  action="ssh:root@srv:journalctl -u api | tail:50"    — последние 50 строк журнала`
+  action="ssh:root:srv1::journalctl -u api | tail:50"    — последние 50 строк журнала`
 
 func init() {
 	rough.AddMan("tail", man_tail)
