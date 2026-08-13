@@ -113,6 +113,28 @@ func Run(fsys fs.FS) (err error) {
 	route := pages.FirstRoute()
 	w, h := s.Size()
 
+	// Телеграфная мышь (голый Linux VT без X): сырое /dev/input/mice.
+	// На X/Wayland openTeletypeMouse вернёт nil — мышь идёт через tcell
+	// (источники взаимоисключающие). События шлются в свой канал и
+	// обрабатываются единым обработчиком handleMouseEvent.
+	var telCh chan MouseEvent
+	if tm := openTeletypeMouse(); tm != nil {
+		defer tm.Close()
+		telCh = make(chan MouseEvent, 16)
+		go func() {
+			for {
+				evs, err := tm.read(w, h)
+				if err != nil {
+					close(telCh)
+					return
+				}
+				for _, ev := range evs {
+					telCh <- ev
+				}
+			}
+		}()
+	}
+
 	// Пул событий: PollEvent блокирует, поэтому крутим его в горутине.
 	evCh := make(chan tcell.Event, 16)
 	go func() {
@@ -144,6 +166,11 @@ func Run(fsys fs.FS) (err error) {
 				}
 			case *tcell.EventMouse:
 				handleMouse(e, pages, &route, w, h)
+			}
+		case me, ok := <-telCh:
+			// Телеграфная мышь: единый обработчик (источник ему не важен).
+			if ok {
+				handleMouseEvent(me, pages, &route, w, h)
 			}
 		case <-tick.C:
 			// Таймер: перерисовка (обновление плагинов с interval).

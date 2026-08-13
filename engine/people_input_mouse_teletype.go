@@ -75,9 +75,14 @@ type teletypeMouse struct {
 // mousePos — абсолютная позиция телеграфной мыши (накапливается из дельт).
 type mousePos struct{ X, Y int }
 
-// openTeletypeMouse находит и открывает мышь. Если устройства нет или нет прав —
-// возвращает nil: интерфейс продолжит работать с десктопной мышью (через tcell).
+// openTeletypeMouse находит и открывает мышь. Источники взаимоисключающие:
+// на X/Wayland (DISPLAY/WAYLAND_DISPLAY) мышь даёт терминал (tcell) — сырое
+// устройство не открываем. На голом Linux VT без графики — читаем /dev/input/mice.
+// Нет устройства/прав — возвращаем nil: движок продолжит с десктопной мышью.
 func openTeletypeMouse() *teletypeMouse {
+	if os.Getenv("DISPLAY") != "" || os.Getenv("WAYLAND_DISPLAY") != "" {
+		return nil
+	}
 	p, err := findMouseDevice()
 	if err != nil {
 		return nil
@@ -143,7 +148,7 @@ func (t *teletypeMouse) read(w, h int) ([]MouseEvent, error) {
 		if h > 0 && t.pos.Y >= h {
 			t.pos.Y = h - 1
 		}
-		evs = append(evs, MouseEvent{X: t.pos.X, Y: t.pos.Y, Left: left, Wheel: wheel})
+		evs = append(evs, MouseEvent{X: t.pos.X, Y: t.pos.Y, Left: left, Wheel: -wheel})
 	}
 	return evs, nil
 }

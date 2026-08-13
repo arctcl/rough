@@ -100,28 +100,74 @@ func (b *Buffer) Copy(src *Buffer, ox, oy int) {
 	}
 }
 
-// Blit выводит буфер на экран tcell со смещением (ox, oy).
+// prevFrame — предыдущий отрисованный кадр (для дифф-рендеринга):
+// на экран отправляются только ИЗМЕНИВШИЕСЯ клетки — сверхлёгкая отрисовка
+// (статику не перерисовываем, живое меняется точечно).
+var prevFrame *Buffer
+
+// Blit выводит буфер на экран tcell, отправляя ТОЛЬКО изменившиеся клетки
+// относительно предыдущего кадра. Первый кадр и ресайз рисуют всё.
 func (b *Buffer) Blit(s tcell.Screen, ox, oy int) {
+	// Первый кадр или изменился размер — рисуем всё, запоминаем кадр.
+	if prevFrame == nil || prevFrame.W != b.W || prevFrame.H != b.H {
+		prevFrame = NewBuffer(b.W, b.H)
+		b.blitAll(s, ox, oy)
+		copyBuffer(prevFrame, b)
+		s.Show()
+		return
+	}
+	// Дальше — только изменённые клетки (дифф с предыдущим кадром).
+	changed := false
 	for y := 0; y < b.H; y++ {
 		for x := 0; x < b.W; x++ {
 			c := b.cells[y][x]
-			st := tcell.StyleDefault
-			if c.Style.Bold {
-				st = st.Bold(true)
+			if c == prevFrame.cells[y][x] {
+				continue // клетка не менялась — не отправляем на экран
 			}
-			if c.Style.Italic {
-				st = st.Italic(true)
-			}
-			if c.Style.Underline {
-				st = st.Underline(true)
-			}
-			if c.Style.Fg != tcell.ColorDefault {
-				st = st.Foreground(c.Style.Fg)
-			}
-			if c.Style.Bg != tcell.ColorDefault {
-				st = st.Background(c.Style.Bg)
-			}
-			s.SetContent(ox+x, oy+y, c.Rune, nil, st)
+			prevFrame.cells[y][x] = c
+			s.SetContent(ox+x, oy+y, c.Rune, nil, cellStyle(c.Style))
+			changed = true
 		}
 	}
+	if changed {
+		s.Show()
+	}
+}
+
+// blitAll выводит весь буфер на экран (первый кадр / ресайз).
+func (b *Buffer) blitAll(s tcell.Screen, ox, oy int) {
+	for y := 0; y < b.H; y++ {
+		for x := 0; x < b.W; x++ {
+			c := b.cells[y][x]
+			s.SetContent(ox+x, oy+y, c.Rune, nil, cellStyle(c.Style))
+		}
+	}
+}
+
+// copyBuffer копирует src в dst (для хранения предыдущего кадра).
+func copyBuffer(dst, src *Buffer) {
+	for y := 0; y < src.H; y++ {
+		copy(dst.cells[y], src.cells[y])
+	}
+}
+
+// cellStyle собирает tcell-стиль из нашего Style.
+func cellStyle(st Style) tcell.Style {
+	s := tcell.StyleDefault
+	if st.Bold {
+		s = s.Bold(true)
+	}
+	if st.Italic {
+		s = s.Italic(true)
+	}
+	if st.Underline {
+		s = s.Underline(true)
+	}
+	if st.Fg != tcell.ColorDefault {
+		s = s.Foreground(st.Fg)
+	}
+	if st.Bg != tcell.ColorDefault {
+		s = s.Background(st.Bg)
+	}
+	return s
 }

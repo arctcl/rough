@@ -9,11 +9,11 @@ func TestExpandVars(t *testing.T) {
 	defer func() { vars = map[string][]string{} }()
 
 	cases := []struct{ in, want string }{
-		{"ssh:$host::uptime", "ssh:srv1::uptime"},            // $имя
-		{"cat:/${path}/x", "cat://var/log app.log/x"},        // ${имя} (несколько строк → пробел)
-		{"echo \\$host $host", "echo $host srv1"},            // \$ — литерал, $host — подстановка
-		{"cat:$no_such::x", "cat:::x"},                       // неизвестная — пусто
-		{"grep:\\d+", "grep:\\d+"},                           // regex не трогаем
+		{"ssh:$host::uptime", "ssh:srv1::uptime"},     // $имя
+		{"cat:/${path}/x", "cat://var/log app.log/x"}, // ${имя} (несколько строк → пробел)
+		{"echo \\$host $host", "echo $host srv1"},     // \$ — литерал, $host — подстановка
+		{"cat:$no_such::x", "cat:::x"},                // неизвестная — пусто
+		{"grep:\\d+", "grep:\\d+"},                    // regex не трогаем
 	}
 	for _, c := range cases {
 		if got := expandVars(c.in); got != c.want {
