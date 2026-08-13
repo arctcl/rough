@@ -25,9 +25,9 @@ func main() { rough.TUI(roughDir) }
 | [cookbook-project](cookbook-project.md) | как собрать свой проект: 4 строчки, `tiles.json`, HTML тайлов, вкладки |
 | [cookbook-html-new](cookbook-html-new.md) | HTML с нуля: от общего к частному, живые примеры (рекомендуется начать здесь) |
 | [cookbook-html](cookbook-html.md) | HTML: справочник поведения тегов и контрактов (подробно) |
-| [cookbook-plugins](cookbook-plugins.md) | как писать плагины: контракт, рецепты, пайпы, справка `man` |
+| [cookbook-plugins](cookbook-plugins.md) | как писать плагины: контракт, живой пример cat, рецепты, пайпы, справка `man` |
 | [cookbook-themes](cookbook-themes.md) | как делать темы: символы, цвета, примеры |
-| [how-it-works](how-it-works.md) | как устроен движок изнутри: рендер, события, вывод в тайл |
+| [how-it-works](how-it-works.md) | как устроен движок изнутри: 2 способа использования (библиотека/standalone), рендер, события |
 | [architecture](architecture.md) | архитектура и принципы (подробно) |
 | [demo](demo.md) | описание шаблона проекта |
 | [systemprompt](systemprompt.md) | правила разработки (для ИИ и людей) |
