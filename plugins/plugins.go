@@ -14,6 +14,7 @@ import (
 	_ "rough/plugins/clock"
 	_ "rough/plugins/curl"
 	_ "rough/plugins/cut"
+	_ "rough/plugins/export"
 	_ "rough/plugins/grep"
 	_ "rough/plugins/head"
 	_ "rough/plugins/hello"

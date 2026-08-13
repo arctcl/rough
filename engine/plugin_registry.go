@@ -325,7 +325,8 @@ func PrepareAction(raw string) (steps []string, needConfirm bool) {
 			needConfirm = true
 			continue
 		}
-		steps = append(steps, s)
+		// Подстановка переменных $имя (движок) перед выполнением шага.
+		steps = append(steps, expandVars(s))
 	}
 	return steps, needConfirm
 }

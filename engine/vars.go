@@ -1,0 +1,92 @@
+// Переменные сессии: глобальная память движка (как outputCache).
+// Храним строки вывода по имени; в action подставляются через $имя или ${имя}.
+// Запись делает плагин export (engine.SetVar), подстановку — движок (expandVars).
+// Это ИНФРАСТРУКТУРА оболочки, не плагин: никакой логики, только хранилище+подстановка.
+package engine
+
+import "strings"
+
+// vars — переменные сессии: имя → строки значения.
+var vars = map[string][]string{}
+
+// SetVar сохраняет значение переменной (строки) по имени.
+// Вызывается плагином export (и любым другим, кому нужно записать в память).
+func SetVar(name string, lines []string) {
+	vars[name] = lines
+}
+
+// GetVar возвращает значение переменной (строки) по имени.
+func GetVar(name string) ([]string, bool) {
+	v, ok := vars[name]
+	return v, ok
+}
+
+// VarLine возвращает переменную одной строкой для подстановки в action:
+// одна строка — как есть, несколько — склеиваются пробелом.
+func VarLine(name string) string {
+	v, ok := vars[name]
+	if !ok || len(v) == 0 {
+		return ""
+	}
+	return strings.Join(v, " ")
+}
+
+// expandVars подставляет $имя и ${имя} в строку (аргументы action).
+//   $имя   — имя из букв/цифр/подчёркивания;
+//   ${имя} — имя до закрывающей скобки (когда нужно отделить от соседей);
+//   \$     — литеральный доллар;
+//   неизвестная переменная — пустая строка.
+// Остальные символы (в т.ч. \d, [0-9]) не трогаем.
+func expandVars(s string) string {
+	var sb strings.Builder
+	runes := []rune(s)
+	for i := 0; i < len(runes); i++ {
+		c := runes[i]
+		// \$ — литеральный доллар.
+		if c == '\\' && i+1 < len(runes) && runes[i+1] == '$' {
+			sb.WriteRune('$')
+			i++
+			continue
+		}
+		if c != '$' {
+			sb.WriteRune(c)
+			continue
+		}
+		// ${имя}
+		if i+1 < len(runes) && runes[i+1] == '{' {
+			j := i + 2
+			start := j
+			for j < len(runes) && runes[j] != '}' {
+				j++
+			}
+			if j < len(runes) {
+				sb.WriteString(VarLine(string(runes[start:j])))
+				i = j
+				continue
+			}
+			// незакрытая ${ — оставляем как есть
+			sb.WriteRune(c)
+			continue
+		}
+		// $имя
+		j := i + 1
+		start := j
+		for j < len(runes) && isVarRune(runes[j]) {
+			j++
+		}
+		if j == start {
+			// $ без имени — литеральный доллар
+			sb.WriteRune(c)
+			continue
+		}
+		sb.WriteString(VarLine(string(runes[start:j])))
+		i = j - 1
+	}
+	return sb.String()
+}
+
+// isVarRune — символ, допустимый в имени переменной ($имя).
+func isVarRune(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
+		(r >= '0' && r <= '9') || r == '_'
+}

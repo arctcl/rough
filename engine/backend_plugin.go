@@ -31,6 +31,10 @@ func renderPlugin(n *Node, b *Buffer, f *flowState) {
 		f.put(b, "ошибка: пустой плагин")
 		return
 	}
+	// Подстановка переменных $имя (движок) — живой контент тоже умеет.
+	for i := range steps {
+		steps[i] = expandVars(steps[i])
+	}
 	// Интервал обновления: не задан → дефолт 2 секунды (не дёргаем чаще).
 	iv := parseDur(n.Attrs["interval"])
 	if iv <= 0 {
