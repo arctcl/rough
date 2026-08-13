@@ -112,9 +112,15 @@ func runSSH(user, host, port, keyPath, cmd string) ([]string, error) {
 	sess.Stdout = &buf
 	sess.Stderr = &buf
 	if err := sess.Run(cmd); err != nil {
-		// Команда вернула ненулевой код — отдаём и вывод, и ошибку,
-		// чтобы в статусе было видно, что произошло.
-		return splitLines(buf.String()), fmt.Errorf("ssh %s: %v", cmd, err)
+		// Команда вернула ненулевой код — показываем и ошибку, и вывод
+		// (в stderr часто причина). Вывод подмешиваем в текст ошибки:
+		// showError выводит многострочное в статус-блок, так причина видна.
+		out := strings.TrimRight(buf.String(), "\n")
+		msg := fmt.Sprintf("ssh %s: %v", cmd, err)
+		if out != "" {
+			msg += "\n" + out
+		}
+		return nil, errors.New(msg)
 	}
 	return splitLines(buf.String()), nil
 }
