@@ -87,6 +87,26 @@
 результат уйдёт в **блок с этим id**, где бы он ни был: в этом тайле, в соседнем,
 даже в другом роуте.
 
+### Запоминание: export и $
+
+Плагин `export` сохраняет вывод в **переменную движка**, а `$имя` подставляет её
+в любой action. Это «память» интерфейса — запомнил раз, используешь много:
+
+```html
+<!-- кнопка: запомнить хост (вывод идёт в переменную и дальше) -->
+<button action="ssh:root:srv1::hostname | export:host">Запомнить хост</button>
+
+<!-- кнопка: подставить запомненный хост -->
+<button action="ssh:root:$host::uptime">Uptime</button>
+
+<!-- поле ввода → запомнить, потом использовать в grep -->
+<input action="export:маска" label="Маска"/>
+<button action="cat:log | grep:$маска | head:5">Найти</button>
+```
+
+`$имя` — подстановка значения; `${имя}` — когда нужно отделить от соседних символов;
+`\$` — буквальный доллар.
+
 ### Пример: поле ввода + вывод рядом
 
 Тайл `man_in.html` — поле ввода:
@@ -328,75 +348,50 @@ logging=0
 
 ```html
 <button action="deploy:all | confirm">Раскатать прод</button>
-<button action="loop:172.0.0.[1-127] | ssh:root:reboot | confirm">Перезагрузить все</button>
+<button action="ssh:root:srv1::reboot | confirm">Перезагрузить srv1</button>
 ```
 
 ---
 
-## 15. SSH-оркестрация: loop | ssh
+## 15. SSH
 
-Вот ради чего всё это. Два режима у `ssh`:
+Выполнение команд на удалённых серверах по SSH. Единые quick-параметры:
+`ssh:user:host::команда` — порт пустым слотом (дефолт 22) или `--port=2222`.
 
-### Режим А: один хост — пишем адрес прямо в вызове (с `@`)
+### Один хост
 
 ```html
-<!-- ssh:user@host:команда — команда склеивается из остатка через ":" -->
-<button action="ssh:root@srv1:uptime">Uptime srv1</button>
-<button action="ssh:root@srv1:systemctl status nginx">Статус nginx</button>
-<button action="ssh:root@srv1:df -h | grep:/data">Диск /data</button>
-<button action="ssh:root@srv1:journalctl -u api | tail:50">Лог api (50 строк)</button>
-<button action="ssh:root@srv1:cat /proc/loadavg | bars">Нагрузка</button>
+<!-- ssh:user:host::команда -->
+<button action="ssh:root:srv1::uptime">Uptime srv1</button>
+<button action="ssh:root:srv1::systemctl status nginx">Статус nginx</button>
+<button action="ssh:root:srv1::df -h | grep:/data">Диск /data</button>
+<button action="ssh:root:srv1::journalctl -u api | tail:50">Лог api (50 строк)</button>
+<button action="ssh:root:srv1::cat /proc/loadavg | bars">Нагрузка</button>
 ```
 
-Если в первом аргументе есть `@` — это обычный режим: хост указан явно.
+### Порт
 
-### Режим Б: хост из пайпа — подставляем loop (без `@`)
-
-**`loop` разворачивает шаблон с диапазонами `[a-b]` в список адресов**, и каждый
-адрес идёт в `ssh` как отдельный хост. **Если `@` в первом аргументе нет — ssh
-берёт хост из каждой строки входа (из loop).**
+Порт — позиционно (слот после host) или флагом `--port`:
 
 ```html
-<!-- адреса 172.0.0.1 .. 172.0.0.127, на каждом: apt update && apt upgrade -->
-<button action="loop:172.0.0.[1-127] | ssh:root:apt update && apt upgrade -y">Апдейт всей сети</button>
+<button action="ssh:root:srv1:2222:uptime">Uptime (порт 2222)</button>
+<button action="ssh:root:srv1::uptime --port=2222">Uptime (флаг)</button>
+```
 
-<!-- диапазоны в любых местах -->
-<button action="loop:172.0.[0-255].[1-254] | ssh:root:hostname">Hostname по всей сети</button>
-
-<!-- не только IP: пирожок_номер_1 .. пирожок_номер_999 -->
-<button action="loop:пирожок_номер_[1-999] | ssh:root:hostname">Пирожки</button>
-
-
-
-### Ключи: -i ПУТЬ
+### Ключи: --keys=ПУТЬ
 
 По умолчанию ssh ищет ключи в `~/.ssh` (id_ed25519, id_rsa, id_ecdsa), работает
-и ssh-agent. Своя папка/файл ключей — флаг `-i` (как у настоящего ssh):
+и ssh-agent. Своя папка/файл ключей — флаг `--keys` (как у настоящего ssh `-i`):
 
 ```html
-<!-- обычный режим + папка ключей -->
-<button action="ssh:root@srv1:-i:/root/keys:hostname">Hostname (ключи)</button>
-
-<!-- обычный режим + конкретный файл ключа -->
-<button action="ssh:root@srv1:-i:~/.ssh/id_rsa:uptime">Uptime (файл)</button>
-
-<!-- пайп-режим + ключи: loop → ssh по всем хостам с ключами из /root/keys -->
-<button action="loop:172.0.0.[1-127] | ssh:root:-i:/root/keys:uptime">Uptime всей сети</button>
+<button action="ssh:root:srv1::hostname --keys=/root/keys">Hostname (ключи)</button>
+<button action="ssh:root:srv1::uptime --keys=~/.ssh/id_rsa">Uptime (файл)</button>
 ```
 
-### Как это работает
+> **Значение с `:`** (например ключ или разделитель) можно передать в кавычках:
+> `ssh:root:srv1::echo ':' | sed:':':1` — `:` внутри кавычек не режет аргументы.
 
-```mermaid
-graph LR
-    A[loop:172.0.0.[1-3]] -->|строка 1: 172.0.0.1| B[ssh:root:uptime]
-    A -->|строка 2: 172.0.0.2| B
-    A -->|строка 3: 172.0.0.3| B
-    B --> C[результаты по всем хостам]
-    C --> D[в тайл / статус]
-```
-
-`loop` выдаёт адреса построчно → каждый уходит в `ssh` как хост → результаты
-склеиваются и показываются.
+> **Плагин `loop`** (перебор адресов диапазоном) — на реворке и временно отключён.
 
 ---
 
@@ -407,17 +402,17 @@ graph LR
 ```html
 <h1 color="#ffcc00">Панель управления</h1>
 
-<!-- Сеть: один хост и вся подсеть -->
+<!-- Сеть: один хост и ключи -->
 <row>
   <div width="50%">
-    <h1>Один сервер</h1>
-    <button action="ssh:root@srv1:uptime">Uptime</button>
-    <button action="ssh:root@srv1:df -h | grep:/data">Диск /data</button>
+    <h1>Сервер</h1>
+    <button action="ssh:root:srv1::uptime">Uptime</button>
+    <button action="ssh:root:srv1::df -h | grep:/data">Диск /data</button>
   </div>
   <div width="50%">
-    <h1>Вся сеть</h1>
-    <button action="loop:172.0.0.[1-127] | ssh:root:-i:/root/keys:uptime">Uptime всех</button>
-    <button action="loop:172.0.0.[1-127] | ssh:root:apt update && apt upgrade -y | confirm">Апдейт всех</button>
+    <h1>С ключами</h1>
+    <button action="ssh:root:srv1::hostname --keys=/root/keys">Hostname (ключи)</button>
+    <button action="ssh:root:srv1::reboot | confirm">Перезагрузка (подтверждение)</button>
   </div>
 </row>
 
@@ -444,7 +439,7 @@ graph LR
 
 <!-- Живой график -->
 <h1>Нагрузка</h1>
-<plugin pipe="ssh:root@srv1:cat /proc/loadavg | bars" interval="1s"/>
+<plugin pipe="ssh:root:srv1::cat /proc/loadavg | bars" interval="1s"/>
 
 <hr/>
 
@@ -495,14 +490,17 @@ graph LR
 | `head` | `… \| head[:N]` | первые N строк (по умолчанию 10) |
 | `tail` | `… \| tail[:N]` | последние N строк (по умолчанию 10) |
 | `wc` | `… \| wc` | сколько строк во входе |
+| `cut` | `… \| cut[:РАЗДЕЛИТЕЛЬ][:ПОЛЯ]` | вырезать поля (как cut -d -f) |
+| `awk` | `… \| awk [--разделитель=Д] [--поля=N] [--фильтр=РЕГ]` | фильтр+поля (упрощ. awk) |
+| `sed` | `… \| sed:ЧТО:НА` | замена текста (как sed 's/ч/н/') |
+| `export` | `… \| export:ИМЯ` | сохранить вывод в переменную (`$ИМЯ` — подстановка) |
 | `line` | `… \| line:N` или `line:ФАЙЛ:N` | строка по номеру |
 | `append` | `append:ФАЙЛ:строка` | дописать строку в файл |
 | `set` | `set:ФАЙЛ:КЛЮЧ:ЗНАЧЕНИЕ` | поставить значение ключа |
 | `toggle` | `toggle:ФАЙЛ:КЛЮЧ` | переключить флаг 0↔1/on↔off |
 | `curl` | `curl:URL` | скачать URL и отдать тело |
-| `ssh` | `ssh:user@host:[ -i ПУТЬ ]:команда` | выполнить команду по SSH |
-| `loop` | `loop:ШАБЛОН` или `loop:БАЗА:КОНЕЦ` | развернуть диапазоны в адреса |
-| `bars` | `… \| bars[:МАСКА]` | спарклайн (одна строка из блоков) |
+| `ssh` | `ssh:user:host::команда` (порт `--port`/слот, ключи `--keys=`) | выполнить команду по SSH |
+| `bars` | `… \| bars[:ЦВЕТ]` | спарклайн (цвет из темы по умолчанию) |
 | `chart` | `… \| chart:МИН:МАКС[:ШИРИНА[:СЕКУНД[:ЗАГОЛОВОК]]]` | живой столбчатый график с осями (нужен `height`) |
 | `clock` | `<plugin name="clock" interval="1s"/>` | живые часы |
 | `theme` | `theme[:ИМЯ\|list]` | смена темы на лету, список тем |
@@ -551,11 +549,9 @@ graph LR
 <!-- curl -->
 <button action="curl:https://api.example.com/status">Статус API</button>
 
-<!-- ssh: один хост -->
-<button action="ssh:root@srv1:uptime">Uptime</button>
-
-<!-- ssh: пайп-режим с loop -->
-<button action="loop:172.0.0.[1-127] | ssh:root:uptime">Uptime всей сети</button>
+<!-- ssh: один хост, порт по умолчанию 22 -->
+<button action="ssh:root:srv1::uptime">Uptime</button>
+<button action="ssh:root:srv1::uptime --port=2222">Uptime (порт)</button>
 
 <!-- bars -->
 <plugin pipe="cat:data.log | tail:10 | bars" interval="1s"/>
@@ -580,15 +576,16 @@ graph LR
 id по всему интерфейсу, не только в текущем тайле.
 
 **Почему у `ssh` команда склеивается через `:`?** Потому что аргументы разделяются
-`:` — а в команде могут быть пробелы. `ssh:root@srv:df -h` → команда `df -h`.
+`:` — а в команде могут быть пробелы. `ssh:root:srv1::df -h` → команда `df -h`.
 
 **Что если ssh-команда сама содержит `|`?** Внутри одного `action` движок тоже
 режет по `|` — это уже следующий шаг пайпа. Если на сервере нужен шелл-пайп —
 оберни команду в `sh -c '...'`.
 
-**`loop` vs `loop:БАЗА:КОНЕЦ`?** Шаблон с `[a-b]` — новый формат, работает для
-всего (`пирожок_[1-5]`). Старый `loop:172.0.0.1:25` — только IP от базы до конца.
-Используй шаблон.
+**А где `loop`?** На реворке — перебор адресов диапазоном вернётся позже.
+
+**Что если в аргументе нужен `:`?** Оберни значение в кавычки: `sed:':':1` —
+`:` внутри кавычек не режет аргументы.
 
 **У меня не работает кириллица.** Терминал должен быть UTF-8: Windows — `chcp
 65001` или Windows Terminal / VS Code.

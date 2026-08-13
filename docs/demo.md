@@ -111,13 +111,13 @@ import _ "rough/plugins" // все готовые плагины репозит�
 <button action="hello">Поздороваться</button>
 <button action="cat:/etc/hostname | hello">Показать hostname</button>
 <button action="curl:https://api.example.com/status">Статус API</button>
-<button action="ssh:root@srv1:systemctl status nginx">Nginx на srv1</button>
-<button action="ssh:root@srv1:-i:/root/keys:uptime">Uptime srv1 (свои ключи)</button>
+<button action="ssh:root:srv1::systemctl status nginx">Nginx на srv1</button>
+<button action="ssh:root:srv1::uptime --keys=/root/keys">Uptime srv1 (свои ключи)</button>
 <button action="man:ssh">Справка по ssh</button>
 ```
 
 Сетевые плагины тоже юникс-лайк: `ssh` ходит по SSH (агент + ключи `~/.ssh`
-по дефолту, можно указать папку или файл через `-i:ПУТЬ` — как у настоящего ssh),
+по дефолту, можно указать папку или файл через `--keys=ПУТЬ` — как у настоящего ssh),
 `curl` — GET по URL (тело построчно). Оба нативно в Go — без внешних бинарников,
 работают в любом контейнере. `man` показывает справку, которую каждый плагин
 несёт в своей переменной `man_<имя>`.
@@ -179,7 +179,7 @@ import _ "rough/plugins" // все готовые плагины репозит�
 <button action="hello">Поздороваться</button>
 <input action="set:/etc/x.conf:level" label="level"/>   <!-- поле ввода -->
 <a href="/other">→ Другая страница</a>                  <!-- переход -->
-<plugin pipe="file:/tmp/cpu.log | bars:cpu=(\d+)" interval="1s"/>  <!-- живой график -->
+<plugin pipe="emu_cpu | bars" interval="1s"/>  <!-- живой график -->
 ```
 
 `color` понимает: номер палитры терминала (`"3"`), hex (`"#ffcc00"`) или имя из темы.

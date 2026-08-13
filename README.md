@@ -38,10 +38,10 @@ ROUGH outlines UI -- go html
 **3. Вызываешь плагины прямо из HTML** — как Linux-команды:
 ```html
 <button action="cat:/etc/hostname">Hostname</button>
-<button action="ssh:root@srv1:uptime">Uptime на srv1</button>
+<button action="ssh:root:srv1::uptime">Uptime на srv1</button>
 ```
 
-А «начинку» кнопок пишут на Go — это плагины-команды: **строки на входе, строки на выходе**. Движок сам ничего не умеет — вся логика в плагинах.
+А «начинку» кнопок пишут на Go — это плагины-команды: **строки на входе, строки на выходе**. Движок сам ничего не умеет — вся логика в плагинах. требования к контрактам см в кукингбуке
 
 ## Как это выглядит
 
@@ -51,7 +51,7 @@ ROUGH outlines UI -- go html
 <!-- тайл «ввод» -->
 <input action="man:" output="out" label="Пакет"/>
 
-<!-- тайл «вывод» (id="out"): сюда движок рисует справку по команде -->
+<!-- тайл «вывод» (id="out"(ЭТО ВАЖНО)): сюда движок рисует справку по команде -->
 ```
 
 `man` — команда вывода, как `cat`: что выполнил, то и показал. Кнопка, поле ввода, пайп — всё это команды, и результат любой из них можно направить в свой тайл.
@@ -103,7 +103,7 @@ func main() { rough.TUI(roughDir) }
 `ssh` гонит по каждому команду с ключами из папки:
 
 ```html
-<button action="loop:172.0.0.[1-127] | ssh:root:-i:/root/keys:apt update && apt upgrade -y | confirm">Раскатать апдейт</button>
+<button action="ssh:root:srv1::apt update && apt upgrade -y | confirm">Раскатать апдейт</button>
 ```
 
 `loop` разворачивает шаблон `172.0.0.[1-127]` в адреса `172.0.0.1..172.0.0.127`,
@@ -114,7 +114,7 @@ func main() { rough.TUI(roughDir) }
 **Любая автоматика.** Графики по таймеру, аварийные кнопки:
 
 ```html
-<plugin pipe="cat:/tmp/core_temp | bars:temp=(\d+)" interval="1s"/>
+<plugin pipe="cat:/tmp/core_temp | cut::1 | bars" interval="1s"/>
 ```
 
 [место для гифки]

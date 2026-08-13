@@ -23,7 +23,7 @@ func main() { rough.TUI(roughDir) }
 |---|---|
 | [README](../README.md) | лицо проекта: что это и зачем (для людей) |
 | [cookbook-project](cookbook-project.md) | как собрать свой проект: 4 строчки, `tiles.json`, HTML тайлов, вкладки |
-| [cookbook-html](cookbook-html.md) | ВСЕ примеры вёрстки: кнопки, пайпы, вывод в тайл, таблицы, чекбоксы, ssh+loop |
+| [cookbook-html](cookbook-html.md) | ВСЕ примеры вёрстки: кнопки, пайпы, вывод в тайл, таблицы, чекбоксы, ssh |
 | [cookbook-plugins](cookbook-plugins.md) | как писать плагины: контракт, рецепты, пайпы, справка `man` |
 | [cookbook-themes](cookbook-themes.md) | как делать темы: символы, цвета, примеры |
 | [how-it-works](how-it-works.md) | как устроен движок изнутри: рендер, события, вывод в тайл |
@@ -36,15 +36,25 @@ func main() { rough.TUI(roughDir) }
 ```
 rough\
   rough.go               # публичное API: TUI(embed.FS), AddPlugin, AddMan
-  engine\                # ДВИЖОК: чистый, без плагинов
-    backend.go           # HTML → DOM → клетки, колонки, вывод в блок
-    backend_conf_loader.go  # tiles.json: страницы, тайлы, menu
-    frontend.go          # холст: буфер клеток → экран tcell
-    people_input.go      # главный цикл: мышь/клавиши/таймер, вкладки, фокус
-    plugin_registry.go   # реестр плагинов + пайпы + справки + LoadUI
-    theme.go             # темы: символы и цвета
+  engine\                # ДВИЖОК: чистый, без плагинов (слои по файлам)
+    engine.go            # Run (главный цикл), execAction, crash.log
+    loader_tiles.go      # tiles.json: страницы, тайлы, menu
+    loader_theme.go      # темы: символы и цвета
+    backend_html.go      # HTML → DOM → клетки, колонки, вывод в блок
+    backend_plugin.go    # тег <plugin>: пайп + кэш по интервалу
+    backend_img.go       # картинки PPM
+    backend_clickzones.go# кликабельные зоны, hit-test, чекбокс/select-состояние
+    frontend_buffer.go   # холст: буфер клеток → экран (дифф-рендеринг)
+    frontend_stretcher.go# растягиватель тайлов + скролл
+    frontend_tiles_borders.go # рамки тайлов
+    frontend_tabs.go     # вкладки + кнопка «Закрыть»
+    frontend_focus.go    # фокус стрелками
+    frontend_widget_*.go # виджеты: поле ввода, select, модалка, статус-блок
+    people_input_*.go    # клавиатура + ЕДИНАЯ мышь (десктоп/телетайп)
+    plugin_registry.go   # реестр плагинов + пайпы + ParseArgs (quick) + LoadUI
+    vars.go              # переменные сессии: SetVar/GetVar, подстановка $имя
     syntax_checker.go    # проверка: action/plugin/ссылки существуют
-  plugins\               # ВСЕ плагины: cat, hello, ssh, curl, man, grep, ...
+  plugins\               # ВСЕ плагины: cat, hello, ssh, curl, man, grep, cut, awk, sed, export, ...
   example\               # живой пример (отдельный модуль)
   testv001\              # проверочная сборка (тоже отдельный модуль)
   docs\                  # эта документация

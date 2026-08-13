@@ -80,7 +80,8 @@ JSON должен читаться глазами за секунду. **Ник�
 ```
 
 - Один атрибут, короткий, двоеточием: `action="имя:аргументы"`.
-- `имя` — это команда Linux: `cat`, `tail`, `grep`, `head`, `wc`, `toggle`, `set`, `run`.
+- `имя` — это команда Linux: `cat`, `tail`, `grep`, `head`, `wc`, `toggle`, `set`.
+  `run` — запрещён движком (безопасность).
 - Аргументы — как в консоли: файл, ключ, значение, команда.
 
 Go-сторона тоже короткая:
@@ -122,7 +123,7 @@ rough.AddPlugin("restart_nginx", func(in []string, args []string) ([]string, err
 | `wc -l file` | `action="wc:file"` |
 | `sed`-подобная правка строки | `action="line:file:N"` |
 | `echo "k=v" >> file` | `action="append:file:key=value"` |
-| `ssh user@host команда` | `action="ssh:user@host:команда"`; ключи `~/.ssh` или `-i:ПУТЬ` (нативно в Go) |
+| `ssh user@host команда` | `action="ssh:user:host::команда"`; ключи `~/.ssh` или `--keys=ПУТЬ` (нативно в Go) |
 | `curl URL` | `action="curl:https://..."` (`net/http`, тело построчно, нативно в Go) |
 | `man` / `man ssh` | `action="man"` — список плагинов, `action="man:ssh"` — справка |
 
