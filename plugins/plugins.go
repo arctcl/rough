@@ -22,10 +22,13 @@ import (
 	_ "rough/plugins/man"
 	_ "rough/plugins/sed"
 	_ "rough/plugins/set"
+	_ "rough/plugins/sort"
 	_ "rough/plugins/ssh"
 	_ "rough/plugins/tail"
 	_ "rough/plugins/theme"
 	_ "rough/plugins/tobotom"
 	_ "rough/plugins/toggle"
+	_ "rough/plugins/tr"
+	_ "rough/plugins/uniq"
 	_ "rough/plugins/wc"
 )
