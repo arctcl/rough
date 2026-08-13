@@ -2,6 +2,7 @@ package engine
 
 import (
 	"io"
+	"io/fs"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -24,6 +25,30 @@ func ParseHTML(r io.Reader) (*Node, error) {
 		return nil, err
 	}
 	return convertNode(doc), nil
+}
+
+// tileCache — кэш распарсенного HTML тайлов (файл → дерево). HTML тайла
+// статичен: парсим ОДИН раз, дальше рендерим из кэша — не открываем и не
+// парсим файл на каждую отрисовку (сверхлёгкая отрисовка).
+var tileCache = map[string]*Node{}
+
+// loadTile возвращает распарсенное дерево HTML тайла, кэшируя его при первом
+// чтении. Дерево не мутируется при рендере, поэтому его можно переиспользовать.
+func loadTile(fsys fs.FS, file string) (*Node, error) {
+	if n, ok := tileCache[file]; ok {
+		return n, nil
+	}
+	f, err := fsys.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	n, err := ParseHTML(f)
+	if err != nil {
+		return nil, err
+	}
+	tileCache[file] = n
+	return n, nil
 }
 
 // convertNode переводит дерево x/net/html в наше.

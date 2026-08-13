@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"testing/fstest"
 )
 
 // dumpBuffer собирает содержимое буфера построчно (для проверок).
@@ -107,6 +108,28 @@ func TestParseSelTree(t *testing.T) {
 	sub := deep[0].children[0]
 	if sub.label != "Б" || len(sub.children) != 2 || sub.children[1].label != "В2" {
 		t.Fatalf("вложенное подменю: %+v", sub)
+	}
+}
+
+// loadTile: HTML тайла парсится ОДИН раз и кэшируется (не перечитывается на
+// каждый кадр — сверхлёгкая отрисовка).
+func TestLoadTileCache(t *testing.T) {
+	fsys := fstest.MapFS{
+		"tiles/a.html": &fstest.MapFile{Data: []byte(`<p>привет</p>`)},
+	}
+	n1, err := loadTile(fsys, "tiles/a.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(n1.Children) == 0 {
+		t.Fatal("пустое дерево")
+	}
+	n2, err := loadTile(fsys, "tiles/a.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n1 != n2 {
+		t.Fatal("кэш не сработал: деревья разные (HTML перечитан)")
 	}
 }
 

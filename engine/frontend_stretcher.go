@@ -47,12 +47,10 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 
 		inner := NewBuffer(tw-2, th-2)
 
+		// HTML тайла распарсен один раз (кэш) — здесь только рендер из кэша.
 		if t.File != "" {
-			if f, err := fsys.Open(t.File); err == nil {
-				if root, perr := ParseHTML(f); perr == nil {
-					renderTile(root, inner, t.ID, x+1, y+1, th-2, &hotzones)
-				}
-				f.Close()
+			if root, perr := loadTile(fsys, t.File); perr == nil {
+				renderTile(root, inner, t.ID, x+1, y+1, th-2, &hotzones)
 			}
 		}
 		bg.Copy(inner, x+1, y+1)
