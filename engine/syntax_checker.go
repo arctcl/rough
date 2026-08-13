@@ -52,7 +52,7 @@ func checkHTMLFile(fsys fs.FS, file string, pages Pages, add func(where, msg str
 // checkNodes рекурсивно проверяет узлы HTML-дерева.
 func checkNodes(n *Node, file string, pages Pages, add func(where, msg string)) {
 	switch n.Tag {
-	case "button", "input":
+	case "button", "input", "checkbox", "select":
 		// Все шаги action (или пайпа) должны существовать в реестре.
 		act := n.Attrs["action"]
 		if act == "" {
@@ -67,6 +67,10 @@ func checkNodes(n *Node, file string, pages Pages, add func(where, msg string)) 
 			if !HasPlugin(name) {
 				add(file, "нет такого плагина: "+name+"  (action=\""+act+"\")")
 			}
+		}
+		// У select должен быть options (иначе выпадать нечему).
+		if n.Tag == "select" && n.Attrs["options"] == "" {
+			add(file, "<select> без атрибута options  (action=\""+act+"\")")
 		}
 	case "a":
 		// Ссылка должна вести на существующую страницу.
