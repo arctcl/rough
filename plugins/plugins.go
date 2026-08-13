@@ -7,11 +7,13 @@ package plugins
 
 import (
 	_ "rough/plugins/append"
+	_ "rough/plugins/awk"
 	_ "rough/plugins/bars"
 	_ "rough/plugins/cat"
 	_ "rough/plugins/chart"
 	_ "rough/plugins/clock"
 	_ "rough/plugins/curl"
+	_ "rough/plugins/cut"
 	_ "rough/plugins/grep"
 	_ "rough/plugins/head"
 	_ "rough/plugins/hello"
