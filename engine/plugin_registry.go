@@ -70,9 +70,9 @@ func ManNames() []string {
 // "имя --а=1 --б=2" → имя + ["--а=1 --б=2"] (разбор флагов — в ParseArgs).
 func SplitAction(raw string) (string, []string) {
 	raw = strings.TrimSpace(raw)
-	i := strings.Index(raw, ":")
+	i := indexColonOutsideQuotes(raw)
 	if i < 0 {
-		// Двоеточий нет: имя до первого пробела, остальное — аргументы
+		// Двоеточий вне кавычек нет: имя до первого пробела, остальное — аргументы
 		// (иначе флаги ушли бы в имя).
 		if j := strings.IndexAny(raw, " \t"); j > 0 {
 			return raw[:j], []string{strings.TrimSpace(raw[j:])}
@@ -81,7 +81,75 @@ func SplitAction(raw string) (string, []string) {
 	}
 	name := raw[:i]
 	rest := raw[i+1:]
-	return name, strings.Split(rest, ":")
+	// Аргументы режем по ":" с учётом кавычек '...' и "...": внутри кавычек
+	// ":" — обычный символ (например разделитель для cut/sed: sed:':':1).
+	return name, splitQuoted(rest, ':')
+}
+
+// indexColonOutsideQuotes возвращает индекс первого ":" вне кавычек
+// ('...' / "...") или -1. Нужно, чтобы ":" внутри значения флага
+// (--разделитель=':') не резал имя действия.
+func indexColonOutsideQuotes(s string) int {
+	var quote rune
+	for i, r := range s {
+		if quote != 0 {
+			if r == quote {
+				quote = 0
+			}
+			continue
+		}
+		switch r {
+		case '\'', '"':
+			quote = r
+		case ':':
+			return i
+		}
+	}
+	return -1
+}
+
+// splitQuoted режет строку по sep, уважая кавычки '...' и "...": внутри кавычек
+// sep — обычный символ, сами кавычки снимаются. Пустые слоты сохраняются
+// (как strings.Split), чтобы "::" оставалось пустым слотом для quick-параметров.
+func splitQuoted(s string, sep rune) []string {
+	var parts []string
+	var cur strings.Builder
+	var quote rune
+	flush := func() {
+		parts = append(parts, cur.String())
+		cur.Reset()
+	}
+	for _, r := range s {
+		if quote != 0 {
+			if r == quote {
+				quote = 0
+			} else {
+				cur.WriteRune(r)
+			}
+			continue
+		}
+		switch r {
+		case '\'', '"':
+			quote = r
+		case sep:
+			flush()
+		default:
+			cur.WriteRune(r)
+		}
+	}
+	flush()
+	return parts
+}
+
+// stripQuotes снимает парные кавычки вокруг значения ('...' / "...").
+// Используется для значений флагов и позиционных токенов, пришедших с кавычками.
+func stripQuotes(s string) string {
+	if len(s) >= 2 {
+		if (s[0] == '\'' && s[len(s)-1] == '\'') || (s[0] == '"' && s[len(s)-1] == '"') {
+			return s[1 : len(s)-1]
+		}
+	}
+	return s
 }
 
 // SplitSteps разбирает пайп "шаг1 | шаг2 | шаг3" на шаги.
@@ -135,13 +203,13 @@ func ParseArgs(args []string, params []Param) (map[string]string, error) {
 			if strings.HasPrefix(tok, "--") {
 				kv := strings.TrimPrefix(tok, "--")
 				if i := strings.Index(kv, "="); i >= 0 {
-					flags[kv[:i]] = kv[i+1:]
+					flags[kv[:i]] = stripQuotes(kv[i+1:])
 				} else {
 					return nil, fmt.Errorf("флаг %s требует =значение", tok)
 				}
 				continue
 			}
-			plain = append(plain, tok)
+			plain = append(plain, stripQuotes(tok))
 		}
 		// Позиционная часть аргумента — не-флаговые токены через пробел.
 		// Аргумент, состоящий только из флагов, слота НЕ даёт.
@@ -169,11 +237,12 @@ func ParseArgs(args []string, params []Param) (map[string]string, error) {
 			vals[p.Name] = v
 		}
 	}
-	// Последний параметр глотает остаток двоеточий (лишние слоты).
+	// Последний параметр глотает остаток двоеточий (только ЛИШНИЕ слоты:
+	// слот самого последнего параметра уже записан в vals выше).
 	if len(params) > 0 && len(pos) > len(params) {
 		last := params[len(params)-1].Name
 		var parts []string
-		for _, t := range pos[len(params)-1:] {
+		for _, t := range pos[len(params):] {
 			if t != "" {
 				parts = append(parts, t)
 			}

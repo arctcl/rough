@@ -238,3 +238,33 @@ func TestRunStepsFlags(t *testing.T) {
 		t.Fatalf("микс: %v", out)
 	}
 }
+
+// Экранирование: ":" внутри кавычек не разделяет аргументы.
+// sed:':':1 → args = [":", "1"] (разделитель ":" как обычное значение).
+func TestSplitActionQuoted(t *testing.T) {
+	name, args := SplitAction("sed:':':1")
+	if name != "sed" || len(args) != 2 || args[0] != ":" || args[1] != "1" {
+		t.Fatalf("sed:':':1 → имя=%q args=%v", name, args)
+	}
+	name, args = SplitAction("sed:\":\":1")
+	if name != "sed" || len(args) != 2 || args[0] != ":" || args[1] != "1" {
+		t.Fatalf("sed:\":\":1 → имя=%q args=%v", name, args)
+	}
+	// Флаг со значением в кавычках: ":" внутри не режет имя действия.
+	name, args = SplitAction("cut --разделитель=':' --поля=1")
+	if name != "cut" || len(args) != 1 || !strings.Contains(args[0], "--разделитель=':'") {
+		t.Fatalf("флаг с ':' → имя=%q args=%v", name, args)
+	}
+}
+
+// Фикс Бага 1: лишние слоты НЕ дублируют последний параметр (был "cat:/a:b" → "cat:cat:/a:b").
+func TestParseArgsGreedyLastNoDup(t *testing.T) {
+	params := []Param{{Name: "хост"}, {Name: "команда"}}
+	v, err := ParseArgs([]string{"user@host", "cat", "/a:b"}, params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v["команда"] != "cat:/a:b" {
+		t.Fatalf("команда = %q, ждали cat:/a:b (без дубля)", v["команда"])
+	}
+}
