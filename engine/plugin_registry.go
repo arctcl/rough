@@ -189,6 +189,39 @@ func SplitSteps(raw string) []string {
 	return steps
 }
 
+// FlagValue вытаскивает из args флаг --имя=значение. Флаг может быть «приклеен»
+// к значению через пробел (например "val --разделитель=пробел") — разбираем
+// каждый аргумент по пробелам. Возвращает значение флага и остаток аргументов
+// (значения склеены обратно с пробелами). Нужно плагинам, которые не используют
+// ParseArgs (значение глотает остаток двоеточий), — например set/toggle.
+func FlagValue(args []string, name string) (string, []string) {
+	flag := "--" + name + "="
+	val := ""
+	found := false
+	var rest []string
+	for _, a := range args {
+		if strings.TrimSpace(a) == "" {
+			continue
+		}
+		var plain []string
+		for _, tok := range strings.Fields(a) {
+			if strings.HasPrefix(tok, flag) {
+				val = strings.TrimPrefix(tok, flag)
+				found = true
+				continue
+			}
+			plain = append(plain, tok)
+		}
+		if len(plain) > 0 {
+			rest = append(rest, strings.Join(plain, " "))
+		}
+	}
+	if !found {
+		return "", args
+	}
+	return val, rest
+}
+
 // Param — описание одного параметра плагина (гибридный ввод).
 // Порядок объявления = позиция при вводе двоеточиями; Name — имя для
 // флага --name=value; Default — значение по умолчанию (пусто = нет дефолта);

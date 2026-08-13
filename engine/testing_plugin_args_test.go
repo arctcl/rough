@@ -277,6 +277,21 @@ func TestSplitStepsQuoted(t *testing.T) {
 	}
 }
 
+// FlagValue: вытаскивает флаг --имя=значение из args (для плагинов, которые
+// не используют ParseArgs — например set/toggle с --разделитель).
+func TestFlagValue(t *testing.T) {
+	// Флаг «приклеен» к последнему позиционному аргументу через пробел.
+	val, rest := FlagValue([]string{"file", "key", "val --разделитель=пробел"}, "разделитель")
+	if val != "пробел" || len(rest) != 3 || rest[0] != "file" || rest[1] != "key" || rest[2] != "val" {
+		t.Fatalf("FlagValue = %q %v, ждали пробел [file key val]", val, rest)
+	}
+	// Флага нет — возвращаем аргументы как есть, значение пустое.
+	val, rest = FlagValue([]string{"a", "b"}, "разделитель")
+	if val != "" || len(rest) != 2 {
+		t.Fatalf("без флага = %q %v", val, rest)
+	}
+}
+
 // Инъекция через поле ввода: ввод оборачивается в кавычки, "|" внутри не
 // создаёт новый шаг — произвольная команда не выполняется.
 func TestInputInjectionBlocked(t *testing.T) {
