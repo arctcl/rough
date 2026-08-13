@@ -29,7 +29,7 @@ const man_awk = `awk — обработка текста (упрощённый a
   action="cat:log | awk --фильтр=ERROR"                  — только строки с ERROR
   action="cat:log | awk --фильтр=ERROR --поля=3"         — 3-е поле строк ERROR
   action="cat:cpu.log | awk --поля=2 | bars"             — 2-е поле → график
-  action="cat:/etc/passwd | awk --разделитель=: --поля=1 | head:3"  — первые логины`
+  action="cat:app.conf | awk --разделитель== --поля=2"     — значения ключей конфига`
 
 // awkParams — параметры awk. Порядок = позиции: разделитель, поля, фильтр.
 var awkParams = []engine.Param{
