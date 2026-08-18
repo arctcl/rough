@@ -7,9 +7,11 @@ import (
 	// Графики и справка.
 	_ "github.com/arctcl/rough/plugins/chart"
 	_ "github.com/arctcl/rough/plugins/man"
+
 	// Склейка пайпов и пауза (кнопка Pipeline).
 	_ "github.com/arctcl/rough/plugins/clear"
 	_ "github.com/arctcl/rough/plugins/sleep"
+
 	// Плагины, по которым на вкладке Man показываем справку.
 	_ "github.com/arctcl/rough/plugins/awk"
 	_ "github.com/arctcl/rough/plugins/bars"
