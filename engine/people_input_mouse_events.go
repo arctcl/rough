@@ -93,7 +93,11 @@ func handleMouseEvent(me MouseEvent, pages Pages, route *string, w, h int) {
 			}
 			return
 		}
-		kind, act, href, label, output, options := HitTest(x, y)
+		hz := HitTest(x, y)
+		kind, act, href, label, output, options := "", "", "", "", "", ""
+		if hz != nil {
+			kind, act, href, label, output, options = hz.Kind, hz.Action, hz.Href, hz.Label, hz.Output, hz.Options
+		}
 		// Кнопка «Закрыть» — закрыть строку вывода (не выход из приложения).
 		if kind == "quit" {
 			statusMsg = ""
@@ -138,6 +142,12 @@ func handleMouseEvent(me MouseEvent, pages Pages, route *string, w, h int) {
 				hz = &Hotzone{X: x, Y: y, W: 1}
 			}
 			openSelect(act, label, output, options, hz.X, hz.Y, hz.W)
+			return
+		}
+		// Одна кнопка может нести несколько action — выполняем их все
+		// последовательно (runHotzone); иначе — одиночное действие как раньше.
+		if hz != nil && len(hz.Actions) > 0 {
+			runHotzone(hz)
 			return
 		}
 		execAction(act, output)

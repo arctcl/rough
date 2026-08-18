@@ -374,17 +374,69 @@ func ParamsUsage(name string, params []Param) string {
 
 // PrepareAction разбирает action на шаги и отделяет confirm-гейт.
 // Возвращает шаги к выполнению и флаг «нужно подтверждение».
-func PrepareAction(raw string) (steps []string, needConfirm bool) {
-	for _, s := range SplitSteps(raw) {
-		name, _ := SplitAction(s)
-		if name == "confirm" {
-			needConfirm = true
+// PrepareAction разбирает action на пайпы и отделяет confirm-гейт.
+// "a && b" — два НЕЗАВИСИМЫХ пайпа (выполняются последовательно, каждый
+// своим выводом), внутри пайпа "|" — конвейер (выход → вход).
+// Возвращает список пайпов (каждый — шаги) и флаг «нужно подтверждение».
+func PrepareAction(raw string) (pipes [][]string, needConfirm bool) {
+	for _, seg := range splitAnd(raw) {
+		var steps []string
+		for _, s := range SplitSteps(seg) {
+			name, _ := SplitAction(s)
+			if name == "confirm" {
+				needConfirm = true
+				continue
+			}
+			// Подстановка переменных $имя (движок) перед выполнением шага.
+			steps = append(steps, expandVars(s))
+		}
+		if len(steps) > 0 {
+			pipes = append(pipes, steps)
+		}
+	}
+	return pipes, needConfirm
+}
+
+// splitAnd разбивает action на несколько пайпов по "&&" (вне кавычек).
+// Одиночный "&" — обычный символ. Кавычки '...'/"..." защищают "&&" внутри.
+func splitAnd(raw string) []string {
+	var parts []string
+	var cur strings.Builder
+	var quote rune
+	flush := func() {
+		s := strings.TrimSpace(cur.String())
+		if s != "" {
+			parts = append(parts, s)
+		}
+		cur.Reset()
+	}
+	runes := []rune(raw)
+	for i := 0; i < len(runes); i++ {
+		r := runes[i]
+		if quote != 0 {
+			if r == quote {
+				quote = 0
+			}
+			cur.WriteRune(r)
 			continue
 		}
-		// Подстановка переменных $имя (движок) перед выполнением шага.
-		steps = append(steps, expandVars(s))
+		switch r {
+		case '\'', '"':
+			quote = r
+			cur.WriteRune(r)
+		case '&':
+			if i+1 < len(runes) && runes[i+1] == '&' {
+				flush()
+				i++
+			} else {
+				cur.WriteRune(r)
+			}
+		default:
+			cur.WriteRune(r)
+		}
 	}
-	return steps, needConfirm
+	flush()
+	return parts
 }
 
 // RunSteps выполняет пайп: выход одного шага — вход следующего.

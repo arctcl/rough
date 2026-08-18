@@ -55,9 +55,11 @@ rough\
     vars.go              # переменные сессии: SetVar/VarLine, подстановка $имя
     syntax_checker.go    # проверка: action/plugin/ссылки существуют
   plugins\               # ВСЕ плагины: cat, hello, ssh, curl, man, grep, cut, awk, sed, export, ...
-  example\               # живой пример (отдельный модуль)
+  example\               # минимальный пример (отдельный модуль)
+  example_project\       # демо-проект для записи GIF-ок в README (отдельный модуль)
   docs\                  # эта документация
 ```
 
-Важно: `example\` — отдельный модуль с `replace github.com/arctcl/rough => ../`.
-Оба используют один и тот же корневой движок — дублирования кода нет.
+Важно: `example\` и `example_project\` — отдельные модули с
+`replace github.com/arctcl/rough => ../`. Все используют один и тот же корневой
+движок — дублирования кода нет.

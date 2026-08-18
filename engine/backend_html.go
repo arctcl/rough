@@ -14,6 +14,7 @@ import (
 type Node struct {
 	Tag      string            // имя тега
 	Attrs    map[string]string // атрибуты
+	Actions  []string          // все action="..." по порядку (кнопка выполняет их последовательно)
 	Text     string            // текст (для текстовых узлов)
 	Children []*Node           // вложенные узлы
 }
@@ -59,6 +60,15 @@ func convertNode(n *html.Node) *Node {
 		nn.Tag = n.Data
 		nn.Attrs = map[string]string{}
 		for _, a := range n.Attr {
+			// Несколько action="..." — все сохраняем по порядку (кнопка
+			// выполняет их последовательно); в Attrs["action"] — первый.
+			if a.Key == "action" {
+				nn.Actions = append(nn.Actions, a.Val)
+				if _, ok := nn.Attrs["action"]; !ok {
+					nn.Attrs["action"] = a.Val
+				}
+				continue
+			}
 			nn.Attrs[a.Key] = a.Val
 		}
 	case html.TextNode:
@@ -346,7 +356,7 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		s := mark + " " + label
 		x0, y0 := f.drawX(b, s), f.y
 		f.put(b, s)
-		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act})
+		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act, Actions: n.Actions, Output: n.Attrs["output"]})
 		f.nl(b)
 	case "table":
 		f.nl(b)
@@ -365,7 +375,7 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		s := string(bl) + " " + label + " " + string(br)
 		x0, y0 := f.drawX(b, s), f.y
 		f.put(b, s)
-		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act, Output: n.Attrs["output"]})
+		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act, Actions: n.Actions, Output: n.Attrs["output"]})
 		f.nl(b)
 	case "a":
 		f.nl(b)
@@ -400,7 +410,7 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		s += " " + string(ir)
 		x0, y0 := f.drawX(b, s), f.y
 		f.put(b, s)
-		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act, Kind: "input", Label: label, Output: n.Attrs["output"]})
+		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act, Actions: n.Actions, Kind: "input", Label: label, Output: n.Attrs["output"]})
 		f.nl(b)
 	case "select":
 		// Выпадающий список: клик открывает меню выбора, выбор выполняет action
@@ -416,7 +426,7 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		s := label + "  " + string(sl) + " " + currentSelect(act)
 		x0, y0 := f.drawX(b, s), f.y
 		f.put(b, s)
-		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act, Kind: "select", Label: label, Output: n.Attrs["output"], Options: n.Attrs["options"]})
+		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act, Actions: n.Actions, Kind: "select", Label: label, Output: n.Attrs["output"], Options: n.Attrs["options"]})
 		f.nl(b)
 	case "img":
 		// Картинка PPM (P6): рисуется половинчатыми блоками ▀▄█.

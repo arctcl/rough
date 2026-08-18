@@ -30,7 +30,7 @@ func TestConfirmBlocksMouse(t *testing.T) {
 	hotzones = append(hotzones, Hotzone{X: 10, Y: 10, W: 5, H: 1, Kind: "confirm_yes"})
 	mouseBtn1 = false
 	confirmMode = true
-	pendingSteps = []string{"__confirm_probe"}
+	pendingPipes = [][]string{{"__confirm_probe"}}
 	handleMouseEvent(MouseEvent{X: 12, Y: 10, Left: true}, Pages{}, &route, 40, 20)
 	if calls != 1 {
 		t.Fatalf("клик по «Да» не подтвердил: calls=%d", calls)
@@ -85,13 +85,16 @@ func TestExpandVarsDigitNotVar(t *testing.T) {
 }
 
 // TestBackgroundSkipsNonInterval — фоновый рендер неактивных страниц запускает
-// ТОЛЬКО плагины с явным interval; разовые плагины (без interval) пропускает.
+// плагины с явным interval ИЛИ с флагом updateanytime; разовые плагины (без
+// того и другого) пропускает.
 func TestBackgroundSkipsNonInterval(t *testing.T) {
 	var calls int
 	AddPlugin("__bg_probe", func(in []string, args []string) ([]string, error) {
 		calls++
 		return nil, nil
 	})
+	// Сброс кэша <plugin> — иначе предыдущий запуск «закрыл» интервал.
+	pluginCache = map[string]pluginEntry{}
 
 	// Без interval — в фоне не запускается.
 	fsys := fstest.MapFS{
@@ -111,6 +114,17 @@ func TestBackgroundSkipsNonInterval(t *testing.T) {
 	renderBackgroundPages(pages2, "/active", 40, 10, fsys2)
 	if calls != 1 {
 		t.Fatalf("фон НЕ запустил плагин с interval: calls=%d", calls)
+	}
+
+	// С updateanytime (без interval) — тоже запускается в фоне.
+	pluginCache = map[string]pluginEntry{}
+	fsys3 := fstest.MapFS{
+		"tiles/bg3.html": &fstest.MapFile{Data: []byte(`<plugin pipe="__bg_probe" updateanytime="1"/>`)},
+	}
+	pages3 := Pages{"/bg3": []Tile{{ID: "b3", X: "0%", Y: "0%", W: "100%", H: "100%", File: "tiles/bg3.html"}}}
+	renderBackgroundPages(pages3, "/active", 40, 10, fsys3)
+	if calls != 2 {
+		t.Fatalf("фон НЕ запустил плагин с updateanytime: calls=%d", calls)
 	}
 }
 

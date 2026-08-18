@@ -36,7 +36,7 @@ func showError(err error) {
 		statusMsg = ""
 		return
 	}
-	statusMsg = "ошибка: " + msg
+	statusMsg = "error: " + msg
 }
 
 // drawStatus рисует статус-сообщение в правом нижнем углу экрана.

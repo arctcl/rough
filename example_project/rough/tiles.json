@@ -1,0 +1,30 @@
+{
+  "theme": "default",
+  "menu": [
+    ["Charts", "/charts"],
+    ["Builder", "/builder"],
+    ["Man", "/man"],
+    ["About", "/about"]
+  ],
+  "pattern": ["id", "x", "y", "w", "h", "file"],
+  "/charts": [
+    ["plots", "0%",  "0%",  "72%", "100%", "tiles/plots.html"],
+    ["stats", "74%", "0%",  "26%", "100%", "tiles/stats.html"]
+  ],
+  "/builder": [
+    ["desc", "0%",  "0%",  "48%", "10%", "tiles/builder_desc.html"],
+    ["conf", "0%",  "12%", "48%", "88%", "tiles/builder_conf.html"],
+    ["edit", "50%", "0%",  "48%", "100%", "tiles/builder_edit.html"]
+  ],
+  "/man": [
+    ["list",   "0%",  "0%",  "30%", "100%", "tiles/man_list.html"],
+    ["out",    "32%", "0%",  "68%", "72%",  "tiles/man_out.html"],
+    ["status", "32%", "74%", "68%", "26%",  "tiles/man_status.html"]
+  ],
+  "/about": [
+    ["title", "0%",  "0%",  "100%", "24%", "tiles/about_title.html"],
+    ["info",  "0%",  "26%", "50%",  "40%", "tiles/about_info.html"],
+    ["feats", "52%", "26%", "48%",  "40%", "tiles/about_feats.html"],
+    ["meta",  "0%",  "68%", "100%", "32%", "tiles/about_meta.html"]
+  ]
+}

@@ -10,24 +10,25 @@ import (
 // Состояние окна подтверждения (шаг "| confirm" в action).
 // Это ВИДЖЕТ интерфейса (инпут внутри интерфейса = фронт).
 var (
-	confirmMode   bool     // открыто ли окно подтверждения
-	confirmMsg    string   // текст вопроса
-	pendingSteps  []string // шаги, которые выполним после подтверждения
-	pendingOutput string   // куда направить вывод после подтверждения
+	confirmMode   bool       // открыто ли окно подтверждения
+	confirmMsg    string     // текст вопроса
+	pendingPipes  [][]string // пайпы, которые выполним после подтверждения ("a && b")
+	pendingOutput string     // куда направить вывод после подтверждения
 )
 
-// confirmYes — подтверждение (Enter/y или клик по «Да»): выполняет отложенные шаги.
+// confirmYes — подтверждение (Enter/y или клик по «Да»): выполняет отложенные пайпы.
 func confirmYes() {
 	confirmMode = false
 	debugLines = nil
 	statusShownAt = time.Now()
-	runStepsAndShow(pendingSteps, pendingOutput)
+	// Кнопка может нести несколько пайпов ("a && b") — склеиваем вывод.
+	runAllPipes(pendingPipes, pendingOutput)
 }
 
 // confirmNo — отмена (Esc/n или клик по «Нет»).
 func confirmNo() {
 	confirmMode = false
-	statusMsg = "отменено"
+	statusMsg = "cancelled"
 }
 
 // widgetConfirmKey обрабатывает клавиши в окне подтверждения (инпут внутри
@@ -52,12 +53,12 @@ func widgetConfirmKey(e *tcell.EventKey) {
 // У окна есть кнопки «Да/Нет» — это хотзоны: подтвердить/отменить можно и
 // мышью, и клавишами (Enter — да, Esc — нет).
 func drawConfirmModal(b *Buffer, w, h int, out *[]Hotzone) {
-	title := "Подтверждение"
+	title := "Confirm"
 	line := confirmMsg
 	bl := curTheme.Sym("button_l", "⟨")
 	br := curTheme.Sym("button_r", "⟩")
-	yes := " " + string(bl) + " Да " + string(br) + " "
-	no := " " + string(bl) + " Нет " + string(br) + " "
+	yes := " " + string(bl) + " Yes " + string(br) + " "
+	no := " " + string(bl) + " No " + string(br) + " "
 	pair := yes + " " + no
 	width := uniseg.StringWidth(line) + 4
 	if tw := uniseg.StringWidth(title) + 4; tw > width {
@@ -91,5 +92,5 @@ func drawConfirmModal(b *Buffer, w, h int, out *[]Hotzone) {
 	px += uniseg.StringWidth(yes) + 1
 	b.SetString(px, py, no, Style{Bg: titleBg, Fg: titleFg, Bold: true})
 	*out = append(*out, Hotzone{X: px, Y: py, W: uniseg.StringWidth(no), H: 1, Kind: "confirm_no"})
-	b.SetString(x0, y0+2, " Enter — да, Esc — нет", Style{Bg: titleBg, Fg: titleFg})
+	b.SetString(x0, y0+2, " Enter — yes, Esc — no", Style{Bg: titleBg, Fg: titleFg})
 }

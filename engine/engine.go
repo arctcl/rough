@@ -36,13 +36,14 @@ func execAction(raw, target string) {
 	steps, need := PrepareAction(raw)
 	if need {
 		confirmMode = true
-		confirmMsg = "Выполнить?"
-		pendingSteps = steps
+		confirmMsg = "Execute?"
+		pendingPipes = steps
 		pendingOutput = target
 		statusMsg = ""
 		return
 	}
-	runStepsAndShow(steps, target)
+	// Несколько пайпов ("a && b") — выполняем каждый последовательно.
+	runAllPipes(steps, target)
 }
 
 // runStepsAndShow выполняет пайп и показывает результат (в тайл или статус).
@@ -59,6 +60,75 @@ func runStepsAndShow(steps []string, target string) {
 	putOutput(out, target)
 }
 
+// isClearPipe — пайп из одного шага clear (маркер «начать склейку с чистого»).
+func isClearPipe(p []string) bool {
+	if len(p) != 1 {
+		return false
+	}
+	name, _ := SplitAction(p[0])
+	return name == "clear"
+}
+
+// runAllPipes выполняет пайпы действия. Если среди них есть clear — приёмник
+// очищается и каждый пайп ДОБАВЛЯЕТ свой вывод (склейка, как "cat a b"); без
+// clear пайпы выполняются, последний перезаписывает приёмник (один пайп —
+// обычное выполнение). Так "clear && man:ssh && cat:/etc/hosts" соберёт
+// справку и файл подряд в один блок.
+func runAllPipes(pipes [][]string, target string) {
+	if len(pipes) == 0 {
+		return
+	}
+	if len(pipes) == 1 {
+		runStepsAndShow(pipes[0], target)
+		return
+	}
+	hasClear := false
+	for _, p := range pipes {
+		if isClearPipe(p) {
+			hasClear = true
+			break
+		}
+	}
+	if !hasClear {
+		for _, p := range pipes {
+			runStepsAndShow(p, target)
+		}
+		return
+	}
+	// Склейка: clear очищает приёмник, остальные пайпы добавляют вывод.
+	if target != "" {
+		outputCache[target] = nil
+	}
+	for _, p := range pipes {
+		if isClearPipe(p) {
+			continue
+		}
+		runStepsAppend(p, target)
+	}
+}
+
+// runStepsAppend выполняет пайп и ДОБАВЛЯЕТ вывод к приёмнику (склейка),
+// а не перезаписывает его.
+func runStepsAppend(steps []string, target string) {
+	out, err := RunSteps(steps, nil)
+	if errors.Is(err, ErrStop) {
+		return
+	}
+	if err != nil {
+		showError(err)
+		return
+	}
+	for i := range out {
+		out[i] = StripMarkers(out[i])
+	}
+	if target != "" {
+		outputCache[target] = append(outputCache[target], out...)
+		statusMsg = ""
+		return
+	}
+	statusMsg = strings.Join(out, " | ")
+}
+
 // putOutput направляет результат действия: в блок вывода (по id) или в статус-строку.
 // Маркеры цветов вычищаем — тут раскраска не рисуется, остался бы мусор.
 func putOutput(out []string, target string) {
@@ -67,7 +137,10 @@ func putOutput(out []string, target string) {
 	}
 	if target != "" {
 		outputCache[target] = out
-		statusMsg = "выполнено → " + target
+		// Результат уже виден в тайле-приёмнике — не дублируем его в статус,
+		// иначе «done → target» мелькал бы при каждом действии (поля, select,
+		// checkbox). Статус остаётся для ошибок и действий без тайла-приёмника.
+		statusMsg = ""
 		return
 	}
 	statusMsg = strings.Join(out, " | ")
@@ -82,7 +155,7 @@ func Run(fsys fs.FS) (err error) {
 		if r := recover(); r != nil {
 			crash := fmt.Sprintf("panic: %v\n%s", r, debug.Stack())
 			_ = os.WriteFile("crash.log", []byte(crash), 0o644)
-			err = fmt.Errorf("вылет: %v (детали в crash.log)", r)
+			err = fmt.Errorf("crash: %v (details in crash.log)", r)
 		}
 	}()
 	// Единый загрузчик: страницы (tiles.json) + тема — всё из папки /rough.

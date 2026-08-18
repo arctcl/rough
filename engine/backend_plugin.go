@@ -34,13 +34,14 @@ func renderPlugin(n *Node, b *Buffer, f *flowState) {
 
 	steps := pluginSteps(n)
 	if len(steps) == 0 {
-		f.put(b, "ошибка: пустой плагин")
+		f.put(b, "error: empty plugin")
 		return
 	}
-	// В фоне (неактивные страницы) выполняем ТОЛЬКО плагины с явным interval —
-	// это «живые» виджеты. Разовые плагины (toggle/set/ssh и т.п.) имеют
-	// побочные эффекты (запись файлов, сеть) — в фоне их не запускаем.
-	if backgroundRender && n.Attrs["interval"] == "" {
+	// В фоне (неактивные страницы) выполняем плагины с явным interval (живые
+	// виджеты — графики, часы) ИЛИ с флагом updateanytime (автор тайла явно
+	// требует обновлять плагин даже на неактивном тайле). Разовые плагины с
+	// побочными эффектами (toggle/set/ssh/export) в фоне не запускаем.
+	if backgroundRender && n.Attrs["interval"] == "" && n.Attrs["updateanytime"] == "" {
 		return
 	}
 	// Подстановка переменных $имя (движок) — живой контент тоже умеет.
@@ -60,7 +61,7 @@ func renderPlugin(n *Node, b *Buffer, f *flowState) {
 	} else {
 		out, err := RunSteps(steps, nil)
 		if err != nil {
-			lines = []string{"ошибка: " + err.Error()}
+			lines = []string{"error: " + err.Error()}
 		} else {
 			lines = out
 		}

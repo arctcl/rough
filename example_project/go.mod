@@ -1,4 +1,4 @@
-module for_gifs
+module example_project
 
 go 1.25.0
 

@@ -82,7 +82,18 @@ func openSelect(act, label, output, options string, x, y, w int) {
 	selectOutput = output
 	selectX, selectY, selectW = x, y, w
 	selectStack = nil
-	selectStack = append(selectStack, selLevel{nodes: parseSelTree(options)})
+	lv := selLevel{nodes: parseSelTree(options)}
+	// Активным при открытии делаем вариант, выбранный СЕЙЧАС (а не первый):
+	// ищем в первом уровне узел с меткой текущего значения select.
+	if cur := currentSelect(act); cur != "" {
+		for i, n := range lv.nodes {
+			if n.label == cur && len(n.children) == 0 {
+				lv.idx = i
+				break
+			}
+		}
+	}
+	selectStack = append(selectStack, lv)
 	statusMsg = ""
 	debugLines = nil
 }
@@ -311,7 +322,7 @@ func selectOption(level, idx int) {
 	// Значение — ЛИТЕРАЛ (как в поле ввода): оборачиваем в '...', чтобы
 	// спецсимволы (| : $) не трактовались как синтаксис action.
 	if strings.Contains(node.label, "'") {
-		statusMsg = "вариант содержит кавычку ' — недопустимо"
+		statusMsg = "option contains quote ' — not allowed"
 		return
 	}
 	execAction(selectAction+":"+"'"+node.label+"'", selectOutput)

@@ -52,8 +52,8 @@ func activateFocus(pages *Pages, route *string) bool {
 		openSelect(hz.Action, hz.Label, hz.Output, hz.Options, hz.X, hz.Y, hz.W)
 		return false
 	}
-	if hz.Action != "" {
-		execAction(hz.Action, hz.Output)
+	if hz.Action != "" || len(hz.Actions) > 0 {
+		runHotzone(&hz)
 	}
 	return false
 }

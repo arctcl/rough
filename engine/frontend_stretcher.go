@@ -36,7 +36,7 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 	// Шапка с текущим роутом и подсказкой выхода (цвета из темы).
 	hdrFg := curTheme.ResolveColor(themeColor("header_fg"), tcell.ColorWhite)
 	hdrBg := curTheme.ResolveColor(themeColor("header_bg"), tcell.ColorDarkBlue)
-	bg.SetString(1, 0, " rough: "+route+"    [q] выход ", Style{Bg: hdrBg, Fg: hdrFg})
+	bg.SetString(1, 0, " rough: "+route+"    [q] quit ", Style{Bg: hdrBg, Fg: hdrFg})
 
 	for _, t := range pages[route] {
 		x, y, tw, th := t.Rect(w, h)

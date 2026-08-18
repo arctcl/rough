@@ -5,14 +5,15 @@ import "strings"
 // Hotzone — кликабельная зона (кнопка/ссылка/поле ввода) в абсолютных координатах экрана.
 type Hotzone struct {
 	X, Y, W, H int
-	Action     string // что выполнить по клику
-	Href       string // куда перейти (роут)
-	Kind       string // вид зоны: "" (действие), "nav" (ссылка), "input" (поле ввода), "select"
-	Label      string // подпись для окна ввода
-	Output     string // id блока, куда направить вывод (пусто = статус-строка)
-	Options    string // варианты для select (через ":", подменю — в [квадратных скобках])
-	SelLevel   int    // уровень меню select (для хотзон вариантов "selopt")
-	SelIdx     int    // индекс варианта в уровне меню select
+	Action     string   // что выполнить по клику (первый action)
+	Actions    []string // все action="..." по порядку (если их несколько)
+	Href       string   // куда перейти (роут)
+	Kind       string   // вид зоны: "" (действие), "nav" (ссылка), "input" (поле ввода), "select"
+	Label      string   // подпись для окна ввода
+	Output     string   // id блока, куда направить вывод (пусто = статус-строка)
+	Options    string   // варианты для select (через ":", подменю — в [квадратных скобках])
+	SelLevel   int      // уровень меню select (для хотзон вариантов "selopt")
+	SelIdx     int      // индекс варианта в уровне меню select
 }
 
 // hotzones — хотзоны последнего кадра, по ним делаем hit-test мыши.
@@ -22,14 +23,32 @@ var hotzones []Hotzone
 // Блок <div id="..."> или <col id="..."> при рендере рисует эти строки.
 var outputCache = map[string][]string{}
 
-// HitTest ищет хотзону по координатам клика.
-func HitTest(x, y int) (kind, action, href, label, output, options string) {
-	for _, hz := range hotzones {
+// HitTest ищет хотзону по координатам клика (nil — промах).
+func HitTest(x, y int) *Hotzone {
+	for i := range hotzones {
+		hz := &hotzones[i]
 		if x >= hz.X && x < hz.X+hz.W && y >= hz.Y && y < hz.Y+hz.H {
-			return hz.Kind, hz.Action, hz.Href, hz.Label, hz.Output, hz.Options
+			return hz
 		}
 	}
-	return "", "", "", "", "", ""
+	return nil
+}
+
+// runHotzone выполняет действия хотзоны: одна кнопка может нести несколько
+// атрибутов action="..." — выполняются последовательно в один приёмник.
+// Если Actions пусто — выполняется одиночный Action (старое поведение).
+func runHotzone(hz *Hotzone) {
+	if len(hz.Actions) > 0 {
+		for _, a := range hz.Actions {
+			if a != "" {
+				execAction(a, hz.Output)
+			}
+		}
+		return
+	}
+	if hz.Action != "" {
+		execAction(hz.Action, hz.Output)
+	}
 }
 
 // HitSelect ищет вариант выпадающего меню select по координатам клика.

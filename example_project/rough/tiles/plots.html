@@ -1,0 +1,12 @@
+<!-- Charts tab: live plots with different ranges in one tile. -->
+<h1>Live metrics</h1>
+<p>Each plot has its own range: 0-1, 0-10, 0-100, 0-1000</p>
+
+<row>
+  <div width="50%"><plugin pipe="emu:alpha:1 | chart:0:1:1:2:ALPHA" height="11" interval="2s" updateanytime="1"/></div>
+  <div width="50%"><plugin pipe="emu:beta:10 | chart:0:10:1:2:BETA" height="11" interval="2s" updateanytime="1"/></div>
+</row>
+<row>
+  <div width="50%"><plugin pipe="emu:gamma:100 | chart:0:100:1:2:GAMMA" height="11" interval="2s" updateanytime="1"/></div>
+  <div width="50%"><plugin pipe="emu:delta:1000 | chart:0:1000:1:2:DELTA" height="11" interval="2s" updateanytime="1"/></div>
+</row>

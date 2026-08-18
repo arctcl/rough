@@ -1,0 +1,24 @@
+<!-- Builder tab: nginx config editor controls. -->
+<h1>Editor</h1>
+<input action="nginx:worker_processes" output="nginx_out" label="worker_processes"/>
+<input action="nginx:server_name" output="nginx_out" label="server_name"/>
+<input action="nginx:listen" output="nginx_out" label="listen"/>
+<input action="nginx:client_max_body_size" output="nginx_out" label="client_max_body_size"/>
+<input action="nginx:keepalive_timeout" output="nginx_out" label="keepalive_timeout"/>
+<input action="nginx:proxy_read_timeout" output="nginx_out" label="proxy_read_timeout"/>
+<hr/>
+<select action="nginx:log_level" label="log_level" options="debug:info:warn:error" output="nginx_out"></select>
+<select action="nginx:ssl_protocols" label="ssl_protocols" options="TLSv1.2:TLSv1.3" output="nginx_out"></select>
+<select action="nginx:upstream" label="upstream" options="round_robin:least_conn:ip_hash" output="nginx_out"></select>
+<hr/>
+<checkbox action="nginx:toggle:gzip" output="nginx_out">gzip on/off</checkbox>
+<checkbox action="nginx:toggle:access_log" output="nginx_out">access_log on/off</checkbox>
+<hr/>
+<button action="clear && nginx:get" output="nginx_out">Show config</button>
+<button action="clear" output="nginx_out">Clear</button>
+<button action="nginx:reload" output="nginx_out">Reload</button>
+<button action="nginx:backup" output="nginx_out">Backup conf</button>
+<button action="nginx:reboot | confirm" output="nginx_out">Reboot Docker Container</button>
+<hr/>
+<!-- Склейка пайпов: clear очищает, затем man и nginx ДОБАВЛЯЮТ вывод подряд. -->
+<button action="clear && sleep:1 && man:ssh && sleep:1 && nginx:get" output="nginx_out">Pipeline: clear && man:ssh && nginx:get</button>

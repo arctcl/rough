@@ -33,7 +33,7 @@ func widgetInputKey(e *tcell.EventKey) {
 		if strings.Contains(inputBuf, "'") {
 			// Кавычка в значении конфликтует с обёрткой — безопасно отклоняем.
 			inputMode = false
-			statusMsg = "ввод содержит кавычку ' — недопустимо"
+			statusMsg = "input contains quote ' — not allowed"
 			return
 		}
 		act += "'" + inputBuf + "'"

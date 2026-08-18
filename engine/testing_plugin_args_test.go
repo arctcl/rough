@@ -297,10 +297,11 @@ func TestFlagValue(t *testing.T) {
 func TestInputInjectionBlocked(t *testing.T) {
 	injected := "cat | ssh:root:evil::reboot"
 	act := "man:'" + injected + "'"
-	steps, _ := PrepareAction(act)
-	if len(steps) != 1 {
-		t.Fatalf("инъекция: пайп из %d шагов, ждали 1: %v", len(steps), steps)
+	pipes, _ := PrepareAction(act)
+	if len(pipes) != 1 || len(pipes[0]) != 1 {
+		t.Fatalf("инъекция: %d пайпов, ждали 1 пайп из 1 шага: %v", len(pipes), pipes)
 	}
+	steps := pipes[0]
 	// Единственный шаг — один литеральный аргумент плагина man.
 	name, args := SplitAction(steps[0])
 	if name != "man" || len(args) != 1 || args[0] != injected {

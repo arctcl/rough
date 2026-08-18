@@ -77,6 +77,26 @@ func TestRenderSelect(t *testing.T) {
 	}
 }
 
+// Разделитель "&&": один action может нести несколько НЕЗАВИСИМЫХ пайпов,
+// выполняются последовательно (в отличие от "|" — конвейера выход→вход).
+func TestMultipleActions(t *testing.T) {
+	pipes, need := PrepareAction("clear && nginx:get")
+	if need {
+		t.Fatal("confirm не ожидался")
+	}
+	if len(pipes) != 2 || len(pipes[0]) != 1 || len(pipes[1]) != 1 {
+		t.Fatalf("ожидали 2 пайпа по 1 шагу: %+v", pipes)
+	}
+	if pipes[0][0] != "clear" || pipes[1][0] != "nginx:get" {
+		t.Fatalf("пайпы не по порядку: %+v", pipes)
+	}
+	// "|" внутри пайпа — конвейер; "&&" делит пайпы.
+	pipes2, _ := PrepareAction("cat:a | grep:b && clear")
+	if len(pipes2) != 2 || len(pipes2[0]) != 2 || len(pipes2[1]) != 1 {
+		t.Fatalf("ожидали [cat|grep] и [clear]: %+v", pipes2)
+	}
+}
+
 // parseSelTree: плоский список, подменю и вложенные подменю.
 func TestParseSelTree(t *testing.T) {
 	// Плоский список — без подменю.

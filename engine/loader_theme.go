@@ -111,20 +111,20 @@ func themeColor(name string) string {
 	return curTheme.Colors[name]
 }
 
-// ConfigTheme возвращает имя темы из tiles.json (ключ "theme", по умолчанию "terminal").
+// ConfigTheme возвращает имя темы из tiles.json (ключ "theme", по умолчанию "default").
 func ConfigTheme(fsys fs.FS) string {
 	b, err := fs.ReadFile(fsys, "tiles.json")
 	if err != nil {
-		return "terminal"
+		return "default"
 	}
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {
-		return "terminal"
+		return "default"
 	}
 	if s, ok := raw["theme"].(string); ok && s != "" {
 		return s
 	}
-	return "terminal"
+	return "default"
 }
 
 // LoadTheme читает тему themes/<name>.json из вшитой папки.

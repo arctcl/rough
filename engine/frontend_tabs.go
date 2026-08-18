@@ -10,14 +10,21 @@ import (
 func drawTabs(b *Buffer, menu [][]string, route string, out *[]Hotzone) {
 	tabFg := curTheme.ResolveColor(themeColor("header_fg"), tcell.ColorWhite)
 	tabBg := curTheme.ResolveColor(themeColor("header_bg"), tcell.ColorDarkBlue)
-	actBg := curTheme.ResolveColor(themeColor("title_fg"), tcell.ColorGreen)
+	// Фон активной вкладки — отдельный ключ active_bg (в title_fg теперь
+	// только текст заголовков тайлов). Fallback — title_fg (старые темы).
+	actBg := curTheme.ResolveColor(themeColor("active_bg"),
+		curTheme.ResolveColor(themeColor("title_fg"), tcell.ColorGreen))
+	// Цвет текста активной вкладки — отдельный ключ active_fg.
+	// Неактивная вкладка красится tabFg (header_fg). Fallback — header_fg.
+	actFg := curTheme.ResolveColor(themeColor("active_fg"),
+		curTheme.ResolveColor(themeColor("header_fg"), tcell.ColorWhite))
 	x := 0
 	for _, m := range menu {
 		label := " " + m[0] + " "
 		lw := uniseg.StringWidth(label)
 		st := Style{Fg: tabFg, Bg: tabBg}
 		if m[1] == route {
-			st = Style{Fg: tabFg, Bg: actBg, Bold: true}
+			st = Style{Fg: actFg, Bg: actBg, Bold: true}
 		}
 		b.SetString(x, b.H-1, label, st)
 		*out = append(*out, Hotzone{X: x, Y: b.H - 1, W: lw, H: 1, Href: m[1], Kind: "nav"})
@@ -34,7 +41,7 @@ func drawQuit(b *Buffer, out *[]Hotzone) {
 	tabBg := curTheme.ResolveColor(themeColor("header_bg"), tcell.ColorDarkBlue)
 	bl := curTheme.Sym("button_l", "⟨")
 	br := curTheme.Sym("button_r", "⟩")
-	text := string(bl) + " Закрыть " + string(br)
+	text := string(bl) + " Close " + string(br)
 	tw := uniseg.StringWidth(text)
 	x := b.W - tw
 	if x < 0 {
