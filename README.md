@@ -58,7 +58,7 @@ Type a package name in a field — the help appears in a neighbouring tile:
 
 `man` is an output command, like `cat`: whatever it runs, it shows. A button, an input field, a pipe — all of them are commands, and the result of any of them can be routed to your tile.
 
-> Demo: `example/` — minimal example. Run: `go run ./example`.
+> Demo: `example_project/` — full demo (4 tabs: live charts, nginx builder, man, about). Run: `cd example_project && go run . -tui`.
 > GIF source: `example_project/` — demo with 4 tabs (live charts, nginx config builder, man, about) to record `docs/gifs/demo.gif`. Run: `cd example_project && go run . -tui`.
 
 ## Live example: write max_users into a config
@@ -195,7 +195,7 @@ ROUGH outlines UI — go html
 
 `man` — команда вывода, как `cat`: что выполнил, то и показал. Кнопка, поле ввода, пайп — всё это команды, и результат любой из них можно направить в свой тайл.
 
-> Демо: `example/` — минимальный пример. Запуск: `go run ./example`.
+> Демо: `example_project/` — демо с 4 вкладками (живые графики, редактор nginx, справка, о проекте). Запуск: `cd example_project && go run . -tui`.
 > Источник GIF: `example_project/` — демо с 4 вкладками (живые графики, редактор конфига nginx, справка, о проекте) для записи `docs/gifs/demo.gif`. Запуск: `cd example_project && go run . -tui`.
 
 ## Живой пример: записать max_users в конфиг
