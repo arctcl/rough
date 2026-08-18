@@ -53,19 +53,21 @@ func checkHTMLFile(fsys fs.FS, file string, pages Pages, add func(where, msg str
 func checkNodes(n *Node, file string, pages Pages, add func(where, msg string)) {
 	switch n.Tag {
 	case "button", "input", "checkbox", "select":
-		// Все шаги action (или пайпа) должны существовать в реестре.
+		// Все шаги action (или пайпов через "&&") должны существовать в реестре.
 		act := n.Attrs["action"]
 		if act == "" {
 			add(file, "<"+n.Tag+"> без атрибута action")
 			break
 		}
-		for _, s := range SplitSteps(act) {
-			name, _ := SplitAction(s)
-			if name == "confirm" {
-				continue // гейт подтверждения, не плагин
-			}
-			if !HasPlugin(name) {
-				add(file, "нет такого плагина: "+name+"  (action=\""+act+"\")")
+		for _, seg := range splitAnd(act) { // "a && b" — несколько независимых пайпов
+			for _, s := range SplitSteps(seg) {
+				name, _ := SplitAction(s)
+				if name == "confirm" {
+					continue // гейт подтверждения, не плагин
+				}
+				if !HasPlugin(name) {
+					add(file, "нет такого плагина: "+name+"  (action=\""+act+"\")")
+				}
 			}
 		}
 		// У select должен быть options (иначе выпадать нечему).
