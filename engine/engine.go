@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime/debug"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -116,6 +117,12 @@ func Run(fsys fs.FS) (err error) {
 	route := pages.FirstRoute()
 	w, h := s.Size()
 
+	// Телеграфная мышь читает размеры экрана в своей горутине — храним их
+	// атомарно, чтобы не было гонки с главным циклом (ресайз перезаписывает w/h).
+	var sizeW, sizeH atomic.Int32
+	sizeW.Store(int32(w))
+	sizeH.Store(int32(h))
+
 	// Телеграфная мышь (голый Linux VT без X): сырое /dev/input/mice.
 	// На X/Wayland openTeletypeMouse вернёт nil — мышь идёт через tcell
 	// (источники взаимоисключающие). События шлются в свой канал и
@@ -126,7 +133,7 @@ func Run(fsys fs.FS) (err error) {
 		telCh = make(chan MouseEvent, 16)
 		go func() {
 			for {
-				evs, err := tm.read(w, h)
+				evs, err := tm.read(int(sizeW.Load()), int(sizeH.Load()))
 				if err != nil {
 					close(telCh)
 					return
@@ -162,6 +169,8 @@ func Run(fsys fs.FS) (err error) {
 				// Растягиватель: терминал сменил размер — тайлы пересчитаются
 				// на следующем кадре (renderFrame по новым w/h).
 				w, h = e.Size()
+				sizeW.Store(int32(w))
+				sizeH.Store(int32(h))
 			case *tcell.EventKey:
 				// Сырой ввод от человека → раздаём виджетам/глобальным клавишам.
 				if handleKey(e, pages, menu, &route) {
@@ -176,7 +185,10 @@ func Run(fsys fs.FS) (err error) {
 				handleMouseEvent(me, pages, &route, w, h)
 			}
 		case <-tick.C:
-			// Таймер: перерисовка (обновление плагинов с interval).
+			// Таймер: перерисовка активной страницы + фоновый прогон «живых»
+			// плагинов неактивных страниц (графики продолжают собирать данные,
+			// пока пользователь на другой вкладке).
+			renderBackgroundPages(pages, route, w, h, fsys)
 		}
 	}
 }

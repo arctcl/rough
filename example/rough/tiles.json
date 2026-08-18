@@ -1,5 +1,5 @@
 {
-  "theme": "default",
+  "theme": "terminal",
   "menu": [["Главная", "/main"], ["Справка", "/man"]],
   "pattern": ["id", "x", "y", "w", "h", "file"],
   "/main": [

@@ -65,7 +65,7 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 	}
 
 	// Статус — внизу, обведён рамкой из темы (поверх тайлов). Вкладки — под ним.
-	drawStatus(bg, w, h, len(menu) > 0)
+	drawStatus(bg, w, h)
 	if len(menu) > 0 {
 		drawTabs(bg, menu, route, &hotzones)
 	}
@@ -76,7 +76,7 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 
 	// Окно подтверждения рисуется поверх всего (ввод идёт прямо в поле, без модалки).
 	if confirmMode {
-		drawConfirmModal(bg, w, h)
+		drawConfirmModal(bg, w, h, &hotzones)
 	}
 	// Выпадающее меню select — поверх всего, под самим элементом.
 	if selectMode {
@@ -98,6 +98,41 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 
 	bg.Blit(s, 0, 0)
 	s.Show()
+}
+
+// renderBackgroundPages обновляет «живые» плагины неактивных страниц в фоне.
+// Движок рисует на экран только активную страницу — но плагины с interval
+// (графики, часы и т.п.) должны продолжать собирать данные, пока пользователь
+// на другой вкладке. Прогоняем их в черновые буферы (не на экран), чтобы
+// renderPlugin перезапускался по своему интервалу и данные не застывали.
+// Сама отрисовка черновика отбрасывается — важен побочный эффект (обновление
+// pluginCache и состояния плагинов вроде серии графика).
+func renderBackgroundPages(pages Pages, active string, w, h int, fsys fs.FS) {
+	backgroundRender = true
+	defer func() {
+		backgroundRender = false
+		// Сбрасываем глобалы рисовалок — плагины из action не должны читать
+		// чужие размеры/сигнатуру, оставшиеся от фоновых страниц.
+		curW, curH, curPluginKey, curViewH = 0, 0, "", 0
+	}()
+	for route, tiles := range pages {
+		if route == active {
+			continue
+		}
+		for _, t := range tiles {
+			x, y, tw, th := t.Rect(w, h)
+			if tw <= 2 || th <= 2 || t.File == "" {
+				continue
+			}
+			root, perr := loadTile(fsys, t.File)
+			if perr != nil {
+				continue
+			}
+			inner := NewBuffer(tw-2, th-2)
+			var scratch []Hotzone
+			renderTile(root, inner, t.ID, x+1, y+1, th-2, &scratch)
+		}
+	}
 }
 
 // renderTile рендерит содержимое тайла в inner с поддержкой скролла:
@@ -137,13 +172,23 @@ func renderTile(root *Node, inner *Buffer, id string, ox, oy, viewH int, out *[]
 			}
 		}
 	}
-	// Хотзоны: сдвигаем на -off, отбрасываем те, что вне окна.
+	// Хотзоны: сдвигаем на -off, отбрасываем те, что вне окна, и обрезаем
+	// частично видимые (чтобы зона не вылезала на рамку тайла).
 	for _, z := range hz {
 		z.Y -= off
 		if z.Y+z.H <= oy || z.Y >= oy+viewH {
 			continue
 		}
-		*out = append(*out, z)
+		if z.Y < oy {
+			z.H -= oy - z.Y
+			z.Y = oy
+		}
+		if z.Y+z.H > oy+viewH {
+			z.H = oy + viewH - z.Y
+		}
+		if z.H > 0 {
+			*out = append(*out, z)
+		}
 	}
 
 	// Полоса прокрутки: если контент длиннее видимой области.

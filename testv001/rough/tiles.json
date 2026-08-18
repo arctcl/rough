@@ -1,5 +1,5 @@
 {
-  "theme": "default",
+  "theme": "terminal",
   "menu": [
     ["Графики", "/plot"],
     ["Текст", "/text"],

@@ -8,6 +8,12 @@ import (
 // pluginCache — кэш результатов <plugin>: не перезапускается чаще interval.
 var pluginCache = map[string]pluginEntry{}
 
+// backgroundRender — флаг фонового рендера неактивных страниц
+// (renderBackgroundPages): в фоне выполняются ТОЛЬКО плагины с явным interval
+// (живые виджеты — графики, часы), разовые плагины с побочными эффектами
+// (toggle/set/ssh/export) пропускаются.
+var backgroundRender bool
+
 // pluginEntry — кэшированный результат плагина и время последнего запуска.
 type pluginEntry struct {
 	at    time.Time
@@ -29,6 +35,12 @@ func renderPlugin(n *Node, b *Buffer, f *flowState) {
 	steps := pluginSteps(n)
 	if len(steps) == 0 {
 		f.put(b, "ошибка: пустой плагин")
+		return
+	}
+	// В фоне (неактивные страницы) выполняем ТОЛЬКО плагины с явным interval —
+	// это «живые» виджеты. Разовые плагины (toggle/set/ssh и т.п.) имеют
+	// побочные эффекты (запись файлов, сеть) — в фоне их не запускаем.
+	if backgroundRender && n.Attrs["interval"] == "" {
 		return
 	}
 	// Подстановка переменных $имя (движок) — живой контент тоже умеет.
