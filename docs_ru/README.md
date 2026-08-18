@@ -56,7 +56,8 @@ rough\
     syntax_checker.go    # проверка: action/plugin/ссылки существуют
   plugins\               # ВСЕ плагины: cat, hello, ssh, curl, man, grep, cut, awk, sed, export, ...
   example_project\       # демо-проект для записи GIF-ок в README (отдельный модуль)
-  docs\                  # эта документация
+  docs_ru\               # эта документация (русский)
+  docs_en\               # документация (english)
 ```
 
 Важно: `example_project\` — отдельный модуль с

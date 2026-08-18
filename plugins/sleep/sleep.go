@@ -10,14 +10,14 @@ import (
 )
 
 func init() {
-	rough.AddMan("sleep", `sleep — пауза на N секунд.
+	rough.AddMan("sleep", `sleep — pause for N seconds.
 
-Синтаксис: sleep:N (N — целые секунды).
+Usage: sleep:N (N is whole seconds).
 
-Ничего не выводит, просто ждёт. Удобно в цепочке "&&", чтобы развести
-по времени вывод нескольких пайпов.
+Outputs nothing, just waits. Handy in a "&&" chain to space out the output
+of several pipes over time.
 
-Пример:
+Example:
   action="clear && sleep:1 && man:ssh && sleep:1 && nginx:get"`)
 	rough.AddPlugin("sleep", func(in []string, args []string) ([]string, error) {
 		n := 1

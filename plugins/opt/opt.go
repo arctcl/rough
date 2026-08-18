@@ -5,14 +5,14 @@ package opt
 import "github.com/arctcl/rough"
 
 func init() {
-	rough.AddMan("opt", `opt — значение выпадающего списка в памяти (без файлов).
+	rough.AddMan("opt", `opt — a select value kept in memory (no files).
 
-Синтаксис:
-  opt:KEY:VALUE — запомнить выбор (для select action="opt:KEY")
-  opt:KEY:get   — вернуть текущее значение (движок вызывает для подписи select)
+Usage:
+  opt:KEY:VALUE — remember a choice (for select action="opt:KEY")
+  opt:KEY:get   — return the current value (engine calls it for the select label)
 
-Пример:
-  <select action="opt:theme" label="Тема" options="day:night"/>`)
+Example:
+  <select action="opt:theme" label="Theme" options="day:night"/>`)
 	demoOpts := map[string]string{}
 	rough.AddPlugin("opt", func(in []string, args []string) ([]string, error) {
 		if len(args) == 0 {

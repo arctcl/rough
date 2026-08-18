@@ -1,6 +1,6 @@
-// Демо-плагин nginx — редактор конфига nginx в памяти:
-// nginx:KEY:VAL — установить ключ, nginx:KEY:get — прочитать,
-// nginx:toggle:KEY — вкл/выкл, nginx:reload / nginx:reboot / nginx:backup.
+// Demo plugin nginx — an in-memory nginx config editor:
+// nginx:KEY:VAL sets a key, nginx:KEY:get reads it,
+// nginx:toggle:KEY flips on/off, nginx:reload / nginx:reboot / nginx:backup act.
 package plugins
 
 import "github.com/arctcl/rough"

@@ -1,18 +1,17 @@
-// Агрегатор плагинов демо — подключаем ТОЛЬКО те плагины из корня репозитория,
-// что реально используются в этом проекте (не тянем мёртвый код).
-// Свои демо-плагины (emu, stats, nginx) — рядом, в этом же пакете.
+// Demo plugin aggregator — imports ONLY the root plugins this project actually
+// uses (no dead code pulled in). Own demo plugins (emu, stats, nginx) sit here.
 package plugins
 
 import (
-	// Графики и справка.
+	// Charts and help.
 	_ "github.com/arctcl/rough/plugins/chart"
 	_ "github.com/arctcl/rough/plugins/man"
 
-	// Склейка пайпов и пауза (кнопка Pipeline).
+	// Pipe gluing and pause (Pipeline button).
 	_ "github.com/arctcl/rough/plugins/clear"
 	_ "github.com/arctcl/rough/plugins/sleep"
 
-	// Плагины, по которым на вкладке Man показываем справку.
+	// Plugins whose help is shown on the Man tab.
 	_ "github.com/arctcl/rough/plugins/awk"
 	_ "github.com/arctcl/rough/plugins/bars"
 	_ "github.com/arctcl/rough/plugins/cut"

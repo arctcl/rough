@@ -8,7 +8,7 @@ A simple tiled, resizable engine for quickly building a terminal UI with a mix o
 
 No web server, no browser. Use it as a library in your project, or as a standalone utility (with ssh and curl as plugins, among others) — and whatever else you come up with: hook it up to a COM port and drive a machine, or build a config editor so no clueless admin can click anything extra on the servers.
 
-![UI demo](docs/gifs/demo.gif)
+![UI demo](docs_ru/gifs/demo.gif)
 
 ## What's going on
 
@@ -59,7 +59,7 @@ Type a package name in a field — the help appears in a neighbouring tile:
 `man` is an output command, like `cat`: whatever it runs, it shows. A button, an input field, a pipe — all of them are commands, and the result of any of them can be routed to your tile.
 
 > Demo: `example_project/` — full demo (4 tabs: live charts, nginx builder, man, about). Run: `cd example_project && go run . -tui`.
-> GIF source: `example_project/` — demo with 4 tabs (live charts, nginx config builder, man, about) to record `docs/gifs/demo.gif`. Run: `cd example_project && go run . -tui`.
+> GIF source: `example_project/` — demo with 4 tabs (live charts, nginx config builder, man, about) to record `docs_ru/gifs/demo.gif`. Run: `cd example_project && go run . -tui`.
 
 ## Live example: write max_users into a config
 
@@ -123,7 +123,7 @@ Everything is embedded into a single file — no `rough/` folder needed in produ
 - everything natively in Go — ssh, curl, sqlite; works even in a scratch container
 - plugin help — right in the UI (`man`)
 
-More: [documentation](docs/) — cookbooks (plugins, themes, project), how-it-works, architecture.
+More: [docs (EN)](docs_en/), [docs (RU)](docs_ru/) — cookbooks (plugins, themes, project), how-it-works, architecture.
 
 ## License
 
@@ -145,7 +145,7 @@ ROUGH outlines UI — go html
 
 Без веб-сервера, без браузера, как библиотека твоего проекта или stand-alone утилита(с ssh и curl как плагинами в том числе) и что ты еще придумаешь, по идее хоть в COM порт подключай и управляй станком или пили редактор конфигов, чтобы любой эникей не смог ничего лишнего натыкать в серверах
 
-![Демо интерфейса](docs/gifs/demo.gif)
+![Демо интерфейса](docs_ru/gifs/demo.gif)
 
 ## Что вообще происходит
 
@@ -196,7 +196,7 @@ ROUGH outlines UI — go html
 `man` — команда вывода, как `cat`: что выполнил, то и показал. Кнопка, поле ввода, пайп — всё это команды, и результат любой из них можно направить в свой тайл.
 
 > Демо: `example_project/` — демо с 4 вкладками (живые графики, редактор nginx, справка, о проекте). Запуск: `cd example_project && go run . -tui`.
-> Источник GIF: `example_project/` — демо с 4 вкладками (живые графики, редактор конфига nginx, справка, о проекте) для записи `docs/gifs/demo.gif`. Запуск: `cd example_project && go run . -tui`.
+> Источник GIF: `example_project/` — демо с 4 вкладками (живые графики, редактор конфига nginx, справка, о проекте) для записи `docs_ru/gifs/demo.gif`. Запуск: `cd example_project && go run . -tui`.
 
 ## Живой пример: записать max_users в конфиг
 
@@ -266,7 +266,7 @@ func main() { rough.TUI(roughDir) }
 - всё нативно в Go — ssh, curl, sqlite; работает даже в scratch-контейнере
 - справка по плагинам — прямо в интерфейсе (`man`)
 
-Подробнее: [документация](docs/) — кукингбуки (плагины, темы, проект), how-it-works, архитектура.
+Подробнее: [документация (RU)](docs_ru/), [документация (EN)](docs_en/) — кукингбуки (плагины, темы, проект), how-it-works, архитектура.
 
 ## Лицензия
 

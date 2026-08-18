@@ -6,16 +6,16 @@ package clear
 import "github.com/arctcl/rough"
 
 func init() {
-	rough.AddMan("clear", `clear — начать склейку с чистого листа.
+	rough.AddMan("clear", `clear — start gluing from a clean slate.
 
-Синтаксис: clear (без аргументов).
+Usage: clear (no arguments).
 
-В связке "clear && пайп1 && пайп2" очищает блок вывода, после чего каждый
-пайп ДОБАВЛЯЕТ свой результат к блоку (как "cat a b"), а не перезаписывает.
+In a chain "clear && pipe1 && pipe2" it clears the output block, then every
+pipe ADDS its result to the block (like "cat a b") instead of overwriting.
 
-Пример:
+Example:
   action="clear && man:ssh && cat:/etc/hosts"
-  → сначала блок очищается, потом в него подряд складываются справка и файл.`)
+  → first the block is cleared, then the help and the file are stacked in it.`)
 	rough.AddPlugin("clear", func(in []string, args []string) ([]string, error) {
 		return nil, nil
 	})

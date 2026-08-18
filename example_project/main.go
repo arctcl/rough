@@ -1,12 +1,12 @@
-// Пример интеграции rough «по гайдбуку»: максимум, что пишет пользователь.
+// Example of integrating rough (by the guidebook): everything the user writes.
 //
-//  1. import "github.com/arctcl/rough"          — подключил библиотеку
-//  2. _ "example_project/rough/plugins"        — вот мои плагины (встроенные + демо)
-//  3. //go:embed rough                          — вшил папку с html/плагинами/данными
-//  4. rough.TUI(roughDir)                       — один вызов
+//  1. import "github.com/arctcl/rough"   — the library
+//  2. _ "example_project/rough/plugins" — my plugins (built-in + demo)
+//  3. //go:embed rough                   — embed the folder with html/plugins/data
+//  4. rough.TUI(roughDir)                — one call
 //
-// Демо-плагины (opt, flag, emu, stats, nginx, clear, sleep) лежат в
-// example_project/rough/plugins/ — как и положено по гайдбуку (cookbook-project).
+// Demo plugins (emu, stats, nginx) live in example_project/rough/plugins/
+// as the guidebook says (cookbook-project).
 package main
 
 import (

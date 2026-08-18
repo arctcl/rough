@@ -5,14 +5,14 @@ package flag
 import "github.com/arctcl/rough"
 
 func init() {
-	rough.AddMan("flag", `flag — чекбокс в памяти (без файлов).
+	rough.AddMan("flag", `flag — a checkbox in memory (no files).
 
-Синтаксис:
-  flag:KEY      — переключить (для checkbox action="flag:KEY")
-  flag:KEY:get  — вернуть "on"/"off" (движок вызывает для галочки)
+Usage:
+  flag:KEY      — toggle (for checkbox action="flag:KEY")
+  flag:KEY:get  — return "on"/"off" (engine calls it for the check mark)
 
-Пример:
-  <checkbox action="flag:verbose">Подробный вывод</checkbox>`)
+Example:
+  <checkbox action="flag:verbose">Verbose output</checkbox>`)
 	demoFlags := map[string]bool{}
 	rough.AddPlugin("flag", func(in []string, args []string) ([]string, error) {
 		if len(args) == 0 {

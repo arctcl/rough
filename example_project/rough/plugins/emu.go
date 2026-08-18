@@ -1,5 +1,5 @@
-// Демо-плагин emu — живая метрика, масштабируется под рейнж графика:
-// emu:NAME:SCALE. wave() общая с stats, чтобы график и цифры совпадали.
+// Demo plugin emu — a live metric scaled to the chart range: emu:NAME:SCALE.
+// wave() is shared with stats so the chart and the numbers match.
 package plugins
 
 import (
@@ -11,7 +11,7 @@ import (
 	"github.com/arctcl/rough"
 )
 
-// wave генерирует плавное «живое» значение 0..scale для имени-сида.
+// wave generates a smooth "live" value 0..scale for the name-seed.
 func wave(now float64, name string, scale float64) float64 {
 	seed := 0
 	for _, r := range name {

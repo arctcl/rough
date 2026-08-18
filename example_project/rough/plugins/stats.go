@@ -1,4 +1,4 @@
-// Демо-плагин stats — текстовый монитор: те же метрики, что на графиках (emu).
+// Demo plugin stats — a plain-text monitor: the same metrics as the charts (emu).
 package plugins
 
 import (
