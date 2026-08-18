@@ -1,0 +1,14 @@
+{
+  "theme": "terminal",
+  "menu": [
+    ["Графики", "/charts"],
+    ["Конструктор", "/builder"],
+    ["Справка", "/man"],
+    ["О проекте", "/about"]
+  ],
+  "pattern": ["id", "x", "y", "w", "h", "file"],
+  "/charts":  [["charts",  "0%", "0%", "100%", "100%", "tiles/charts.html"]],
+  "/builder": [["builder", "0%", "0%", "100%", "100%", "tiles/builder.html"]],
+  "/man":     [["man",     "0%", "0%", "100%", "100%", "tiles/man.html"]],
+  "/about":   [["about",   "0%", "0%", "100%", "100%", "tiles/about.html"]]
+}

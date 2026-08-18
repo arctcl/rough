@@ -44,9 +44,9 @@ func hasTUI() bool {
 
 // Run запускает движок: берёт из вшитой папки /rough страницы, темы, html.
 func Run(fsys fs.FS) error {
-	// Папка /rough вшита с префиксом "github.com/arctcl/rough/..." — срезаем его, дальше пути
-	// относительные: tiles.json, tiles/*.html, themes/*.json.
-	sub, err := fs.Sub(fsys, "github.com/arctcl/rough")
+	// Папка /rough вшита с префиксом "rough/" (//go:embed rough) — срезаем его,
+	// дальше пути относительные: tiles.json, tiles/*.html, themes/*.json.
+	sub, err := fs.Sub(fsys, "rough")
 	if err != nil {
 		return err
 	}

@@ -293,19 +293,21 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		*f = old
 		f.nl(b)
 	case "b":
-		old := *f
+		oldBold := f.bold
 		f.bold = true
 		for _, c := range n.Children {
 			renderNode(c, b, f, ox, oy, out)
 		}
-		*f = old
+		// Возвращаем ТОЛЬКО флаг стиля — позицию x/y не трогаем: иначе после
+		// <b>текст</b> курсор сбрасывается и следующий текст перезаписывает жирный.
+		f.bold = oldBold
 	case "i":
-		old := *f
+		oldItalic := f.italic
 		f.italic = true
 		for _, c := range n.Children {
 			renderNode(c, b, f, ox, oy, out)
 		}
-		*f = old
+		f.italic = oldItalic
 	case "center":
 		f.nl(b)
 		old := *f
@@ -487,6 +489,11 @@ func renderRow(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		}
 	}
 	// Каждую колонку рендерим в свой буфер и вставляем рядом по x-смещению.
+	// Ряд кладём на ТЕКУЩУЮ строку потока f.y (а не в 0 — иначе ряды
+	// накладываются друг на друга и затирают контент выше). После ряда
+	// поток сдвигаем на высоту самого высокого столбца.
+	rowY := f.y
+	maxH := 0
 	x := 0
 	for i, c := range cols {
 		if widths[i] <= 0 {
@@ -494,10 +501,14 @@ func renderRow(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		}
 		cb := NewBuffer(widths[i], b.H)
 		cf := &flowState{fg: f.fg, bg: f.bg}
-		renderNode(c, cb, cf, ox+x, oy, out)
-		b.Copy(cb, x, 0)
+		renderNode(c, cb, cf, ox+x, oy+rowY, out)
+		b.Copy(cb, x, rowY)
+		if h := usedHeight(cb); h > maxH {
+			maxH = h
+		}
 		x += widths[i]
 	}
+	f.y = rowY + maxH
 }
 
 // childrenTags возвращает детей-элементы с заданным тегом.
