@@ -59,6 +59,7 @@ Type a package name in a field — the help appears in a neighbouring tile:
 `man` is an output command, like `cat`: whatever it runs, it shows. A button, an input field, a pipe — all of them are commands, and the result of any of them can be routed to your tile.
 
 > Demo: `example/` — minimal example. Run: `go run ./example`.
+> GIF source: `for_gifs/` — demo with 4 tabs (10 live charts, query builder, man, about) to record `docs/gifs/demo.gif`. Run: `cd for_gifs && go run . -tui`.
 
 ## Live example: write max_users into a config
 
@@ -195,6 +196,7 @@ ROUGH outlines UI — go html
 `man` — команда вывода, как `cat`: что выполнил, то и показал. Кнопка, поле ввода, пайп — всё это команды, и результат любой из них можно направить в свой тайл.
 
 > Демо: `example/` — минимальный пример. Запуск: `go run ./example`.
+> Источник GIF: `for_gifs/` — демо с 4 вкладками (10 живых графиков, конструктор запросов, справка, о проекте) для записи `docs/gifs/demo.gif`. Запуск: `cd for_gifs && go run . -tui`.
 
 ## Живой пример: записать max_users в конфиг
 
