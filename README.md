@@ -8,7 +8,7 @@ A simple tiled, resizable engine for quickly building a terminal UI with a mix o
 
 No web server, no browser. Use it as a library in your project, or as a standalone utility (with ssh and curl as plugins, among others) — and whatever else you come up with: hook it up to a COM port and drive a machine, or build a config editor so no clueless admin can click anything extra on the servers.
 
-![UI demo](docs_ru/gifs/demo.gif)
+![UI demo](docs_ru/gifs/stiky.gif)
 
 ## What's going on
 
@@ -144,7 +144,7 @@ ROUGH outlines UI — go html
 
 Без веб-сервера, без браузера, как библиотека твоего проекта или stand-alone утилита(с ssh и curl как плагинами в том числе) и что ты еще придумаешь, по идее хоть в COM порт подключай и управляй станком или пили редактор конфигов, чтобы любой эникей не смог ничего лишнего натыкать в серверах
 
-![Демо интерфейса](docs_ru/gifs/demo.gif)
+![Демо интерфейса](docs_ru/gifs/stiky.gif)
 
 ## Что вообще происходит
 
