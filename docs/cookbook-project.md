@@ -48,13 +48,21 @@ rough\
   plugins\plugins.go    # агрегатор: линк на готовые плагины
 ```
 
-`rough/plugins/plugins.go` — подключить готовый набор плагинов репозитория:
+`rough/plugins/plugins.go` — подключить ТОЛЬКО те плагины, что реально
+используются (не тянем мёртвый код). Каждый плагин — отдельный импорт:
 
 ```go
 package plugins
 
-import _ "rough/plugins" // cat, hello, ssh, curl, man, grep, tail, head, wc, ...
+import (
+	_ "rough/plugins/cat"    // только нужные
+	_ "rough/plugins/man"
+	_ "rough/plugins/set"
+)
 ```
+
+Хочешь весь набор разом — можно `import _ "rough/plugins"` (все сразу), но тогда
+в бинарник попадут и неиспользуемые плагины. Выборочный импорт — чище.
 
 Свои плагины — тоже здесь (см. [cookbook-plugins](cookbook-plugins.md)).
 
