@@ -44,7 +44,7 @@ func showError(err error) {
 // (над вкладками, если они есть). Высота — по содержимому: от 1 до 3 строк
 // текста плюс рамка. Если строк больше 3 — прокрутка колесом мыши над блоком.
 // Фон непрозрачный (status_bg), чтобы сквозь статус ничего не просвечивало.
-func drawStatus(b *Buffer, w, h int, hasTabs bool) {
+func drawStatus(b *Buffer, w, h int) {
 	if statusMsg == "" && len(debugLines) == 0 {
 		statusRectH = 0
 		return
@@ -94,10 +94,7 @@ func drawStatus(b *Buffer, w, h int, hasTabs bool) {
 	if x0 < 0 {
 		x0 = 0
 	}
-	bottom := h - 3
-	if hasTabs {
-		bottom = h - 3 // вкладки на последней строке — блок выше них
-	}
+	bottom := h - 3 // вкладки на последней строке — блок выше них
 	top := bottom - blockH + 1
 	if top < 0 {
 		top = 0

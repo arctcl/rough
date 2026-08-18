@@ -308,7 +308,13 @@ func selectOption(level, idx int) {
 	selectMode = false
 	selectStack = nil
 	selectValue[selectAction] = node.label
-	execAction(selectAction+":"+node.label, selectOutput)
+	// Значение — ЛИТЕРАЛ (как в поле ввода): оборачиваем в '...', чтобы
+	// спецсимволы (| : $) не трактовались как синтаксис action.
+	if strings.Contains(node.label, "'") {
+		statusMsg = "вариант содержит кавычку ' — недопустимо"
+		return
+	}
+	execAction(selectAction+":"+"'"+node.label+"'", selectOutput)
 }
 
 // pushLevel открывает подменю родителя (level, idx). Уровни глубже родителя

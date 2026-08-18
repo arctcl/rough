@@ -16,45 +16,61 @@ var (
 	pendingOutput string   // куда направить вывод после подтверждения
 )
 
+// confirmYes — подтверждение (Enter/y или клик по «Да»): выполняет отложенные шаги.
+func confirmYes() {
+	confirmMode = false
+	debugLines = nil
+	statusShownAt = time.Now()
+	runStepsAndShow(pendingSteps, pendingOutput)
+}
+
+// confirmNo — отмена (Esc/n или клик по «Нет»).
+func confirmNo() {
+	confirmMode = false
+	statusMsg = "отменено"
+}
+
 // widgetConfirmKey обрабатывает клавиши в окне подтверждения (инпут внутри
 // интерфейса): Enter/y — да, Esc/n — нет.
 func widgetConfirmKey(e *tcell.EventKey) {
 	switch e.Key() {
 	case tcell.KeyEnter:
-		confirmMode = false
-		debugLines = nil
-		statusShownAt = time.Now()
-		runStepsAndShow(pendingSteps, pendingOutput)
+		confirmYes()
 	case tcell.KeyEscape:
-		confirmMode = false
-		statusMsg = "отменено"
+		confirmNo()
 	default:
 		switch e.Rune() {
 		case 'y', 'Y':
-			confirmMode = false
-			debugLines = nil
-			statusShownAt = time.Now()
-			runStepsAndShow(pendingSteps, pendingOutput)
+			confirmYes()
 		case 'n', 'N':
-			confirmMode = false
-			statusMsg = "отменено"
+			confirmNo()
 		}
 	}
 }
 
 // drawConfirmModal рисует модальное окно подтверждения по центру экрана.
-func drawConfirmModal(b *Buffer, w, h int) {
+// У окна есть кнопки «Да/Нет» — это хотзоны: подтвердить/отменить можно и
+// мышью, и клавишами (Enter — да, Esc — нет).
+func drawConfirmModal(b *Buffer, w, h int, out *[]Hotzone) {
 	title := "Подтверждение"
-	line := confirmMsg + "  (Enter — да, Esc — нет)"
+	line := confirmMsg
+	bl := curTheme.Sym("button_l", "⟨")
+	br := curTheme.Sym("button_r", "⟩")
+	yes := " " + string(bl) + " Да " + string(br) + " "
+	no := " " + string(bl) + " Нет " + string(br) + " "
+	pair := yes + " " + no
 	width := uniseg.StringWidth(line) + 4
 	if tw := uniseg.StringWidth(title) + 4; tw > width {
 		width = tw
+	}
+	if pw := uniseg.StringWidth(pair) + 4; pw > width {
+		width = pw
 	}
 	if width > w-4 {
 		width = w - 4
 	}
 	x0 := (w - width) / 2
-	y0 := h/2 - 1
+	y0 := h/2 - 2
 	if y0 < 1 {
 		y0 = 1
 	}
@@ -62,7 +78,18 @@ func drawConfirmModal(b *Buffer, w, h int) {
 	titleFg := curTheme.ResolveColor(themeColor("header_fg"), tcell.ColorWhite)
 	inFg := curTheme.ResolveColor(themeColor("input_fg"), tcell.ColorGreen)
 
-	drawFrame(b, x0-1, y0-1, width+2, 3)
+	// Рамка: заголовок на верхней линии, вопрос, кнопки, подсказка на нижней.
+	drawFrame(b, x0-1, y0-1, width+2, 4)
 	b.SetString(x0, y0-1, " "+title+" ", Style{Bg: titleBg, Fg: titleFg})
 	b.SetString(x0, y0, line, Style{Fg: inFg})
+
+	// Кнопки «Да / Нет» — хотзоны: клик мыши тоже подтверждает/отменяет.
+	py := y0 + 1
+	px := x0 + (width-uniseg.StringWidth(pair))/2
+	b.SetString(px, py, yes, Style{Bg: titleBg, Fg: titleFg, Bold: true})
+	*out = append(*out, Hotzone{X: px, Y: py, W: uniseg.StringWidth(yes), H: 1, Kind: "confirm_yes"})
+	px += uniseg.StringWidth(yes) + 1
+	b.SetString(px, py, no, Style{Bg: titleBg, Fg: titleFg, Bold: true})
+	*out = append(*out, Hotzone{X: px, Y: py, W: uniseg.StringWidth(no), H: 1, Kind: "confirm_no"})
+	b.SetString(x0, y0+2, " Enter — да, Esc — нет", Style{Bg: titleBg, Fg: titleFg})
 }

@@ -15,12 +15,6 @@ func SetVar(name string, lines []string) {
 	vars[name] = lines
 }
 
-// GetVar возвращает значение переменной (строки) по имени.
-func GetVar(name string) ([]string, bool) {
-	v, ok := vars[name]
-	return v, ok
-}
-
 // VarLine возвращает переменную одной строкой для подстановки в action:
 // одна строка — как есть, несколько — склеиваются пробелом.
 func VarLine(name string) string {
@@ -68,16 +62,17 @@ func expandVars(s string) string {
 			sb.WriteRune(c)
 			continue
 		}
-		// $имя
+		// $имя — имя начинается с буквы или _ (цифра первой не допускается,
+		// иначе $1/$2 в sed/awk ошибочно станут «переменными»).
 		j := i + 1
+		if j >= len(runes) || !isVarStartRune(runes[j]) {
+			// $ без имени или с цифры — литеральный доллар
+			sb.WriteRune(c)
+			continue
+		}
 		start := j
 		for j < len(runes) && isVarRune(runes[j]) {
 			j++
-		}
-		if j == start {
-			// $ без имени — литеральный доллар
-			sb.WriteRune(c)
-			continue
 		}
 		sb.WriteString(VarLine(string(runes[start:j])))
 		i = j - 1
@@ -89,4 +84,10 @@ func expandVars(s string) string {
 func isVarRune(r rune) bool {
 	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
 		(r >= '0' && r <= '9') || r == '_'
+}
+
+// isVarStartRune — ПЕРВЫЙ символ имени переменной: буква или _ (НЕ цифра,
+// чтобы $1/$2 в sed/awk не считались переменными).
+func isVarStartRune(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_'
 }

@@ -62,6 +62,25 @@ func handleMouseEvent(me MouseEvent, pages Pages, route *string, w, h int) {
 		mouseBtn1 = true
 		mouseLastX, mouseLastY = mouseX, mouseY
 		x, y := me.X, me.Y
+		// Модалка подтверждения открыта: клики работают ТОЛЬКО по её кнопкам
+		// «Да/Нет», всё остальное игнорируем — нельзя выполнить действие без
+		// подтверждения.
+		if confirmMode {
+			for i := range hotzones {
+				hz := &hotzones[i]
+				if (hz.Kind != "confirm_yes" && hz.Kind != "confirm_no") ||
+					x < hz.X || x >= hz.X+hz.W || y < hz.Y || y >= hz.Y+hz.H {
+					continue
+				}
+				if hz.Kind == "confirm_yes" {
+					confirmYes()
+				} else {
+					confirmNo()
+				}
+				return
+			}
+			return // клик мимо кнопок — игнорируем
+		}
 		// Меню select открыто: карта экрана ПОЛНОСТЬЮ отключена, работает
 		// ТОЛЬКО список. Клик по варианту — выбор/подменю, клик мимо — закрыть.
 		if selectMode {
@@ -88,6 +107,7 @@ func handleMouseEvent(me MouseEvent, pages Pages, route *string, w, h int) {
 		if href != "" {
 			if _, ok := pages[href]; ok {
 				*route = href
+				focusIdx = -1 // новая страница — фокус сбрасывается
 			}
 		}
 		if act == "" {
