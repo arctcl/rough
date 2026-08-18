@@ -2,7 +2,7 @@
 
 ROUGH outlines UI — go html
 
-> **Status: v0.1** — first public release.
+> **Status: v0.1** 
 
 A simple tiled, resizable engine for quickly building a terminal UI with a mix of HTML markup and linux-like commands.
 
@@ -139,7 +139,6 @@ Engine and plugins — [MIT](LICENSE). Dependencies are permissive (Apache-2.0, 
 
 ROUGH outlines UI — go html
 
-> **Статус: v0.1** — первый публичный релиз.
 
 Это простой тайловый резиновый движок для быстрого поднятия интерфейса в терминале с использованием микса html разметки и linux-like команд
 
