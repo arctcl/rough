@@ -4,10 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"regexp"
 	"runtime/debug"
 	"sort"
-	"strconv"
 	"strings"
 )
 
@@ -429,30 +427,9 @@ func callSafe(fn PluginFunc, in []string, args []string, name string) (out []str
 	return fn(in, args)
 }
 
-// ErrNeedConfirm — сигнал движку: в action есть confirm, нужна модалка.
-var ErrNeedConfirm = errors.New("нужно подтверждение")
-
 // ErrStop — сигнал движку остановить пайп без ошибки (плагин отладки tobotom:stop):
 // вывод уже показан в статус-блоке, дальше пайп не работает.
 var ErrStop = errors.New("стоп")
-
-// DoAction выполняет action из HTML (кнопка/поле) и возвращает текст для статуса.
-// Если в action есть confirm — возвращает ErrNeedConfirm (движок сам покажет модалку).
-func DoAction(raw string) (string, error) {
-	steps, need := PrepareAction(raw)
-	if need {
-		return "", ErrNeedConfirm
-	}
-	out, err := RunSteps(steps, nil)
-	if err != nil {
-		return "", err
-	}
-	// Маркеры цветов вычищаем — DoAction отдаёт текст без раскраски.
-	for i := range out {
-		out[i] = StripMarkers(out[i])
-	}
-	return strings.Join(out, " | "), nil
-}
 
 // Window возвращает текущий размер окна тайла в клетках.
 // Движок устанавливает его перед запуском пайпа в <plugin>, чтобы рисовалки
@@ -478,28 +455,6 @@ func PluginKey() string { return curPluginKey }
 // curViewH — видимая высота тайла. Нужна для вертикального центрирования
 // <div align="center"> внутри запасного буфера скролла (ставит renderTile).
 var curViewH int
-
-// ApplyMask извлекает числа из строк по регулярке (первая группа захвата).
-func ApplyMask(lines []string, mask string) []float64 {
-	if mask == "" {
-		return nil
-	}
-	re, err := regexp.Compile(mask)
-	if err != nil {
-		return nil
-	}
-	var out []float64
-	for _, ln := range lines {
-		m := re.FindStringSubmatch(ln)
-		if len(m) < 2 {
-			continue
-		}
-		if f, err := strconv.ParseFloat(m[1], 64); err == nil {
-			out = append(out, f)
-		}
-	}
-	return out
-}
 
 // UI — всё, что движок вытащил из папки /rough проекта: страницы, вкладки и тема.
 type UI struct {

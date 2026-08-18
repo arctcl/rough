@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/uniseg"
 )
 
 // Состояние поля ввода: пока inputMode включён, клавиши идут в буфер,
@@ -52,33 +51,4 @@ func widgetInputKey(e *tcell.EventKey) {
 			inputBuf += string(e.Rune())
 		}
 	}
-}
-
-// drawInputModal рисует модальное окно ввода по центру экрана.
-func drawInputModal(b *Buffer, w, h int) {
-	title := "✎ " + inputLabel
-	line := inputLabel + " = " + inputBuf
-	width := uniseg.StringWidth(line) + 4
-	if tw := uniseg.StringWidth(title) + 4; tw > width {
-		width = tw
-	}
-	if width > w-4 {
-		width = w - 4
-	}
-	x0 := (w - width) / 2
-	y0 := h/2 - 1
-	if y0 < 1 {
-		y0 = 1
-	}
-
-	frameFg := curTheme.ResolveColor(themeColor("frame"), tcell.ColorYellow)
-	titleBg := curTheme.ResolveColor(themeColor("header_bg"), tcell.ColorDarkBlue)
-	titleFg := curTheme.ResolveColor(themeColor("header_fg"), tcell.ColorWhite)
-	inFg := curTheme.ResolveColor(themeColor("input_fg"), tcell.ColorGreen)
-
-	drawFrame(b, x0-1, y0-1, width+2, 4)
-	b.SetString(x0, y0-1, " "+title+" ", Style{Bg: titleBg, Fg: titleFg})
-	b.SetString(x0, y0, line, Style{Fg: inFg})
-	b.Set(x0+uniseg.StringWidth(line), y0, curTheme.Sym("cursor", "█"), Style{Fg: inFg})
-	b.SetString(x0, y0+1, " Enter — применить, Esc — отмена", Style{Fg: frameFg})
 }

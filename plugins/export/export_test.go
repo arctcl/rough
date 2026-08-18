@@ -15,8 +15,7 @@ func TestExportSetVar(t *testing.T) {
 	if len(out) != 1 || out[0] != "srv1" {
 		t.Fatalf("export должен пропустить вход дальше: %v", out)
 	}
-	v, ok := engine.GetVar("host")
-	if !ok || len(v) != 1 || v[0] != "srv1" {
-		t.Fatalf("переменная host = %v (ok=%v)", v, ok)
+	if v := engine.VarLine("host"); v != "srv1" {
+		t.Fatalf("переменная host = %q", v)
 	}
 }

@@ -300,7 +300,6 @@ c := engine.ThemeColor("color_2", tcell.ColorGreen)
 import "rough/engine"
 
 engine.SetVar("name", []string{"value"})   // записать
-v, ok := engine.GetVar("name")              // прочитать ([]string, есть ли)
 line := engine.VarLine("name")              // одной строкой (для $подстановки)
 ```
 

@@ -76,7 +76,7 @@ Run(fsys) → LoadUI (tiles.json → страницы/тайлы, тема)
 **Ядро**
 - `engine.go` — `Run` (главный цикл), `execAction`, crash.log, пуск телеграфной мыши
 - `plugin_registry.go` — реестр плагинов, пайпы, `ParseArgs` (quick), `LoadUI`
-- `vars.go` — переменные сессии: `SetVar/GetVar/VarLine`, подстановка `$имя` в action
+- `vars.go` — переменные сессии: `SetVar/VarLine`, подстановка `$имя` в action
 - `syntax_checker.go` — проверка action/плагинов/ссылок до старта
 
 **Тесты (testing_*_test.go)** — по тем же областям (backend, theme, centered, plugin_args, teletype_mouse).
@@ -106,7 +106,7 @@ Run(fsys) → LoadUI (tiles.json → страницы/тайлы, тема)
 ## 5.1 Переменные сессии
 
 Движок хранит глобальную память — переменные (имя → строки). Инфраструктура живёт в
-движке (`engine/vars.go`): `SetVar/GetVar/VarLine`. Запись делает плагин `export`
+движке (`engine/vars.go`): `SetVar/VarLine`. Запись делает плагин `export`
 (`... | export:имя` — сохраняет вход и пропускает дальше), подстановку — движок:
 `$имя` / `${имя}` в любом action подставляется значением до разбора шага (`\$` — литерал,
 неизвестная переменная — пусто). Так можно запомнить хост и переиспользовать:

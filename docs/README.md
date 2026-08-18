@@ -24,7 +24,6 @@ func main() { rough.TUI(roughDir) }
 | [README](../README.md) | лицо проекта: что это и зачем (для людей) |
 | [cookbook-project](cookbook-project.md) | как собрать свой проект: 4 строчки, `tiles.json`, HTML тайлов, вкладки |
 | [cookbook-html-new](cookbook-html-new.md) | HTML с нуля: от общего к частному, живые примеры (рекомендуется начать здесь) |
-| [cookbook-html](cookbook-html.md) | HTML: справочник поведения тегов и контрактов (подробно) |
 | [cookbook-plugins](cookbook-plugins.md) | как писать плагины: контракт, живой пример cat, рецепты, пайпы, справка `man` |
 | [cookbook-themes](cookbook-themes.md) | как делать темы: символы, цвета, примеры |
 | [how-it-works](how-it-works.md) | как устроен движок изнутри: 2 способа использования (библиотека/standalone), рендер, события |
@@ -53,7 +52,7 @@ rough\
     frontend_widget_*.go # виджеты: поле ввода, select, модалка, статус-блок
     people_input_*.go    # клавиатура + ЕДИНАЯ мышь (десктоп/телетайп)
     plugin_registry.go   # реестр плагинов + пайпы + ParseArgs (quick) + LoadUI
-    vars.go              # переменные сессии: SetVar/GetVar, подстановка $имя
+    vars.go              # переменные сессии: SetVar/VarLine, подстановка $имя
     syntax_checker.go    # проверка: action/plugin/ссылки существуют
   plugins\               # ВСЕ плагины: cat, hello, ssh, curl, man, grep, cut, awk, sed, export, ...
   example\               # живой пример (отдельный модуль)
