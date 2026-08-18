@@ -56,9 +56,8 @@ rough\
     syntax_checker.go    # проверка: action/plugin/ссылки существуют
   plugins\               # ВСЕ плагины: cat, hello, ssh, curl, man, grep, cut, awk, sed, export, ...
   example\               # живой пример (отдельный модуль)
-  testv001\              # проверочная сборка (тоже отдельный модуль)
   docs\                  # эта документация
 ```
 
-Важно: `example\` и `testv001\` — **отдельные модули** с `replace rough => ../`.
+Важно: `example\` — отдельный модуль с `replace rough => ../`.
 Оба используют один и тот же корневой движок — дублирования кода нет.
