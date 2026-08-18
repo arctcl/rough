@@ -1,10 +1,18 @@
-// Демо-плагин opt — память для <select>: opt:KEY:VALUE запоминает выбор,
+// Плагин opt — память для <select>: opt:KEY:VALUE запоминает выбор,
 // opt:KEY:get читает. Всё в памяти, файлов не трогает.
-package plugins
+package opt
 
 import "github.com/arctcl/rough"
 
 func init() {
+	rough.AddMan("opt", `opt — значение выпадающего списка в памяти (без файлов).
+
+Синтаксис:
+  opt:KEY:VALUE — запомнить выбор (для select action="opt:KEY")
+  opt:KEY:get   — вернуть текущее значение (движок вызывает для подписи select)
+
+Пример:
+  <select action="opt:theme" label="Тема" options="day:night"/>`)
 	demoOpts := map[string]string{}
 	rough.AddPlugin("opt", func(in []string, args []string) ([]string, error) {
 		if len(args) == 0 {
