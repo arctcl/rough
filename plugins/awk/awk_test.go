@@ -3,7 +3,7 @@ package awk
 import (
 	"testing"
 
-	"rough/engine"
+	"github.com/arctcl/rough/engine"
 )
 
 // Фильтр по регулярке: остаются только строки с ERROR.

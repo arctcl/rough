@@ -2,7 +2,7 @@ module example
 
 go 1.25.0
 
-require rough v0.0.0
+require github.com/arctcl/rough v0.0.0
 
 require (
 	github.com/gdamore/encoding v1.0.1 // indirect
@@ -16,4 +16,4 @@ require (
 	golang.org/x/text v0.40.0 // indirect
 )
 
-replace rough => ../
+replace github.com/arctcl/rough => ../

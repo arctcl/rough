@@ -2,4 +2,4 @@
 // Сами плагины (cat, hello, ssh, curl, ...) живут там; здесь только одна строчка-импорт.
 package plugins
 
-import _ "rough/plugins" // все плагины из корня
+import _ "github.com/arctcl/rough/plugins" // все плагины из корня

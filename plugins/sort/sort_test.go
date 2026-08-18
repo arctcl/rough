@@ -3,7 +3,7 @@ package sort
 import (
 	"testing"
 
-	"rough/engine"
+	"github.com/arctcl/rough/engine"
 )
 
 // По алфавиту по возрастанию.

@@ -3,7 +3,7 @@ package rough
 import (
 	"testing"
 
-	"rough/engine"
+	"github.com/arctcl/rough/engine"
 )
 
 // Механика реестра: плагин регистрируется через AddPlugin и находится по имени.

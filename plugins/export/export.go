@@ -7,8 +7,8 @@ package export
 import (
 	"errors"
 
-	"rough"
-	"rough/engine"
+	"github.com/arctcl/rough"
+	"github.com/arctcl/rough/engine"
 )
 
 // man_export — справка по плагину (для man).

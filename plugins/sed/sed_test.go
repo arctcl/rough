@@ -3,7 +3,7 @@ package sed
 import (
 	"testing"
 
-	"rough/engine"
+	"github.com/arctcl/rough/engine"
 )
 
 // Простая замена: error → ERROR в каждой строке.

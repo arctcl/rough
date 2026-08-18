@@ -35,7 +35,7 @@ func main() {
 
 ```
 myproject\
-  go.mod                  # require rough + replace rough => ../rough
+  go.mod                  # require github.com/arctcl/rough + replace github.com/arctcl/rough => ../rough
   main.go                 # 4 строчки выше
   rough\                  # ВСЁ про проект: данные + плагины (вшивается в бинарник)
     tiles.json            # страницы и тайлы

@@ -1,4 +1,4 @@
-module rough
+module github.com/arctcl/rough
 
 go 1.25.0
 

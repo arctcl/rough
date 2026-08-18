@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"rough"
+	"github.com/arctcl/rough"
 )
 
 // man_cat — справка по плагину (для man). Лежит внутри плагина, как и требует контракт.

@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"rough"
+	"github.com/arctcl/rough"
 )
 
 // man_append — справка по плагину (для man).

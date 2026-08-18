@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"rough"
-	"rough/engine"
+	"github.com/arctcl/rough"
+	"github.com/arctcl/rough/engine"
 )
 
 // man_set — справка по плагину (для man).

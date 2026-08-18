@@ -3,7 +3,7 @@ package export
 import (
 	"testing"
 
-	"rough/engine"
+	"github.com/arctcl/rough/engine"
 )
 
 // export сохраняет вход в переменную и пропускает строки дальше.

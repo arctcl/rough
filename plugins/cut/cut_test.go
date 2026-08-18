@@ -3,7 +3,7 @@ package cut
 import (
 	"testing"
 
-	"rough/engine"
+	"github.com/arctcl/rough/engine"
 )
 
 // Выбор 2-го поля по пробелу (разделитель по умолчанию).

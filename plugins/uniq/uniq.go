@@ -7,8 +7,8 @@ package uniq
 import (
 	"fmt"
 
-	"rough"
-	"rough/engine"
+	"github.com/arctcl/rough"
+	"github.com/arctcl/rough/engine"
 )
 
 // man_uniq — справка по плагину (для man).

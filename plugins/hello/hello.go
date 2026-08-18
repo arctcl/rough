@@ -4,7 +4,7 @@ package hello
 import (
 	"strings"
 
-	"rough"
+	"github.com/arctcl/rough"
 )
 
 // man_hello — справка по плагину (для man).

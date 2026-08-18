@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"rough/engine"
+	"github.com/arctcl/rough/engine"
 )
 
 // TestChartAxisRight — подпись максимума («100») должна быть СПРАВА (у правой оси).

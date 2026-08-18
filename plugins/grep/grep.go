@@ -6,7 +6,7 @@ package grep
 import (
 	"regexp"
 
-	"rough"
+	"github.com/arctcl/rough"
 )
 
 // man_grep — справка по плагину (для man).

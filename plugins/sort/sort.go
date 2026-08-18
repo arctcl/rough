@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"rough"
-	"rough/engine"
+	"github.com/arctcl/rough"
+	"github.com/arctcl/rough/engine"
 )
 
 // man_sort — справка по плагину (для man).

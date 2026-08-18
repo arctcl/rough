@@ -5,7 +5,7 @@ package head
 import (
 	"strconv"
 
-	"rough"
+	"github.com/arctcl/rough"
 )
 
 // man_head — справка по плагину (для man).

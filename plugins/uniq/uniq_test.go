@@ -3,7 +3,7 @@ package uniq
 import (
 	"testing"
 
-	"rough/engine"
+	"github.com/arctcl/rough/engine"
 )
 
 // Убирает только соседние дубли (как uniq).

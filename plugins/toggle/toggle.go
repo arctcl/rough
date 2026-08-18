@@ -10,8 +10,8 @@ import (
 	"os"
 	"strings"
 
-	"rough"
-	"rough/engine"
+	"github.com/arctcl/rough"
+	"github.com/arctcl/rough/engine"
 )
 
 // man_toggle — справка по плагину (для man).

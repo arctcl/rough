@@ -79,7 +79,7 @@ ROUGH outlines UI — go html
 
 ## Как подключить в свой проект на GO
 
-1. Подключи модуль: `go get github.com/ВАШ-ПРОФИЛЬ/rough@v0.1.0`
+1. Подключи модуль: `go get github.com/arctcl/rough@v0.1.0`
 2. Положи папку `rough/` рядом с `main.go`: там `tiles.json`, `tiles/*.html`, `themes/*.json`
    и `plugins/plugins.go` (линк на плагины).
 3. Вшивай папку и запускай:

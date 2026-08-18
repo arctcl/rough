@@ -8,8 +8,8 @@ package tobotom
 import (
 	"errors"
 
-	"rough"
-	"rough/engine"
+	"github.com/arctcl/rough"
+	"github.com/arctcl/rough/engine"
 )
 
 // man_tobotom — справка по плагину (для man).

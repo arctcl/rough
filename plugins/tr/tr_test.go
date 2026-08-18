@@ -3,7 +3,7 @@ package tr
 import (
 	"testing"
 
-	"rough/engine"
+	"github.com/arctcl/rough/engine"
 )
 
 // Замена одного символа: a → b.

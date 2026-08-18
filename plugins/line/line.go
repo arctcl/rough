@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"rough"
+	"github.com/arctcl/rough"
 )
 
 // man_line — справка по плагину (для man).

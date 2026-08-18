@@ -15,8 +15,8 @@ import (
 
 	"github.com/rivo/uniseg"
 
-	"rough"
-	"rough/engine"
+	"github.com/arctcl/rough"
+	"github.com/arctcl/rough/engine"
 )
 
 // chartParams — параметры плагина (гибрид: позиционные двоеточиями + --флаги).

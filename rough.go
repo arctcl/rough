@@ -9,7 +9,7 @@ import (
 	"io/fs"
 	"os"
 
-	"rough/engine"
+	"github.com/arctcl/rough/engine"
 )
 
 // TUI запускает интерфейс, если в аргументах есть -tui.
@@ -44,9 +44,9 @@ func hasTUI() bool {
 
 // Run запускает движок: берёт из вшитой папки /rough страницы, темы, html.
 func Run(fsys fs.FS) error {
-	// Папка /rough вшита с префиксом "rough/..." — срезаем его, дальше пути
+	// Папка /rough вшита с префиксом "github.com/arctcl/rough/..." — срезаем его, дальше пути
 	// относительные: tiles.json, tiles/*.html, themes/*.json.
-	sub, err := fs.Sub(fsys, "rough")
+	sub, err := fs.Sub(fsys, "github.com/arctcl/rough")
 	if err != nil {
 		return err
 	}

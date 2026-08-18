@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strings"
 
-	"rough"
+	"github.com/arctcl/rough"
 )
 
 // man_man — справка по самому плагину man.

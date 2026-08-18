@@ -5,7 +5,7 @@ package tail
 import (
 	"strconv"
 
-	"rough"
+	"github.com/arctcl/rough"
 )
 
 // man_tail — справка по плагину (для man).

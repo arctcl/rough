@@ -33,9 +33,9 @@ module myproject
 
 go 1.25.0
 
-require rough v0.0.0
+require github.com/arctcl/rough v0.0.0
 
-replace rough => ../rough   // или версия с GitHub
+replace github.com/arctcl/rough => ../rough   // или версия с GitHub
 ```
 
 ## 2. Структура папки rough/

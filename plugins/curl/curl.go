@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"rough"
+	"github.com/arctcl/rough"
 )
 
 // man_curl — справка по плагину (для man).

@@ -1,6 +1,6 @@
 // Пример интеграции rough: максимум, что пишет пользователь.
 //
-//  1. import "rough"                     — подключил библиотеку
+//  1. import "github.com/arctcl/rough"                     — подключил библиотеку
 //  2. _ "example/rough/plugins"          — показал, где его плагины
 //  3. //go:embed rough                    — вшил папку с html/плагинами/данными
 //  4. rough.TUI(roughDir)                 — один вызов
@@ -12,7 +12,7 @@ package main
 import (
 	"embed"
 
-	"rough"
+	"github.com/arctcl/rough"
 
 	_ "example/rough/plugins" // вот мои плагины
 )

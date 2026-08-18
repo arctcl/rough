@@ -5,7 +5,7 @@ package wc
 import (
 	"strconv"
 
-	"rough"
+	"github.com/arctcl/rough"
 )
 
 // man_wc — справка по плагину (для man).

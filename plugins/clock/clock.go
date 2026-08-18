@@ -5,7 +5,7 @@ package clock
 import (
 	"time"
 
-	"rough"
+	"github.com/arctcl/rough"
 )
 
 // man_clock — справка по плагину (для man).

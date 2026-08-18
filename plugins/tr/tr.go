@@ -10,8 +10,8 @@ import (
 	"errors"
 	"strings"
 
-	"rough"
-	"rough/engine"
+	"github.com/arctcl/rough"
+	"github.com/arctcl/rough/engine"
 )
 
 // man_tr — справка по плагину (для man).
