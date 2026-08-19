@@ -88,7 +88,7 @@ Say your project lives in `/opt/my_docker_project/conf.conf` and you want to giv
 <!-- or a button with a fixed value right away -->
 <button action="set:/opt/my_docker_project/conf.conf:max_users:100 | confirm">max_users = 100</button>
 <button action="ssh:user:localhost:67:docker compose down && docker compose --project-directory /opt/my_docker_project/ up -d | confirm">REBOOT DOCKER</button>
-<button action="ssh:user:localhost::docker compose down && docker compose --project-directory /opt/my_docker_project/ up -d | confirm">THIS BUTTON USE DEFAULT PORT - "::" - </button>
+<button action="ssh:user:localhost::docker compose down && docker compose --project-directory /opt/my_docker_project/ up -d | confirm">THIS BUTTON USE DEFAULT PORT - "::" its default/empty - </button>
 ```
 
 ## Quick parameters
@@ -99,8 +99,7 @@ You can use a quick method for entering parameters—they are positional and sup
  action="shh::docker compose down --user=user --host=localhost --port=67
  (yep this is ipv6 logic)
 ```
-The `set` plugin reads a `key=value` file, sets the value and writes it back.
-A clueless admin doesn't touch the config by hand and can't break anything — only what you gave them as a button. Plugin logic can be seen right in the plugins' code — there's a built-in `man` help there.
+The parameters, their placement, and their default values ​​are defined within the plugin itself—the engine simply passes them through—see the cookbooks.
 
 ## How to use in your Go project
 
