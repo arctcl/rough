@@ -15,7 +15,12 @@ No web server, no browser. Use it as a library in your project, or as a standalo
 I'm tired of endless web servers in projects where they're not needed at all, and I'm equally tired of endless config files.
 So: the same HTML, the same linux-like commands, and it all renders right in the terminal with buttons, fields and spinners. On top of that — the engine stretches tiles and their content to its own size by itself: resize the window and nothing breaks.
 
+![mouse](docs_ru/gifs/mouse.gif)
+
 ## Using it in a project
+
+![Создание тайлов](docs_ru/gifs/tiles.gif)
+
 Three steps:
 
 **1. Draw tiles** — divide the screen into rectangles with percentages or pixels in `tiles.json`:
@@ -31,6 +36,9 @@ Three steps:
 Left — settings tile, right — output.
 
 **2. Write HTML markup** inside each tile — headings, buttons, fields:
+
+![html-simly](docs_ru/gifs/html.gif)
+
 ```html
 <!-- tiles/cfg.html -->
 <h1>Settings</h1>
@@ -151,7 +159,12 @@ ROUGH outlines UI — go html
 Мне надоели бесконечные веб сервера в проектах, в которых они вообще не нужны и так же мне надоели бесконечные файлы конфигураций
 Итого: тот же html, те же linux-like команды и рисуется это все прямо в терминале с кнопочками, полями и крутилками. И плюс ко всему этому - движок сам по себе растягивает тайлы и наполнение под свой размер - растянул окно и ничего не поплыло
 
+![А еще тут можно тыкать мышкой](docs_ru/gifs/mouse.gif)
+
 ## Реализация в проекте
+
+![Создание тайлов](docs_ru/gifs/tiles.gif)
+
 Три шага:
 
 **1. Рисуешь тайлы** — делишь экран на прямоугольники процентами или пикселями в `tiles.json`:
@@ -167,6 +180,8 @@ ROUGH outlines UI — go html
 Слева тайл настроек, справа — вывод.
 
 **2. Пишешь HTML-разметку** внутри каждого тайла — заголовки, кнопки, поля:
+
+![html-simly](docs_ru/gifs/html.gif)
 ```html
 <!-- tiles/cfg.html -->
 <h1>Настройки</h1>

@@ -4,7 +4,8 @@
     ["Charts", "/charts"],
     ["Builder", "/builder"],
     ["Man", "/man"],
-    ["About", "/about"]
+    ["About", "/about"],
+    ["new", "/new"]
   ],
   "pattern": ["id", "x", "y", "w", "h", "file"],
   "/charts": [
@@ -26,5 +27,10 @@
     ["info",  "0%",  "26%", "50%",  "40%", "tiles/about_info.html"],
     ["feats", "52%", "26%", "48%",  "40%", "tiles/about_feats.html"],
     ["meta",  "0%",  "68%", "100%", "32%", "tiles/about_meta.html"]
+  ],
+    "/new": [
+    ["title", "0%",  "0%",  "50%", "100%", "tiles/new_page.html"],
+    ["info",  "50%",  "0%", "50%",  "100%", "tiles/new_page2.html"]
+
   ]
 }
