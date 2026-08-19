@@ -2,13 +2,9 @@
 
 ROUGH outlines UI — go html
 
-> **Status: v0.1** 
-
 A simple tiled, resizable engine for quickly building a terminal UI with a mix of HTML markup and linux-like commands.
 
 No web server, no browser. Use it as a library in your project, or as a standalone utility (with ssh and curl as plugins, among others) — and whatever else you come up with: hook it up to a COM port and drive a machine, or build a config editor so no clueless admin can click anything extra on the servers.
-
-
 
 ## What's going on
 
@@ -56,6 +52,14 @@ Left — settings tile, right — output.
 
 The "guts" of the buttons are written in Go — they're command plugins: **strings in, strings out**. The engine itself can't do anything — all the logic lives in plugins. Contract requirements are in the cookbook.
 
+#Quick Start
+
+```bash
+git clone https://github.com/arctcl/rough
+cd rough/example_project
+go run . -tui
+```
+
 ## What it looks like
 
 Type a package name in a field — the help appears in a neighbouring tile:
@@ -72,7 +76,7 @@ Type a package name in a field — the help appears in a neighbouring tile:
 > Demo: `example_project/` — full demo (4 tabs: live charts, nginx builder, man, about). Run: `cd example_project && go run . -tui`.
 > GIF source: `example_project/` — demo with 4 tabs (live charts, nginx config builder, man, about) to record `docs_ru/gifs/demo.gif`. Run: `cd example_project && go run . -tui`.
 
-## Live example: write max_users into a config
+## Live example:
 
 Say your project lives in `/opt/my_docker_project/conf.conf` and you want to give an admin a "set max users" button. Easy:
 
@@ -82,14 +86,24 @@ Say your project lives in `/opt/my_docker_project/conf.conf` and you want to giv
 
 <!-- or a button with a fixed value right away -->
 <button action="set:/opt/my_docker_project/conf.conf:max_users:100 | confirm">max_users = 100</button>
+<button action="ssh:user:localhost:67:docker compose down && docker compose --project-directory /opt/my_docker_project/ up -d | confirm">REBOOT DOCKER</button>
+<button action="ssh:user:localhost::docker compose down && docker compose --project-directory /opt/my_docker_project/ up -d | confirm">THIS BUTTON USE DEFAULT PORT - "::" - </button>
 ```
 
+## Quick parameters
+
+You can use a quick method for entering parameters—they are positional and support skipping. An example of the same action:
+```html
+ action="ssh:user:localhost:67:docker compose down"
+ action="shh::docker compose down --user=user --host=localhost --port=67
+ (yep this is ipv6 logic)
+```
 The `set` plugin reads a `key=value` file, sets the value and writes it back.
 A clueless admin doesn't touch the config by hand and can't break anything — only what you gave them as a button. Plugin logic can be seen right in the plugins' code — there's a built-in `man` help there.
 
 ## How to use in your Go project
 
-1. Add the module: `go get github.com/arctcl/rough@v0.1.0`
+1. Add the module: `go get github.com/arctcl/rough`
 2. Put a `rough/` folder next to `main.go`: `tiles.json`, `tiles/*.html`, `themes/*.json` and `plugins/plugins.go` (link to the plugins).
 3. Embed the folder and run:
 
@@ -139,8 +153,3 @@ More: [docs (EN)](docs_en/), [docs (RU)](docs_ru/) — cookbooks (plugins, theme
 ## License
 
 Engine and plugins — [MIT](LICENSE). Dependencies are permissive (Apache-2.0, MIT, BSD-3) — no copyleft, safe for closed-source projects.
-
-
-Движок и плагины — [MIT](LICENSE). Зависимости пермиссивные (Apache-2.0, MIT, BSD-3) — копилефта нет, можно использовать в закрытых проектах.
-
-
