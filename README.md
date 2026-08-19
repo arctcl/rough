@@ -13,7 +13,7 @@ No web server, no browser. Use it as a library in your project, or as a standalo
 I'm tired of endless web servers in projects where they're not needed at all, and I'm equally tired of endless config files.
 So: the same HTML, the same linux-like commands, and it all renders right in the terminal with buttons, fields and spinners. On top of that — the engine stretches tiles and their content to its own size by itself: resize the window and nothing breaks.
 
-(and u can click the mouse)]
+(and u can click the mouse)
 
 ![mouse](docs_ru/gifs/mouse.gif)
 
