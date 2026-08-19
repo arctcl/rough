@@ -8,13 +8,16 @@ A simple tiled, resizable engine for quickly building a terminal UI with a mix o
 
 No web server, no browser. Use it as a library in your project, or as a standalone utility (with ssh and curl as plugins, among others) — and whatever else you come up with: hook it up to a COM port and drive a machine, or build a config editor so no clueless admin can click anything extra on the servers.
 
-![UI demo](docs_ru/gifs/stiky.gif)
+
 
 ## What's going on
+
+![UI demo](docs_ru/gifs/stiky.gif)
 
 I'm tired of endless web servers in projects where they're not needed at all, and I'm equally tired of endless config files.
 So: the same HTML, the same linux-like commands, and it all renders right in the terminal with buttons, fields and spinners. On top of that — the engine stretches tiles and their content to its own size by itself: resize the window and nothing breaks.
 
+(and u can click the mouse)
 ![mouse](docs_ru/gifs/mouse.gif)
 
 ## Using it in a project
@@ -152,13 +155,16 @@ ROUGH outlines UI — go html
 
 Без веб-сервера, без браузера, как библиотека твоего проекта или stand-alone утилита(с ssh и curl как плагинами в том числе) и что ты еще придумаешь, по идее хоть в COM порт подключай и управляй станком или пили редактор конфигов, чтобы любой эникей не смог ничего лишнего натыкать в серверах
 
-![Демо интерфейса](docs_ru/gifs/stiky.gif)
+
 
 ## Что вообще происходит
+
+![Демо интерфейса](docs_ru/gifs/stiky.gif)
 
 Мне надоели бесконечные веб сервера в проектах, в которых они вообще не нужны и так же мне надоели бесконечные файлы конфигураций
 Итого: тот же html, те же linux-like команды и рисуется это все прямо в терминале с кнопочками, полями и крутилками. И плюс ко всему этому - движок сам по себе растягивает тайлы и наполнение под свой размер - растянул окно и ничего не поплыло
 
+(а еще тут можно тыкать мышкой)
 ![А еще тут можно тыкать мышкой](docs_ru/gifs/mouse.gif)
 
 ## Реализация в проекте
