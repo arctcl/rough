@@ -2,6 +2,8 @@
 
 ROUGH outlines UI — go html
 
+This project is a work in progress; please do not rely on it until the full version (v1) is released.
+
 A simple tiled, resizable engine for quickly building a terminal UI with a mix of HTML markup and linux-like commands.
 
 No web server, no browser. Use it as a library in your project, or as a standalone utility (with ssh and curl as plugins, among others) — and whatever else you come up with: hook it up to a COM port and drive a machine, or build a config editor so no clueless admin can click anything extra on the servers.
@@ -16,6 +18,14 @@ So: the same HTML, the same linux-like commands, and it all renders right in the
 (and u can click the mouse)
 
 ![mouse](docs_ru/gifs/mouse.gif)
+
+## Quick Start
+
+```bash
+git clone https://github.com/arctcl/rough
+cd rough/example_project
+go run . -tui
+```
 
 ## Using it in a project
 
@@ -53,14 +63,6 @@ Left — settings tile, right — output.
 
 The "guts" of the buttons are written in Go — they're command plugins: **strings in, strings out**. The engine itself can't do anything — all the logic lives in plugins. Contract requirements are in the cookbook.
 
-#Quick Start
-
-```bash
-git clone https://github.com/arctcl/rough
-cd rough/example_project
-go run . -tui
-```
-
 ## What it looks like
 
 Type a package name in a field — the help appears in a neighbouring tile:
@@ -71,11 +73,6 @@ Type a package name in a field — the help appears in a neighbouring tile:
 
 <!-- "output" tile (id="out" (IMPORTANT)): the engine draws the command help here -->
 ```
-
-`man` is an output command, like `cat`: whatever it runs, it shows. A button, an input field, a pipe — all of them are commands, and the result of any of them can be routed to your tile.
-
-> Demo: `example_project/` — full demo (4 tabs: live charts, nginx builder, man, about). Run: `cd example_project && go run . -tui`.
-> GIF source: `example_project/` — demo with 4 tabs (live charts, nginx config builder, man, about) to record `docs_ru/gifs/demo.gif`. Run: `cd example_project && go run . -tui`.
 
 ## Live example:
 
