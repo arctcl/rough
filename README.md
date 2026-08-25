@@ -8,6 +8,16 @@ A simple tiled, resizable engine for quickly building a terminal UI with a mix o
 
 No web server, no browser. Use it as a library in your project, or as a standalone utility (with ssh and curl as plugins, among others) — and whatever else you come up with: hook it up to a COM port and drive a machine, or build a config editor so no clueless admin can click anything extra on the servers.
 
+## 🛡️ Security by Design
+
+While ROUGH is built for rapid, "no-bloat" interface design, its Go + UNIX-way architecture provides absolute isolation out of the box by offloading security to the OS level:
+
+*   **Zero Ports, Zero Web Server:** No browser backend means no XSS, no DDoS, and zero network attack surface. Your HTML markup is compiled directly into a single static binary via `//go:embed`. It cannot be modified or tampered with at runtime.
+*   **Compile-Time Stripping:** Every command plugin (`cat:`, `ssh:`, etc.) is an isolated Go module. Need a foolproof kiosk mode? Simply comment out unnecessary plugins before compiling. The underlying code is completely stripped from the final binary, making unauthorized execution physically impossible.
+*   **OS-Level Jail (POSIX & SSH Core):** ROUGH carries no hardcoded credentials and completely relies on the active SSH session. If a low-privilege user clicks a button mapped to `cat:/etc/shadow`, the Linux kernel drops the process with a `Permission Denied` error. A user can never bypass their native OS permissions through the UI.
+*   **Scratch-Container Ready:** Ship your final binary in an empty Docker `FROM scratch` container. With no shell, no `/bin/sh`, and no environment utilities inside the sandbox, there is literally nothing left for an attacker to exploit.
+
+
 ## What's going on
 
 ![UI demo](docs_ru/gifs/stiky.gif)
