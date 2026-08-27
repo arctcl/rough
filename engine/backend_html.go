@@ -264,7 +264,15 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 	}()
 
 	if n.Text != "" {
-		f.put(b, n.Text)
+		// Пробельный текстовый узел с переводом строки ("\n  " между тегами)
+		// не рисуем: блочные элементы сами делают перевод строки в начале и
+		// конце, иначе между ними накапливалось бы по 2 пустые строки.
+		// Обычный пробел внутри строки (без \n) рисуем как есть.
+		if strings.Contains(n.Text, "\n") && strings.TrimSpace(n.Text) == "" {
+			// пропускаем межблочный разрыв
+		} else {
+			f.put(b, n.Text)
+		}
 	}
 	switch n.Tag {
 	case "br":
