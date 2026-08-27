@@ -63,7 +63,7 @@ func expandVars(s string) string {
 			sb.WriteRune(c)
 			continue
 		}
-		// ${имя}
+		// ${имя} или ${имя%паттерн} / ${имя#паттерн} (Bash Parameter Expansion).
 		if i+1 < len(runes) && runes[i+1] == '{' {
 			j := i + 2
 			start := j
@@ -71,7 +71,7 @@ func expandVars(s string) string {
 				j++
 			}
 			if j < len(runes) {
-				sb.WriteString(VarLine(string(runes[start:j])))
+				sb.WriteString(expandBraced(string(runes[start:j])))
 				i = j
 				continue
 			}
@@ -97,7 +97,29 @@ func expandVars(s string) string {
 	return sb.String()
 }
 
-// isVarRune — символ, допустимый в имени переменной ($имя).
+// expandBraced разбирает содержимое ${...}: либо просто имя переменной,
+// либо Bash Parameter Expansion — усечение по самому короткому совпадению:
+//
+//	${var%паттерн} — убрать суффикс (как ${var%pattern} в bash);
+//	${var#паттерн} — убрать префикс (как ${var#pattern} в bash).
+//
+// Пока узор — ЛИТЕРАЛ (без glob-звёздочек), через TrimSuffix/TrimPrefix.
+func expandBraced(inner string) string {
+	for k, r := range inner {
+		switch r {
+		case '%', '#':
+			v := VarLine(inner[:k])
+			if r == '%' {
+				return strings.TrimSuffix(v, inner[k+1:])
+			}
+			return strings.TrimPrefix(v, inner[k+1:])
+		}
+		if !isVarRune(r) {
+			break // не имя переменной — оператора нет
+		}
+	}
+	return VarLine(inner)
+}
 func isVarRune(r rune) bool {
 	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
 		(r >= '0' && r <= '9') || r == '_'

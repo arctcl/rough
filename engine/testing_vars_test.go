@@ -41,3 +41,24 @@ func TestExpandVarsRespectsSingleQuotes(t *testing.T) {
 		}
 	}
 }
+
+// Фича var%pat: ${var%суффикс} / ${var#префикс} — Bash Parameter Expansion.
+func TestExpandVarsParamExpansion(t *testing.T) {
+	SetVar("file", []string{"/var/log/app.log"})
+	SetVar("host", []string{"srv1.example.com"})
+	defer func() { vars = map[string][]string{} }()
+
+	cases := []struct{ in, want string }{
+		{"${file%.log}", "/var/log/app"},        // убрать суффикс .log
+		{"${file#/var/}", "log/app.log"},        // убрать префикс /var/
+		{"${host%.example.com}", "srv1"},        // убрать суффикс
+		{"${host#srv}", "1.example.com"},        // убрать префикс srv
+		{"${host%nomatch}", "srv1.example.com"}, // нет совпадения — без изменений
+		{"${file}", "/var/log/app.log"},         // без оператора — как раньше
+	}
+	for _, c := range cases {
+		if got := expandVars(c.in); got != c.want {
+			t.Fatalf("expandVars(%q) = %q, ждали %q", c.in, got, c.want)
+		}
+	}
+}
