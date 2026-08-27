@@ -26,6 +26,8 @@ func handleKey(e *tcell.EventKey, pages Pages, menu [][]string, route *string) b
 		widgetConfirmKey(e)
 		return false
 	}
+	// Секретные последовательности клавиш (конами-код и т.п.) — см. cheat.go.
+	checkCheat(e)
 	// Глобальные клавиши вне виджетов.
 	if e.Key() == tcell.KeyEscape {
 		if statusMsg != "" || len(debugLines) > 0 {

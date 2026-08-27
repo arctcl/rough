@@ -23,4 +23,8 @@ import (
 	_ "github.com/arctcl/rough/plugins/toggle"
 	_ "github.com/arctcl/rough/plugins/tr"
 	_ "github.com/arctcl/rough/plugins/uniq"
+
+	// Killer-фичи: просмотр горутин (ps) и конами-код (konami).
+	_ "github.com/arctcl/rough/plugins/ps"
+	_ "github.com/arctcl/rough/plugins/konami"
 )

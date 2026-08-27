@@ -119,4 +119,3 @@ func drainAsyncLive() {
 		}
 	}
 }
-

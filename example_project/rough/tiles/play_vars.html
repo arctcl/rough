@@ -1,0 +1,9 @@
+<h1>Пайпы и переменные</h1>
+<p>Цепочки плагинов через <b>|</b> и подстановка <b>$имя</b>.</p>
+
+<button action="man:ssh | grep:port | head:3" output="out">man:ssh → grep → head</button>
+<button action="emu:alpha:1 | export:v">сохранить в $v</button>
+<button action="bars:$v" output="out">bars($v)</button>
+
+<hr>
+<p>Ключ async-задачи = раскрытая команда: две одинаковые async-кнопки = одна задача.</p>

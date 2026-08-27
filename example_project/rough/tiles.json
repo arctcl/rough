@@ -3,9 +3,9 @@
   "menu": [
     ["Charts", "/charts"],
     ["Builder", "/builder"],
+    ["Playground", "/play"],
     ["Man", "/man"],
-    ["About", "/about"],
-    ["new", "/new"]
+    ["About", "/about"]
   ],
   "pattern": ["id", "x", "y", "w", "h", "file"],
   "/charts": [
@@ -28,9 +28,9 @@
     ["feats", "52%", "26%", "48%",  "40%", "tiles/about_feats.html"],
     ["meta",  "0%",  "68%", "100%", "32%", "tiles/about_meta.html"]
   ],
-    "/new": [
-    ["title", "0%",  "0%",  "50%", "100%", "tiles/new_page.html"],
-    ["info",  "50%",  "0%", "50%",  "100%", "tiles/new_page2.html"]
-
+  "/play": [
+    ["async", "0%",  "0%",  "50%", "58%", "tiles/play_async.html"],
+    ["out",   "52%", "0%",  "48%", "58%", "tiles/play_out.html"],
+    ["vars",  "0%",  "60%", "100%", "40%", "tiles/play_vars.html"]
   ]
 }

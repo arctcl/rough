@@ -70,3 +70,8 @@ func ManText(name string) (string, bool) { return engine.ManText(name) }
 
 // ManNames возвращает отсортированный список плагинов со справкой.
 func ManNames() []string { return engine.ManNames() }
+
+// AddCheat регистрирует секретную последовательность клавиш (пасхалка вроде
+// конами-кода): при вводе выполняется action. Кодировка: 'U','D','L','R' —
+// стрелки; буква/цифра — соответствующая клавиша.
+func AddCheat(seq, action string) { engine.AddCheat(seq, action) }

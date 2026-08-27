@@ -1,0 +1,10 @@
+<h1>Async — не морозит интерфейс</h1>
+<p>Кнопка с <b>async</b> запускает медленную задачу в <b>фоне</b>: пока идёт —
+видно «running…», повторный клик игнорируется, результат придёт сам.
+Интерфейс при этом живой.</p>
+
+<button async action="deploy:4" output="out">Deploy 4s (async)</button>
+<button async action="deploy:2 | tr:upper" output="out">Deploy 2s → tr:upper</button>
+
+<h2>Живой async-график (плагин-служба)</h2>
+<plugin pipe="emu:wave:1 | chart:0:1:1:1:WAVE" async interval="1s" height="8"/>
