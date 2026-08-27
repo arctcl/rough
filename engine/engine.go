@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"runtime/debug"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/arctcl/rough/engine/faultlog"
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -21,6 +22,17 @@ var crashNow bool
 // Crash поднимает флаг тестового краша. Намеренный сбой для проверки crash.log:
 // интерфейс вылетит на следующем кадре, а не мгновенно в пайпе.
 func Crash() { crashNow = true }
+
+// debugMode проверяет флаг --tui-debug: подробный лог в rough.log + пауза при
+// краше (не закрываемся сразу, чтобы можно было отладить/снять состояние).
+func debugMode() bool {
+	for _, a := range os.Args[1:] {
+		if a == "--tui-debug" {
+			return true
+		}
+	}
+	return false
+}
 
 // execAction выполняет action из HTML (кнопка/поле/пайп).
 // target — id блока для вывода (output="..."), пусто = статус-строка.
@@ -148,16 +160,31 @@ func putOutput(out []string, target string) {
 
 // Run запускает движок: читает всё из вшитой папки (fs.FS), рисует интерфейс,
 // обрабатывает ввод. Работает, пока пользователь не нажмёт q / Esc / Ctrl+C.
-// Верхнеуровневый перехват паники: пишет crash.log (Windows не затирает
-// панику из консоли), возвращает ошибку вместо мгновенной смерти терминала.
+// Верхнеуровневый перехват паники (в горутине main): пишет полный дамп
+// (crash.log + rough.log), возвращает ошибку вместо мгновенной смерти
+// терминала. С флагом --tui-debug — пауза: не закрываемся сразу, ждём Enter,
+// чтобы можно было подцепить отладчик к живому процессу.
 func Run(fsys fs.FS) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			crash := fmt.Sprintf("panic: %v\n%s", r, debug.Stack())
-			_ = os.WriteFile("crash.log", []byte(crash), 0o644)
+			stack := faultlog.StackTrace()
+			faultlog.LogPanic("main", r, stack)
 			err = fmt.Errorf("crash: %v (details in crash.log)", r)
+			if debugMode() {
+				fmt.Fprintln(os.Stderr, "\n[rough --tui-debug] паника:", r)
+				fmt.Fprintln(os.Stderr, "дамп записан в crash.log. Жми Enter, чтобы выйти.")
+				var b [1]byte
+				_, _ = os.Stdin.Read(b[:])
+			}
 		}
 	}()
+	// Канал завершения: по сигналу ОС (graceful) или после паники в фоновой
+	// горутине главный цикл должен завершиться корректно — с ошибкой или без.
+	done := make(chan error, 1)
+	var once sync.Once
+	fail := func(err error) {
+		once.Do(func() { done <- err })
+	}
 	// Единый загрузчик: страницы (tiles.json) + тема — всё из папки /rough.
 	ui, err := LoadUI(fsys)
 	if err != nil {
@@ -210,7 +237,9 @@ func Run(fsys fs.FS) (err error) {
 	if tm := openTeletypeMouse(); tm != nil {
 		defer tm.Close()
 		telCh = make(chan MouseEvent, 16)
-		go func() {
+		// Защищённая горутина: паника здесь раньше убивала процесс молча
+		// (recover в Run её не видел). Теперь — дамп в crash.log и выход с ошибкой.
+		faultlog.GoSafe("teletype", func() {
 			for {
 				evs, err := tm.read(int(sizeW.Load()), int(sizeH.Load()))
 				if err != nil {
@@ -221,16 +250,28 @@ func Run(fsys fs.FS) (err error) {
 					telCh <- ev
 				}
 			}
-		}()
+		}, func(r any, _ []byte) {
+			fail(fmt.Errorf("телеграфная мышь: %v", r))
+		})
 	}
 
-	// Пул событий: PollEvent блокирует, поэтому крутим его в горутине.
+	// Пул событий: PollEvent блокирует, поэтому крутим его в защищённой
+	// горутине. Паника здесь (tcell на Windows-консоли: ресайз, быстрый ввод,
+	// спецклавиши) раньше роняла весь процесс без следа — теперь пишем дамп
+	// и завершаемся с ошибкой.
 	evCh := make(chan tcell.Event, 16)
-	go func() {
+	faultlog.GoSafe("poll", func() {
 		for {
 			evCh <- s.PollEvent()
 		}
-	}()
+	}, func(r any, _ []byte) {
+		fail(fmt.Errorf("чтение событий: %v", r))
+	})
+
+	// Сигналы ОС: Ctrl+C / SIGTERM → корректный выход (tcell.Fini уже
+	// зарегистрирован в defer) вместо «схлопывания» посреди кадра.
+	faultlog.InitSignals(func() { fail(nil) })
+
 	tick := time.NewTicker(500 * time.Millisecond)
 	defer tick.Stop()
 
@@ -268,6 +309,9 @@ func Run(fsys fs.FS) (err error) {
 			// плагинов неактивных страниц (графики продолжают собирать данные,
 			// пока пользователь на другой вкладке).
 			renderBackgroundPages(pages, route, w, h, fsys)
+		case err := <-done:
+			// Завершение: сигнал ОС (nil) или паника в фоновой горутине (err).
+			return err
 		}
 	}
 }
