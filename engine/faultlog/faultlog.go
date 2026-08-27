@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -30,7 +31,11 @@ const (
 	historyFile = "rough.log" // история событий (кольцевая)
 	maxHistory  = 256 * 1024  // rough.log не растёт бесконечно (256 КБ)
 )
-
+// logMu — мьютекс записи в файлы логов. WriteCrash/AppendLog вызываются из
+// РАЗНЫХ горутин (panic-handler poll/teletype, сигнальная, main), а без
+// синхронизации параллельный write + os.Rename (trimHistory) мог бы портить
+// или терять записи rough.log (F6).
+var logMu sync.Mutex
 // GoSafe запускает fn в отдельной горутине с защитой от паники.
 //
 // Если fn паникует:
@@ -92,6 +97,8 @@ func WriteCrash(where string, r any, stack []byte) {
 	body := fmt.Sprintf(
 		"=== CRASH %s ===\nwhere: %s\npanic: %v\n%s\n\n%s\n",
 		time.Now().Format(time.RFC3339), where, r, stack, MemStats())
+	logMu.Lock()
+	defer logMu.Unlock()
 	_ = os.WriteFile(crashFile, []byte(body), 0o644)
 }
 
@@ -100,17 +107,20 @@ func WriteCrash(where string, r any, stack []byte) {
 // в rough.log.old и начинается заново — история не разрастается бесконечно.
 func AppendLog(format string, a ...any) {
 	line := fmt.Sprintf("%s %s\n", time.Now().Format(time.RFC3339), fmt.Sprintf(format, a...))
+	logMu.Lock()
+	defer logMu.Unlock()
 	f, err := os.OpenFile(historyFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
 		return
 	}
 	defer f.Close()
 	_, _ = f.WriteString(line)
-	trimHistory()
+	trimHistoryLocked()
 }
 
-// trimHistory следит, чтобы rough.log не превышал maxHistory.
-func trimHistory() {
+// trimHistoryLocked следит, чтобы rough.log не превышал maxHistory.
+// Вызывается ТОЛЬКО под logMu (из AppendLog).
+func trimHistoryLocked() {
 	fi, err := os.Stat(historyFile)
 	if err != nil || fi.Size() < maxHistory {
 		return

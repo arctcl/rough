@@ -13,6 +13,10 @@ import (
 // scrollOff — вертикальный скролл внутри тайла (id тайла → смещение строк).
 var scrollOff = map[string]int{}
 
+// maxTileHeight — жёсткий потолок высоты запасного буфера тайла (F5):
+// чтобы длинный вывод был достижим, но память не раздувалась бесконечно.
+const maxTileHeight = 4000
+
 // renderFrame рисует текущий кадр: фон, заголовок, тайлы, вкладки и статус.
 // Тайлы растягиваются по своим Rect под текущий размер окна (ресайз терминала
 // подхватывается каждый кадр — это и есть «растягиватель»).
@@ -50,7 +54,7 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 		// HTML тайла распарсен один раз (кэш) — здесь только рендер из кэша.
 		if t.File != "" {
 			if root, perr := loadTile(fsys, t.File); perr == nil {
-				renderTile(root, inner, t.ID, x+1, y+1, th-2, &hotzones)
+				renderTile(root, inner, route+"/"+t.ID, x+1, y+1, th-2, &hotzones)
 			}
 		}
 		bg.Copy(inner, x+1, y+1)
@@ -130,7 +134,7 @@ func renderBackgroundPages(pages Pages, active string, w, h int, fsys fs.FS) {
 			}
 			inner := NewBuffer(tw-2, th-2)
 			var scratch []Hotzone
-			renderTile(root, inner, t.ID, x+1, y+1, th-2, &scratch)
+			renderTile(root, inner, route+"/"+t.ID, x+1, y+1, th-2, &scratch)
 		}
 	}
 }
@@ -138,10 +142,17 @@ func renderBackgroundPages(pages Pages, active string, w, h int, fsys fs.FS) {
 // renderTile рендерит содержимое тайла в inner с поддержкой скролла:
 // контент рисуется в большой буфер (запас по высоте), окно копируется
 // со сдвигом scrollOff[id]; хотзоны сдвигаются так же.
-func renderTile(root *Node, inner *Buffer, id string, ox, oy, viewH int, out *[]Hotzone) {
-	bigH := viewH * 4
-	if bigH < 40 {
-		bigH = 40
+func renderTile(root *Node, inner *Buffer, scrollKey string, ox, oy, viewH int, out *[]Hotzone) {
+	// F5: запас по высоте для длинного вывода. Раньше 4× — хвост контента
+	// (логи, большие страницы) становился недостижимым. Увеличили до 16×
+	// (минимум 200) с жёстким потолком. Полный «честный» расчёт высоты
+	// невозможен: повторный рендер перезапустил бы <plugin> (побочные эффекты).
+	bigH := viewH * 16
+	if bigH < 200 {
+		bigH = 200
+	}
+	if bigH > maxTileHeight {
+		bigH = maxTileHeight
 	}
 	big := NewBuffer(inner.W, bigH)
 	var hz []Hotzone
@@ -157,11 +168,11 @@ func renderTile(root *Node, inner *Buffer, id string, ox, oy, viewH int, out *[]
 	if maxOff < 0 {
 		maxOff = 0
 	}
-	off := scrollOff[id]
+	off := scrollOff[scrollKey]
 	if off > maxOff {
 		off = maxOff
 	}
-	scrollOff[id] = off
+	scrollOff[scrollKey] = off
 
 	// Копируем видимое окно (со сдвигом) в inner.
 	for yy := 0; yy < viewH && yy+off < big.H; yy++ {

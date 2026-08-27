@@ -24,7 +24,7 @@ const forbiddenName = "run"
 
 // AddPlugin регистрирует плагин. Зарезервированные имена молча отбрасываются.
 func AddPlugin(name string, fn PluginFunc) {
-	if name == forbiddenName {
+	if strings.EqualFold(name, forbiddenName) {
 		return
 	}
 	plugins[name] = fn
@@ -41,7 +41,7 @@ var mans = map[string]string{}
 // AddMan регистрирует справку по плагину (юникс-like man).
 // Обязательный вызов из init() плагина — рядом с AddPlugin.
 func AddMan(name, text string) {
-	if name == forbiddenName {
+	if strings.EqualFold(name, forbiddenName) {
 		return
 	}
 	mans[name] = text
@@ -446,7 +446,7 @@ func RunSteps(steps []string, in []string) ([]string, error) {
 	cur := in
 	for _, s := range steps {
 		name, args := SplitAction(s)
-		if name == forbiddenName {
+		if strings.EqualFold(name, forbiddenName) {
 			return nil, fmt.Errorf("%s запрещён движком", name)
 		}
 		fn, ok := plugins[name]

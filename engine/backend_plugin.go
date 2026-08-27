@@ -8,6 +8,11 @@ import (
 // pluginCache — кэш результатов <plugin>: не перезапускается чаще interval.
 var pluginCache = map[string]pluginEntry{}
 
+// maxPluginCache — верхний предел записей pluginCache. Ключ = пайп ПОСЛЕ
+// подстановки переменных, поэтому при динамических пайпах (с $переменной)
+// ключи меняются и без лимита кэш рос бы бесконечно. При превышении — сброс.
+const maxPluginCache = 256
+
 // backgroundRender — флаг фонового рендера неактивных страниц
 // (renderBackgroundPages): в фоне выполняются ТОЛЬКО плагины с явным interval
 // (живые виджеты — графики, часы), разовые плагины с побочными эффектами
@@ -64,6 +69,10 @@ func renderPlugin(n *Node, b *Buffer, f *flowState) {
 			lines = []string{"error: " + err.Error()}
 		} else {
 			lines = out
+		}
+		// F4: ограничиваем рост — динамические пайпы дают всё новые ключи.
+		if len(pluginCache) >= maxPluginCache {
+			pluginCache = map[string]pluginEntry{}
 		}
 		pluginCache[key] = pluginEntry{at: time.Now(), lines: lines}
 	}

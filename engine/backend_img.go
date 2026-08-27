@@ -42,7 +42,11 @@ func renderImg(n *Node, b *Buffer, f *flowState) {
 		return
 	}
 	// Масштаб: сколько пикселей по горизонтали в одном блоке (минимум 1).
-	sx := img.w / b.W
+	// Защита от b.W==0 (тайл шириной 1-2 клетки) — иначе деление на ноль.
+	sx := 1
+	if b.W > 0 {
+		sx = img.w / b.W
+	}
 	if sx < 1 {
 		sx = 1
 	}
@@ -122,13 +126,17 @@ func decodePPM(b []byte) (*ppmImage, error) {
 	if w <= 0 || h <= 0 {
 		return nil, errors.New("PPM: плохой размер")
 	}
-	if pos < len(b) && (b[pos] == ' ' || b[pos] == '\n' || b[pos] == '\t' || b[pos] == '\r') {
+	// Пропускаем ВСЕ пробельные символы между заголовком и данными (не один):
+	// иначе при "255\r\n" лишний \r/\n попал бы в первый пиксель.
+	for pos < len(b) && (b[pos] == ' ' || b[pos] == '\t' || b[pos] == '\n' || b[pos] == '\r') {
 		pos++
 	}
-	need := w * h * 3
-	if pos+need > len(b) {
+	// Защита от переполнения w*h*3 (считаем в int64), чтобы не получить
+	// отрицательный размер среза → панику по границам.
+	if int64(w)*int64(h)*3 > int64(len(b)-pos) {
 		return nil, errors.New("PPM: не хватает данных")
 	}
+	need := w * h * 3
 	return &ppmImage{w: w, h: h, data: b[pos : pos+need]}, nil
 }
 

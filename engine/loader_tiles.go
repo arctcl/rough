@@ -30,30 +30,26 @@ func LoadPages(fsys fs.FS) (Pages, error) {
 		return nil, err
 	}
 
+	// Паттерн читаем ДО цикла по страницам: порядок обхода map в Go случайный.
+	// Если бы pattern разбирался внутри цикла, применение к страницам зависело
+	// бы от того, попадётся ли ключ раньше них (недетерминизм между запусками).
 	pattern := defaultPattern
+	if arr, ok := raw["pattern"].([]any); ok {
+		p := make([]string, 0, len(arr))
+		for _, v := range arr {
+			if s, ok := v.(string); ok {
+				p = append(p, s)
+			}
+		}
+		if len(p) > 0 {
+			pattern = p
+		}
+	}
+
 	pages := Pages{}
 	for key, val := range raw {
-		// Ключ паттерна объявляет схему строк данных один раз.
-		if key == "pattern" {
-			if arr, ok := val.([]any); ok {
-				p := make([]string, 0, len(arr))
-				for _, v := range arr {
-					if s, ok := v.(string); ok {
-						p = append(p, s)
-					}
-				}
-				if len(p) > 0 {
-					pattern = p
-				}
-			}
-			continue
-		}
-		// Ключ "theme" — имя темы, это не страница.
-		if key == "theme" {
-			continue
-		}
-		// Ключ "menu" — вкладки (пары [имя, роут]), это не страница.
-		if key == "menu" {
+		// Служебные ключи (паттерн/тема/меню) — не страницы.
+		if key == "pattern" || key == "theme" || key == "menu" {
 			continue
 		}
 

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/arctcl/rough/engine/faultlog"
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -128,7 +129,8 @@ func ConfigTheme(fsys fs.FS) string {
 }
 
 // LoadTheme читает тему themes/<name>.json из вшитой папки.
-// Если файла нет — пустая тема (запасные символы/цвета).
+// Если файла нет или JSON битый — пустая тема (запасные символы/цвета),
+// а ошибка парсинга пишется в лог (иначе опечатка в теме проходила молча).
 func LoadTheme(fsys fs.FS, name string) *Theme {
 	b, err := fs.ReadFile(fsys, "themes/"+name+".json")
 	if err != nil {
@@ -136,6 +138,7 @@ func LoadTheme(fsys fs.FS, name string) *Theme {
 	}
 	t := &Theme{Name: name}
 	if err := json.Unmarshal(b, t); err != nil {
+		faultlog.AppendLog("тема %s: ошибка JSON: %v", name, err)
 		return &Theme{Name: name}
 	}
 	return t
