@@ -52,20 +52,17 @@ composable.
 Plugins returning data over time (charts, monitors) are re-run by `<plugin
 interval="...">`. Add `updateanytime="1"` to keep them running on inactive tabs.
 
-## Inject into the engine (secret keys)
+## Inject into the engine (key sequences)
 
 A plugin is not only "called from HTML" — it can register **hooks** into the
 engine through public APIs.
 
-`AddCheat(seq, action)` — a secret key sequence runs an action (a pipe, like a
-button `action`):
-- `'U','D','L','R'` — arrows; letter/digit — that key; `'+'` — the plus key.
-
-`AddCheatRoute(seq, route)` — a secret key sequence **navigates** to a page
-(like a tab). Secret pages can be registered programmatically with `AddPage` —
+`AddCheatRoute(seq, route)` — a key sequence **navigates** to a page (like a
+tab). Keys: `'U','D','L','R'` — arrows; letter/digit — that key; `'+'` — the
+plus key. Secret pages can be registered programmatically with `AddPage` —
 so `tiles.json` is never touched and the page has no tab button; reachable only
-by the secret code. On the page you put normal plugins, e.g. an
-immediately-printed greeting:
+by the code. On the page you put normal plugins, e.g. an immediately-printed
+greeting:
 
 ```html
 <plugin pipe="cat GLHF mate!" async interval="1s"/>
