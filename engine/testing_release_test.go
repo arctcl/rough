@@ -17,7 +17,7 @@ func TestConfirmBlocksMouse(t *testing.T) {
 	// Клик по обычной кнопке позади модалки — игнорируется.
 	hotzones = hotzones[:0]
 	hotzones = append(hotzones, Hotzone{X: 10, Y: 10, W: 5, H: 1, Action: "__confirm_probe"})
-	mouseBtn1 = false
+	eng.mouseBtn1 = false
 	confirmMode = true
 	route := "/main"
 	handleMouseEvent(MouseEvent{X: 12, Y: 10, Left: true}, Pages{}, &route, 40, 20)
@@ -28,7 +28,7 @@ func TestConfirmBlocksMouse(t *testing.T) {
 	// Клик по кнопке «Да» модалки — подтверждает и выполняет отложенные шаги.
 	hotzones = hotzones[:0]
 	hotzones = append(hotzones, Hotzone{X: 10, Y: 10, W: 5, H: 1, Kind: "confirm_yes"})
-	mouseBtn1 = false
+	eng.mouseBtn1 = false
 	confirmMode = true
 	pendingPipes = [][]string{{"__confirm_probe"}}
 	handleMouseEvent(MouseEvent{X: 12, Y: 10, Left: true}, Pages{}, &route, 40, 20)
@@ -41,7 +41,7 @@ func TestConfirmBlocksMouse(t *testing.T) {
 
 	// Сброс глобалов.
 	confirmMode = false
-	mouseBtn1 = false
+	eng.mouseBtn1 = false
 	hotzones = hotzones[:0]
 }
 
@@ -133,7 +133,7 @@ func TestFocusResetOnNav(t *testing.T) {
 	pages := Pages{"/a": nil, "/b": nil}
 	hotzones = hotzones[:0]
 	hotzones = append(hotzones, Hotzone{X: 5, Y: 5, W: 3, H: 1, Href: "/b", Kind: "nav"})
-	mouseBtn1 = false
+	eng.mouseBtn1 = false
 	route := "/a"
 	focusIdx = 3
 
@@ -147,6 +147,6 @@ func TestFocusResetOnNav(t *testing.T) {
 
 	// Сброс глобалов.
 	focusIdx = -1
-	mouseBtn1 = false
+	eng.mouseBtn1 = false
 	hotzones = hotzones[:0]
 }

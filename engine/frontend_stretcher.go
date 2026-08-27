@@ -88,8 +88,8 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 	}
 
 	// Квадратик под курсором мыши и подсветка сфокусированной хотзоны.
-	if mouseX >= 0 && mouseY >= 0 && mouseX < w && mouseY < h {
-		bg.Highlight(mouseX, mouseY)
+	if eng.mouseX >= 0 && eng.mouseY >= 0 && eng.mouseX < w && eng.mouseY < h {
+		bg.Highlight(eng.mouseX, eng.mouseY)
 	}
 	if focusIdx >= 0 && focusIdx < len(hotzones) {
 		hz := hotzones[focusIdx]

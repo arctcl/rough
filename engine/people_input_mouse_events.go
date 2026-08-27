@@ -1,14 +1,5 @@
 package engine
 
-// mouseX, mouseY — позиция мыши (для подсветки квадратика под курсором, -1 — вне экрана).
-var mouseX, mouseY = -1, -1
-
-// mouseBtn1 — зажата ли левая кнопка; mouseLastX/Y — прошлая позиция (для drag).
-var (
-	mouseBtn1              bool
-	mouseLastX, mouseLastY int
-)
-
 // MouseEvent — высокоуровневое событие мыши, ЕДИНОЕ для всех источников:
 // десктоп (терминал/tcell), телеграфный (сырой /dev/input/mice) и любой
 // будущий (нейролинк и т.п.). Каждый источник переводит свои данные в этот
@@ -25,42 +16,42 @@ type MouseEvent struct {
 // меню). Вызывается и десктопным источником (handleMouse), и телеграфным.
 func handleMouseEvent(me MouseEvent, pages Pages, route *string, w, h int) {
 	// Позиция — для подсветки квадратика под курсором.
-	mouseX, mouseY = me.X, me.Y
+	eng.mouseX, eng.mouseY = me.X, me.Y
 	// Колесо: над меню select — его прокрутка; над статус-блоком — статус; иначе — тайл.
 	if me.Wheel != 0 {
 		if selectMode {
-			if li := menuLevelAt(mouseX, mouseY); li >= 0 {
+			if li := menuLevelAt(eng.mouseX, eng.mouseY); li >= 0 {
 				lv := &selectStack[li]
 				lv.scroll += me.Wheel
 				clampScroll(lv)
 				return
 			}
 		}
-		if statusRectH > 0 && mouseX >= statusRectX && mouseX < statusRectX+statusRectW &&
-			mouseY >= statusRectY && mouseY < statusRectY+statusRectH {
+		if statusRectH > 0 && eng.mouseX >= statusRectX && eng.mouseX < statusRectX+statusRectW &&
+			eng.mouseY >= statusRectY && eng.mouseY < statusRectY+statusRectH {
 			statusScroll += me.Wheel
 			return
 		}
-		scrollTile(pages, *route, mouseX, mouseY, w, h, me.Wheel)
+		scrollTile(pages, *route, eng.mouseX, eng.mouseY, w, h, me.Wheel)
 		return
 	}
 	// Левая кнопка: нажатие — клик; удержание с движением — drag-скролл меню.
 	if me.Left {
-		if mouseBtn1 {
+		if eng.mouseBtn1 {
 			// Кнопка уже была нажата — это перетаскивание.
-			if selectMode && (mouseX != mouseLastX || mouseY != mouseLastY) {
-				if li := menuLevelAt(mouseX, mouseY); li >= 0 {
+			if selectMode && (eng.mouseX != eng.mouseLastX || eng.mouseY != eng.mouseLastY) {
+				if li := menuLevelAt(eng.mouseX, eng.mouseY); li >= 0 {
 					lv := &selectStack[li]
-					lv.scroll += mouseLastY - mouseY
+					lv.scroll += eng.mouseLastY - eng.mouseY
 					clampScroll(lv)
 				}
 			}
-			mouseLastX, mouseLastY = mouseX, mouseY
+			eng.mouseLastX, eng.mouseLastY = eng.mouseX, eng.mouseY
 			return
 		}
 		// Нажатие (кнопка только что нажата) — обычный клик.
-		mouseBtn1 = true
-		mouseLastX, mouseLastY = mouseX, mouseY
+		eng.mouseBtn1 = true
+		eng.mouseLastX, eng.mouseLastY = eng.mouseX, eng.mouseY
 		x, y := me.X, me.Y
 		// Модалка подтверждения открыта: клики работают ТОЛЬКО по её кнопкам
 		// «Да/Нет», всё остальное игнорируем — нельзя выполнить действие без
@@ -153,6 +144,6 @@ func handleMouseEvent(me MouseEvent, pages Pages, route *string, w, h int) {
 		execAction(act, output)
 		return
 	}
-	mouseBtn1 = false
-	mouseLastX, mouseLastY = mouseX, mouseY
+	eng.mouseBtn1 = false
+	eng.mouseLastX, eng.mouseLastY = eng.mouseX, eng.mouseY
 }
