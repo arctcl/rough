@@ -205,17 +205,23 @@ func Run(fsys fs.FS) (err error) {
 	pages := ui.Pages
 	menu := ui.Menu
 
-	// Проверяльщик синтаксиса: пока есть ошибки — интерфейс не стартует.
-	if errs := CheckSyntax(fsys, pages); len(errs) > 0 {
-		return fmt.Errorf("проверка синтаксиса:\n  %s", syntaxErrorsOneLine(errs))
-	}
-
 	curTheme = ui.Theme
 	// Вшитая папка — нужна плагину theme (переключение тем на лету).
 	curFS = fsys
 	// Плагины-инжекторы (chch) читают свои конфиги после готовности папки.
 	for _, fn := range onReady {
 		fn(fsys)
+	}
+	// Секретные страницы инжекторов добавляем в общий список (не трогаем
+	// tiles.json — они живут в конфиге инжектора).
+	for r, ts := range extraPages {
+		pages[r] = ts
+	}
+
+	// Проверяльщик синтаксиса: пока есть ошибки — интерфейс не стартует.
+	// Проверяем ПОСЛЕ добавления страниц инжекторов, чтобы ловить и их.
+	if errs := CheckSyntax(fsys, pages); len(errs) > 0 {
+		return fmt.Errorf("проверка синтаксиса:\n  %s", syntaxErrorsOneLine(errs))
 	}
 
 	s, err := tcell.NewScreen()

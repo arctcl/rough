@@ -7,12 +7,33 @@ import (
 )
 
 // Tile — один тайл на странице (позиция и размеры в % или px).
+// json-теги нужны инжекторам (chch), которые задают страницы в своём конфиге.
 type Tile struct {
-	ID, X, Y, W, H, File string
+	ID   string `json:"id"`
+	X    string `json:"x"`
+	Y    string `json:"y"`
+	W    string `json:"w"`
+	H    string `json:"h"`
+	File string `json:"file"`
 }
 
 // Pages — карта роутов в список тайлов.
 type Pages map[string][]Tile
+
+// extraPages — страницы, зарегистрированные плагинами программно (инжекторы
+// вроде chch): живут не в tiles.json, а в конфиге инжектора и добавляются в
+// общий список страниц при старте Run.
+var extraPages = Pages{}
+
+// AddPage регистрирует страницу (роут → тайлы) программно. Используется
+// инжекторами (chch) для секретных страниц: страница не трогает tiles.json,
+// а добавляется в общий список страниц при старте Run.
+func AddPage(route string, tiles []Tile) {
+	if route == "" || len(tiles) == 0 {
+		return
+	}
+	extraPages[route] = tiles
+}
 
 // defaultPattern — порядок полей в массиве тайла, если паттерн не задан.
 var defaultPattern = []string{"id", "x", "y", "w", "h", "file"}

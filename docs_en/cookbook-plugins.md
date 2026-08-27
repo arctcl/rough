@@ -62,25 +62,35 @@ button `action`):
 - `'U','D','L','R'` — arrows; letter/digit — that key; `'+'` — the plus key.
 
 `AddCheatRoute(seq, route)` — a secret key sequence **navigates** to a page
-(like a tab). The page is an ordinary tile in `tiles.json` with its own html
-(in `tiles/`), just **not in `menu`**: no tab button, reachable only by the
-secret code. On the page you put normal plugins, e.g. an immediately-printed
-greeting:
+(like a tab). Secret pages can be registered programmatically with `AddPage` —
+so `tiles.json` is never touched and the page has no tab button; reachable only
+by the secret code. On the page you put normal plugins, e.g. an
+immediately-printed greeting:
 
 ```html
 <plugin pipe="cat GLHF mate!" async interval="1s"/>
 ```
 
+`AddPage(route string, tiles []Tile)` — registers a page (route → tiles)
+programmatically. Used by injectors (`chch`) for secret pages: they live in the
+injector's config, not in `tiles.json`, and are added to the page list at
+startup.
+
 `OnReady(fn func(fs.FS))` — a hook run right after the engine loads the embedded
 folder (in `init()` the folder is not ready yet). Use it to read config files.
 
 The **`chch` injector plugin** makes this data-driven. It reads `chch.json`
-from the project's `/rough` folder and registers every code as a page jump:
+from the project's `/rough` folder and registers every page and code:
 
 ```json
 {
   "title": "chch — secret pages",
   "description": "Type a code to open a hidden page.",
+  "pages": {
+    "/ps": [
+      { "id": "ps", "x": "0%", "y": "0%", "w": "100%", "h": "100%", "file": "tiles/ps_page.html" }
+    ]
+  },
   "cheats": {
     "ps+": "/ps",
     "UUDDLRLRba": "/konami"
@@ -94,8 +104,14 @@ func init() { rough.OnReady(load) }
 func load(fsys fs.FS) {
 	b, err := fs.ReadFile(fsys, "chch.json")
 	if err != nil { return }
-	var c struct{ Cheats map[string]string `json:"cheats"` }
+	var c struct {
+		Pages  map[string][]rough.Tile `json:"pages"`
+		Cheats map[string]string       `json:"cheats"`
+	}
 	if json.Unmarshal(b, &c) != nil { return }
+	for route, tiles := range c.Pages {
+		rough.AddPage(route, tiles)
+	}
 	for seq, route := range c.Cheats {
 		rough.AddCheatRoute(seq, route)
 	}

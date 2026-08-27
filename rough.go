@@ -84,6 +84,14 @@ func AddCheat(seq, action string) { engine.AddCheat(seq, action) }
 // попасть можно только секретным кодом.
 func AddCheatRoute(seq, route string) { engine.AddCheatRoute(seq, route) }
 
+// Tile — один тайл на странице (позиция и размеры в % или px).
+type Tile = engine.Tile
+
+// AddPage регистрирует страницу (роут → тайлы) программно. Используется
+// инжекторами (chch) для секретных страниц: страница живёт не в tiles.json,
+// а в конфиге инжектора, и добавляется в общий список страниц при старте Run.
+func AddPage(route string, tiles []Tile) { engine.AddPage(route, tiles) }
+
 // OnReady регистрирует колбэк, вызываемый в Run сразу после загрузки вшитой
 // папки /rough (в init() вшитой папки ещё нет). Плагин-инжектор читает тут
 // свой конфиг и регистрирует секретные коды. Колбэк получает саму папку.
