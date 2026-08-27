@@ -40,8 +40,9 @@ HTML → ParseHTML (x/net/html) → convertNode → renderTile → Buffer → Bl
 click/Enter → HitTest → execAction(action, output) → RunSteps (pipe) → putOutput
 ```
 
-Live widgets: `<plugin interval="2s" updateanytime="1">` keeps running in the
-background for inactive tabs (`renderBackgroundPages`).
+Live widgets: `<plugin interval="2s" updateanytime="1">` renders on the active
+page. Cyclic plugins WITHOUT `async` stop when the tab is unloaded; with `async`
+they keep running in their own goroutine (plugin-as-service).
 
 ## Conventions
 

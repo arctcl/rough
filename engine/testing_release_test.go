@@ -1,9 +1,6 @@
 package engine
 
-import (
-	"testing"
-	"testing/fstest"
-)
+import "testing"
 
 // TestConfirmBlocksMouse — модалка подтверждения блокирует клики мыши:
 // клик по кнопке ПОЗАДИ модалки не выполняет действие, а клик по «Да» — подтверждает.
@@ -81,50 +78,6 @@ func TestExpandVarsDigitNotVar(t *testing.T) {
 	SetVar("host", []string{"srv1"})
 	if got := expandVars("ssh:root:$host"); got != "ssh:root:srv1" {
 		t.Fatalf("$host не подставился: %q", got)
-	}
-}
-
-// TestBackgroundSkipsNonInterval — фоновый рендер неактивных страниц запускает
-// плагины с явным interval ИЛИ с флагом updateanytime; разовые плагины (без
-// того и другого) пропускает.
-func TestBackgroundSkipsNonInterval(t *testing.T) {
-	var calls int
-	AddPlugin("__bg_probe", func(in []string, args []string) ([]string, error) {
-		calls++
-		return nil, nil
-	})
-	// Сброс кэша <plugin> — иначе предыдущий запуск «закрыл» интервал.
-	pluginCache = map[string]pluginEntry{}
-
-	// Без interval — в фоне не запускается.
-	fsys := fstest.MapFS{
-		"tiles/bg.html": &fstest.MapFile{Data: []byte(`<plugin pipe="__bg_probe"/>`)},
-	}
-	pages := Pages{"/bg": []Tile{{ID: "b", X: "0%", Y: "0%", W: "100%", H: "100%", File: "tiles/bg.html"}}}
-	renderBackgroundPages(pages, "/active", 40, 10, fsys)
-	if calls != 0 {
-		t.Fatalf("фон запустил плагин без interval: calls=%d", calls)
-	}
-
-	// С interval — запускается (живой виджет).
-	fsys2 := fstest.MapFS{
-		"tiles/bg2.html": &fstest.MapFile{Data: []byte(`<plugin pipe="__bg_probe" interval="2s"/>`)},
-	}
-	pages2 := Pages{"/bg2": []Tile{{ID: "b2", X: "0%", Y: "0%", W: "100%", H: "100%", File: "tiles/bg2.html"}}}
-	renderBackgroundPages(pages2, "/active", 40, 10, fsys2)
-	if calls != 1 {
-		t.Fatalf("фон НЕ запустил плагин с interval: calls=%d", calls)
-	}
-
-	// С updateanytime (без interval) — тоже запускается в фоне.
-	pluginCache = map[string]pluginEntry{}
-	fsys3 := fstest.MapFS{
-		"tiles/bg3.html": &fstest.MapFile{Data: []byte(`<plugin pipe="__bg_probe" updateanytime="1"/>`)},
-	}
-	pages3 := Pages{"/bg3": []Tile{{ID: "b3", X: "0%", Y: "0%", W: "100%", H: "100%", File: "tiles/bg3.html"}}}
-	renderBackgroundPages(pages3, "/active", 40, 10, fsys3)
-	if calls != 2 {
-		t.Fatalf("фон НЕ запустил плагин с updateanytime: calls=%d", calls)
 	}
 }
 

@@ -13,12 +13,6 @@ var pluginCache = map[string]pluginEntry{}
 // ключи меняются и без лимита кэш рос бы бесконечно. При превышении — сброс.
 const maxPluginCache = 256
 
-// backgroundRender — флаг фонового рендера неактивных страниц
-// (renderBackgroundPages): в фоне выполняются ТОЛЬКО плагины с явным interval
-// (живые виджеты — графики, часы), разовые плагины с побочными эффектами
-// (toggle/set/ssh/export) пропускаются.
-var backgroundRender bool
-
 // pluginEntry — кэшированный результат плагина и время последнего запуска.
 type pluginEntry struct {
 	at    time.Time
@@ -61,13 +55,6 @@ func renderPlugin(n *Node, b *Buffer, f *flowState) {
 			f.putColored(b, ln)
 			f.nl(b)
 		}
-		return
-	}
-	// В фоне (неактивные страницы) выполняем плагины с явным interval (живые
-	// виджеты — графики, часы) ИЛИ с флагом updateanytime (автор тайла явно
-	// требует обновлять плагин даже на неактивном тайле). Разовые плагины с
-	// побочными эффектами (toggle/set/ssh/export) в фоне не запускаем.
-	if backgroundRender && n.Attrs["interval"] == "" && n.Attrs["updateanytime"] == "" {
 		return
 	}
 	// Подстановка переменных $имя (движок) — живой контент тоже умеет.

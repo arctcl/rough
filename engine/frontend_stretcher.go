@@ -104,43 +104,6 @@ func renderFrame(s tcell.Screen, pages Pages, route string, menu [][]string, w, 
 	s.Show()
 }
 
-// renderBackgroundPages обновляет «живые» плагины неактивных страниц в фоне.
-// Движок рисует на экран только активную страницу — но плагины с interval
-// (графики, часы и т.п.) должны продолжать собирать данные, пока пользователь
-// на другой вкладке. Прогоняем их в черновые буферы (не на экран), чтобы
-// renderPlugin перезапускался по своему интервалу и данные не застывали.
-// Сама отрисовка черновика отбрасывается — важен побочный эффект (обновление
-// pluginCache и состояния плагинов вроде серии графика).
-func renderBackgroundPages(pages Pages, active string, w, h int, fsys fs.FS) {
-	backgroundRender = true
-	defer func() {
-		backgroundRender = false
-		// Сбрасываем глобалы рисовалок — плагины из action не должны читать
-		// чужие размеры/сигнатуру, оставшиеся от фоновых страниц.
-		engineMu.Lock()
-		curW, curH, curPluginKey, curViewH = 0, 0, "", 0
-		engineMu.Unlock()
-	}()
-	for route, tiles := range pages {
-		if route == active {
-			continue
-		}
-		for _, t := range tiles {
-			x, y, tw, th := t.Rect(w, h)
-			if tw <= 2 || th <= 2 || t.File == "" {
-				continue
-			}
-			root, perr := loadTile(fsys, t.File)
-			if perr != nil {
-				continue
-			}
-			inner := NewBuffer(tw-2, th-2)
-			var scratch []Hotzone
-			renderTile(root, inner, route+"/"+t.ID, x+1, y+1, th-2, &scratch)
-		}
-	}
-}
-
 // renderTile рендерит содержимое тайла в inner с поддержкой скролла:
 // контент рисуется в большой буфер (запас по высоте), окно копируется
 // со сдвигом scrollOff[id]; хотзоны сдвигаются так же.

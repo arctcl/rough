@@ -43,5 +43,6 @@ writing any UI code yourself.
    (keyboard + mouse).
 4. A click on an element runs its `action` pipe; the result goes to the target
    tile or the status line.
-5. Live `<plugin interval="...">` keeps collecting data even when its tab is
-   inactive (`renderBackgroundPages`).
+5. Live `<plugin interval="...">` renders on the active page. Cyclic plugins
+   without `async` stop when the tab is unloaded; with `async` they keep running
+   in their own goroutine.
