@@ -347,8 +347,9 @@ func Run(fsys fs.FS) (err error) {
 			// плагинов неактивных страниц (графики продолжают собирать данные,
 			// пока пользователь на другой вкладке).
 			renderBackgroundPages(pages, route, w, h, fsys)
-			// async: доставляем готовые фоновые задачи (async.go).
+			// async: доставляем готовые фоновые задачи и кадры живых плагинов.
 			pollAsyncJobs()
+			drainAsyncLive()
 		case err := <-done:
 			// Завершение: сигнал ОС (nil) или паника в фоновой горутине (err).
 			return err

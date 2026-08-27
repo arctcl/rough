@@ -37,8 +37,10 @@ var curTheme *Theme
 // чтобы переключать темы на лету (читать themes/*.json из проекта).
 var curFS fs.FS
 
-// CurrentThemeName возвращает имя активной темы.
+// CurrentThemeName возвращает имя активной темы. Безопасно из async-горутин.
 func CurrentThemeName() string {
+	engineMu.RLock()
+	defer engineMu.RUnlock()
 	if curTheme == nil {
 		return ""
 	}
@@ -55,7 +57,9 @@ func SwitchTheme(name string) error {
 	if len(t.Colors) == 0 && len(t.Symbols) == 0 {
 		return fmt.Errorf("тема %s не найдена", name)
 	}
+	engineMu.Lock()
 	curTheme = t
+	engineMu.Unlock()
 	return nil
 }
 
@@ -82,7 +86,10 @@ func ListThemes() []string {
 // ThemeColor возвращает цвет из активной темы по ключу (для плагинов).
 // def — запасной, если ключа нет или тема не загружена. Плагины берут свои
 // цвета отсюда: color_0..color_15 (палитра терминала) и любые ключи темы.
+// Безопасно из async-горутин.
 func ThemeColor(name string, def tcell.Color) tcell.Color {
+	engineMu.RLock()
+	defer engineMu.RUnlock()
 	if curTheme == nil {
 		return def
 	}

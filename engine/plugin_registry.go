@@ -485,14 +485,20 @@ var ErrStop = errors.New("стоп")
 
 // Window возвращает текущий размер окна тайла в клетках.
 // Движок устанавливает его перед запуском пайпа в <plugin>, чтобы рисовалки
-// (bars и т.п.) адаптировали вывод под свой размер.
+// (bars и т.п.) адаптировали вывод под свой размер. Безопасно из async-горутин.
 func Window() (int, int) {
+	engineMu.RLock()
+	defer engineMu.RUnlock()
 	return curW, curH
 }
 
 // SetWindowSize вручную задаёт размер окна тайла для рисовалок.
 // Нужна тестам плагинов (без запуска всего интерфейса).
-func SetWindowSize(w, h int) { curW, curH = w, h }
+func SetWindowSize(w, h int) {
+	engineMu.Lock()
+	curW, curH = w, h
+	engineMu.Unlock()
+}
 
 // curW, curH — размер окна тайла для рисовалок (глобал, как curTheme).
 var curW, curH int
@@ -502,7 +508,12 @@ var curPluginKey string
 
 // PluginKey возвращает сигнатуру текущего выполняемого <plugin> (пайп).
 // Нужна stateful-плагинам (chart), чтобы хранить свою серию отдельно.
-func PluginKey() string { return curPluginKey }
+// Безопасно из async-горутин.
+func PluginKey() string {
+	engineMu.RLock()
+	defer engineMu.RUnlock()
+	return curPluginKey
+}
 
 // curViewH — видимая высота тайла. Нужна для вертикального центрирования
 // <div align="center"> внутри запасного буфера скролла (ставит renderTile).

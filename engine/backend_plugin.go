@@ -30,16 +30,37 @@ type pluginEntry struct {
 func renderPlugin(n *Node, b *Buffer, f *flowState) {
 	// Размер окна тайла — чтобы рисовалки (bars и т.п.) адаптировались.
 	// height на <plugin> — высота зоны графика (chart рисует на ней).
+	engineMu.Lock()
 	curW, curH = b.W, b.H
 	if hv := n.Attrs["height"]; hv != "" {
 		if hh := parseLen(hv, b.H); hh > 0 {
 			curH = hh
 		}
 	}
+	engineMu.Unlock()
 
 	steps := pluginSteps(n)
 	if len(steps) == 0 {
 		f.put(b, "error: empty plugin")
+		return
+	}
+	// async: живой плагин-служба — в своей горутине, ядро показывает последний кадр.
+	if n.Attrs["async"] != "" {
+		for i := range steps {
+			steps[i] = expandVars(steps[i])
+		}
+		key := strings.Join(steps, "|")
+		if !asyncLiveStarted[key] {
+			iv := parseDur(n.Attrs["interval"])
+			if iv <= 0 {
+				iv = 2 * time.Second
+			}
+			startAsyncLive(key, steps, iv)
+		}
+		for _, ln := range asyncLive[key] {
+			f.putColored(b, ln)
+			f.nl(b)
+		}
 		return
 	}
 	// В фоне (неактивные страницы) выполняем плагины с явным interval (живые
@@ -59,7 +80,9 @@ func renderPlugin(n *Node, b *Buffer, f *flowState) {
 		iv = 2 * time.Second
 	}
 	key := strings.Join(steps, "|")
+	engineMu.Lock()
 	curPluginKey = key // сигнатура для stateful-плагинов (chart)
+	engineMu.Unlock()
 	var lines []string
 	if c, ok := pluginCache[key]; ok && time.Since(c.at) < iv {
 		lines = c.lines // ещё не время — показываем прошлый результат

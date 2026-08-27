@@ -63,3 +63,28 @@ func TestAsyncJobDedup(t *testing.T) {
 	}
 	asyncJobs = map[string]*asyncJob{} // дочистка на случай сбоя
 }
+
+// async-живой <plugin> — служба: кадры шлются по каналу и попадают в asyncLive.
+func TestAsyncLivePlugin(t *testing.T) {
+	AddPlugin("__tick", func(in, args []string) ([]string, error) {
+		return []string{"tick"}, nil
+	})
+	defer func() { delete(plugins, "__tick") }()
+	asyncLive = map[string][]string{}
+	asyncLiveStarted = map[string]bool{}
+	defer func() { asyncLiveStarted = map[string]bool{} }()
+
+	startAsyncLive("k", []string{"__tick"}, 20*time.Millisecond)
+
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		drainAsyncLive()
+		if len(asyncLive["k"]) > 0 {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if len(asyncLive["k"]) == 0 || asyncLive["k"][0] != "tick" {
+		t.Fatalf("кадр не доставлен: %v", asyncLive["k"])
+	}
+}

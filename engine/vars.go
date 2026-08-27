@@ -11,14 +11,20 @@ var vars = map[string][]string{}
 
 // SetVar сохраняет значение переменной (строки) по имени.
 // Вызывается плагином export (и любым другим, кому нужно записать в память).
+// Безопасно из async-горутин.
 func SetVar(name string, lines []string) {
+	engineMu.Lock()
 	vars[name] = lines
+	engineMu.Unlock()
 }
 
 // VarLine возвращает переменную одной строкой для подстановки в action:
 // одна строка — как есть, несколько — склеиваются пробелом.
+// Безопасно из async-горутин.
 func VarLine(name string) string {
+	engineMu.RLock()
 	v, ok := vars[name]
+	engineMu.RUnlock()
 	if !ok || len(v) == 0 {
 		return ""
 	}

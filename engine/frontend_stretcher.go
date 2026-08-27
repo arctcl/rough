@@ -117,7 +117,9 @@ func renderBackgroundPages(pages Pages, active string, w, h int, fsys fs.FS) {
 		backgroundRender = false
 		// Сбрасываем глобалы рисовалок — плагины из action не должны читать
 		// чужие размеры/сигнатуру, оставшиеся от фоновых страниц.
+		engineMu.Lock()
 		curW, curH, curPluginKey, curViewH = 0, 0, "", 0
+		engineMu.Unlock()
 	}()
 	for route, tiles := range pages {
 		if route == active {

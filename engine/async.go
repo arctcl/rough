@@ -1,5 +1,7 @@
 package engine
 
+import "time"
+
 // Async-модель: явный флаг `async` на элементе запускает ВЕСЬ его пайплайн
 // в отдельной фоновой горутине (плагин-служба). Ядро НЕ опрашивает async-задачу
 // и НЕ кеширует её — задача сама шлёт готовый вывод по каналу. Экран рисует
@@ -11,8 +13,8 @@ package engine
 
 // asyncJob — фоновая задача async-элемента.
 type asyncJob struct {
-	key    string       // раскрытая команда (ключ задачи)
-	target string       // куда вывести (output="id"); пусто = статус-строка
+	key    string           // раскрытая команда (ключ задачи)
+	target string           // куда вывести (output="id"); пусто = статус-строка
 	done   chan asyncResult // канал с готовым выводом (буфер 1)
 }
 
@@ -69,3 +71,52 @@ func pollAsyncJobs() {
 		}
 	}
 }
+
+// --- async-живые <plugin> (плагин-служба) ---
+
+// liveFrame — кадр живого async-плагина по ключу.
+type liveFrame struct {
+	key   string
+	lines []string
+}
+
+// asyncLive — последний кадр каждого живого async-плагина (обновляется в
+// главном цикле). Горутина шлёт кадры по asyncLiveCh — общего состояния нет,
+// поэтому рейсов нет.
+var (
+	asyncLive        = map[string][]string{}
+	asyncLiveCh      = make(chan liveFrame, 64)
+	asyncLiveStarted = map[string]bool{}
+)
+
+// startAsyncLive запускает службу async-<plugin>: в своей горутине по interval
+// выполняет пайп и шлёт готовый кадр в asyncLiveCh. Запускается один раз на ключ.
+func startAsyncLive(key string, steps []string, iv time.Duration) {
+	asyncLiveStarted[key] = true
+	go func() {
+		t := time.NewTicker(iv)
+		defer t.Stop()
+		for {
+			out, err := RunSteps(steps, nil)
+			if err != nil {
+				out = []string{"error: " + err.Error()}
+			}
+			asyncLiveCh <- liveFrame{key: key, lines: out}
+			<-t.C
+		}
+	}()
+}
+
+// drainAsyncLive забирает готовые кадры живых async-плагинов в asyncLive.
+// Вызывается в главном цикле каждый тик (вместе с pollAsyncJobs).
+func drainAsyncLive() {
+	for {
+		select {
+		case fr := <-asyncLiveCh:
+			asyncLive[fr.key] = fr.lines
+		default:
+			return
+		}
+	}
+}
+
