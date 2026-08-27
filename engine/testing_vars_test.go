@@ -30,10 +30,10 @@ func TestExpandVarsRespectsSingleQuotes(t *testing.T) {
 	defer func() { vars = map[string][]string{} }()
 
 	cases := []struct{ in, want string }{
-		{"ssh:'$host'::up", "ssh:'$host'::up"},     // $ внутри кавычек — литерал
-		{"'$evil'", "'$evil'"},                     // значение с ':' не раскрывается
-		{"cat:$host:'$evil'", "cat:srv1:'$evil'"},  // вне кавычек — раскрывается, внутри — нет
-		{"a'$host'b", "a'$host'b"},                 // кавычки не закрывают подстановку ВНЕ их
+		{"ssh:'$host'::up", "ssh:'$host'::up"},    // $ внутри кавычек — литерал
+		{"'$evil'", "'$evil'"},                    // значение с ':' не раскрывается
+		{"cat:$host:'$evil'", "cat:srv1:'$evil'"}, // вне кавычек — раскрывается, внутри — нет
+		{"a'$host'b", "a'$host'b"},                // кавычки не закрывают подстановку ВНЕ их
 	}
 	for _, c := range cases {
 		if got := expandVars(c.in); got != c.want {

@@ -31,11 +31,13 @@ const (
 	historyFile = "rough.log" // история событий (кольцевая)
 	maxHistory  = 256 * 1024  // rough.log не растёт бесконечно (256 КБ)
 )
+
 // logMu — мьютекс записи в файлы логов. WriteCrash/AppendLog вызываются из
 // РАЗНЫХ горутин (panic-handler poll/teletype, сигнальная, main), а без
 // синхронизации параллельный write + os.Rename (trimHistory) мог бы портить
 // или терять записи rough.log (F6).
 var logMu sync.Mutex
+
 // GoSafe запускает fn в отдельной горутине с защитой от паники.
 //
 // Если fn паникует:
