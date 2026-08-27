@@ -383,7 +383,9 @@ func renderNode(n *Node, b *Buffer, f *flowState, ox, oy int, out *[]Hotzone) {
 		s := string(bl) + " " + label + " " + string(br)
 		x0, y0 := f.drawX(b, s), f.y
 		f.put(b, s)
-		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1, Action: act, Actions: n.Actions, Output: n.Attrs["output"]})
+		// async="1" — кнопка запускает действие в фоне (не блокирует ядро).
+		*out = append(*out, Hotzone{X: ox + x0, Y: oy + y0, W: uniseg.StringWidth(s), H: 1,
+			Action: act, Actions: n.Actions, Output: n.Attrs["output"], Async: n.Attrs["async"] != ""})
 		f.nl(b)
 	case "a":
 		f.nl(b)

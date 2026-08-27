@@ -11,6 +11,7 @@ type Hotzone struct {
 	Kind       string   // вид зоны: "" (действие), "nav" (ссылка), "input" (поле ввода), "select"
 	Label      string   // подпись для окна ввода
 	Output     string   // id блока, куда направить вывод (пусто = статус-строка)
+	Async      bool     // async: действие выполняется в фоновой горутине (не блокирует ядро)
 	Options    string   // варианты для select (через ":", подменю — в [квадратных скобках])
 	SelLevel   int      // уровень меню select (для хотзон вариантов "selopt")
 	SelIdx     int      // индекс варианта в уровне меню select
@@ -37,18 +38,43 @@ func HitTest(x, y int) *Hotzone {
 // runHotzone выполняет действия хотзоны: одна кнопка может нести несколько
 // атрибутов action="..." — выполняются последовательно в один приёмник.
 // Если Actions пусто — выполняется одиночный Action (старое поведение).
+// Если у хотзоны async — действие уходит в фоновую горутину (см. async.go).
 func runHotzone(hz *Hotzone) {
 	if len(hz.Actions) > 0 {
 		for _, a := range hz.Actions {
 			if a != "" {
-				execAction(a, hz.Output)
+				runAction(hz, a)
 			}
 		}
 		return
 	}
 	if hz.Action != "" {
-		execAction(hz.Action, hz.Output)
+		runAction(hz, hz.Action)
 	}
+}
+
+// runAction выполняет одно действие хотзоны: синхронно (по умолчанию) или
+// в фоне (если async).
+func runAction(hz *Hotzone, a string) {
+	if hz.Async {
+		execActionAsync(a, hz.Output)
+		return
+	}
+	execAction(a, hz.Output)
+}
+
+// execActionAsync выполняет действие в фоне: ключ = РАСКРЫТАЯ команда.
+// Повторный клик на «занятой» async-кнопке игнорируется (защита от двойного
+// запуска). Пока поддерживаем один пайп без confirm.
+func execActionAsync(raw, target string) {
+	key := expandVars(raw)
+	steps, need := PrepareAction(raw)
+	if need || len(steps) == 0 {
+		// confirm или пусто — пока не async: выполняем синхронно.
+		execAction(raw, target)
+		return
+	}
+	startAsyncJob(key, target, steps[0])
 }
 
 // HitSelect ищет вариант выпадающего меню select по координатам клика.
