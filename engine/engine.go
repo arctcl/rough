@@ -209,7 +209,8 @@ func Run(fsys fs.FS) (err error) {
 	if err := s.Init(); err != nil {
 		return err
 	}
-	defer s.Fini()
+	// Закрываем ПОСЛЕДНИЙ экран (при перезапуске старые закрываем вручную).
+	defer func() { s.Fini() }()
 	s.EnableMouse()
 	s.Clear()
 	s.Show()
@@ -257,16 +258,47 @@ func Run(fsys fs.FS) (err error) {
 
 	// Пул событий: PollEvent блокирует, поэтому крутим его в защищённой
 	// горутине. Паника здесь (tcell на Windows-консоли: ресайз, быстрый ввод,
-	// спецклавиши) раньше роняла весь процесс без следа — теперь пишем дамп
-	// и завершаемся с ошибкой.
+	// спецклавиши) раньше роняла весь процесс без следа. Теперь при панике
+	// ПЕРЕЗАПУСКАЕМ экран и продолжаем (а не выходим) — см. restartCh в select.
+	restartCh := make(chan struct{}, 1)
 	evCh := make(chan tcell.Event, 16)
-	faultlog.GoSafe("poll", func() {
-		for {
-			evCh <- s.PollEvent()
+
+	// startPoll запускает горутину чтения событий для текущего экрана s.
+	// s и evCh захватываются по ссылке — после перезапуска новая горутина
+	// читает уже новый экран.
+	startPoll := func() {
+		faultlog.GoSafe("poll", func() {
+			for {
+				evCh <- s.PollEvent()
+			}
+		}, func(r any, _ []byte) {
+			faultlog.AppendLog("чтение событий: паника, перезапуск экрана: %v", r)
+			select {
+			case restartCh <- struct{}{}:
+			default: // перезапуск уже запрошен — не дублируем
+			}
+		})
+	}
+	startPoll()
+
+	// restartScreen закрывает старый экран и создаёт новый (после паники в
+	// чтении событий). Возвращает ошибку — тогда главный цикл выйдет запасным
+	// путём (с логом), а не зависнет.
+	restartScreen := func() error {
+		s.Fini()
+		ns, err := tcell.NewScreen()
+		if err != nil {
+			return err
 		}
-	}, func(r any, _ []byte) {
-		fail(fmt.Errorf("чтение событий: %v", r))
-	})
+		if err := ns.Init(); err != nil {
+			return err
+		}
+		ns.EnableMouse()
+		ns.Clear()
+		ns.Show()
+		s = ns
+		return nil
+	}
 
 	// Сигналы ОС: Ctrl+C / SIGTERM → корректный выход (tcell.Fini уже
 	// зарегистрирован в defer) вместо «схлопывания» посреди кадра.
@@ -304,6 +336,12 @@ func Run(fsys fs.FS) (err error) {
 			if ok {
 				handleMouseEvent(me, pages, &route, w, h)
 			}
+		case <-restartCh:
+			// Паника в чтении событий: перезапускаем экран и продолжаем.
+			if err := restartScreen(); err != nil {
+				return err
+			}
+			startPoll()
 		case <-tick.C:
 			// Таймер: перерисовка активной страницы + фоновый прогон «живых»
 			// плагинов неактивных страниц (графики продолжают собирать данные,
