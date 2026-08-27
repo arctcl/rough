@@ -24,8 +24,8 @@ import (
 	_ "github.com/arctcl/rough/plugins/tr"
 	_ "github.com/arctcl/rough/plugins/uniq"
 
-	// Killer-фичи: просмотр горутин (ps) и инжектор секретных кодов (chch) —
-	// читает chch.json и регистрирует коды как действия (пайпы).
+	// Killer-фичи: просмотр горутин (ps) и инжектор секретных страниц (chch) —
+	// читает chch.json и регистрирует коды как переход на страницу.
 	_ "github.com/arctcl/rough/plugins/ps"
 	_ "github.com/arctcl/rough/plugins/chch"
 )

@@ -61,19 +61,29 @@ engine through public APIs.
 button `action`):
 - `'U','D','L','R'` — arrows; letter/digit — that key; `'+'` — the plus key.
 
+`AddCheatRoute(seq, route)` — a secret key sequence **navigates** to a page
+(like a tab). The page is an ordinary tile in `tiles.json` with its own html
+(in `tiles/`), just **not in `menu`**: no tab button, reachable only by the
+secret code. On the page you put normal plugins, e.g. an immediately-printed
+greeting:
+
+```html
+<plugin pipe="cat GLHF mate!" async interval="1s"/>
+```
+
 `OnReady(fn func(fs.FS))` — a hook run right after the engine loads the embedded
 folder (in `init()` the folder is not ready yet). Use it to read config files.
 
 The **`chch` injector plugin** makes this data-driven. It reads `chch.json`
-from the project's `/rough` folder and registers every code as an action:
+from the project's `/rough` folder and registers every code as a page jump:
 
 ```json
 {
-  "title": "chch — secret codes",
-  "description": "Type a code — an action runs.",
+  "title": "chch — secret pages",
+  "description": "Type a code to open a hidden page.",
   "cheats": {
-    "UUDDLRLRba": "cat GLHF mate!",
-    "ps+": "ps --track=1"
+    "ps+": "/ps",
+    "UUDDLRLRba": "/konami"
   }
 }
 ```
@@ -86,14 +96,14 @@ func load(fsys fs.FS) {
 	if err != nil { return }
 	var c struct{ Cheats map[string]string `json:"cheats"` }
 	if json.Unmarshal(b, &c) != nil { return }
-	for seq, action := range c.Cheats {
-		rough.AddCheat(seq, action)
+	for seq, route := range c.Cheats {
+		rough.AddCheatRoute(seq, route)
 	}
 }
 ```
 
 The injector is optional: drop the `chch` import and the engine works as usual —
-just no secret codes. Everything goes through public engine APIs, no hacking.
+just no secret pages. Everything goes through public engine APIs, no hacking.
 
 ## Tips
 

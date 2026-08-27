@@ -32,5 +32,11 @@
     ["async", "0%",  "0%",  "50%", "58%", "tiles/play_async.html"],
     ["out",   "52%", "0%",  "48%", "58%", "tiles/play_out.html"],
     ["vars",  "0%",  "60%", "100%", "40%", "tiles/play_vars.html"]
+  ],
+  "/ps": [
+    ["ps", "0%", "0%", "100%", "100%", "tiles/ps_page.html"]
+  ],
+  "/konami": [
+    ["konami", "0%", "0%", "100%", "100%", "tiles/konami_page.html"]
   ]
 }
