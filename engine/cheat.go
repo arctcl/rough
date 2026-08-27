@@ -11,13 +11,10 @@ import (
 // Плагин регистрирует последовательность и действие через AddCheat; движок
 // отслеживает ввод и при совпадении выполняет действие.
 
-// cheatEntry — зарегистрированная последовательность клавиш и её эффект:
-// либо выполнить action, либо перейти на страницу (роут). Ровно одно из
-// полей action/route заполнено.
+// cheatEntry — зарегистрированная последовательность клавиш и её действие.
 type cheatEntry struct {
 	seq    string
-	action string // если не пусто — выполнить действие
-	route  string // если не пусто — перейти на страницу (роут)
+	action string
 }
 
 // cheats — реестр секретных последовательностей.
@@ -30,9 +27,10 @@ var keyBuffer string
 var cheatMaxLen int
 
 // AddCheat регистрирует секретную последовательность клавиш: при вводе
-// выполняется action. Кодировка последовательности:
+// выполняется action (обычно пайп — кнопка action). Кодировка:
 //
-//	'U','D','L','R' — стрелки; буква/цифра — соответствующая клавиша.
+//	'U','D','L','R' — стрелки; буква/цифра — соответствующая клавиша;
+//	'+' — клавиша плюса (например в коде ps+).
 func AddCheat(seq, action string) {
 	if seq == "" || action == "" {
 		return
@@ -43,27 +41,9 @@ func AddCheat(seq, action string) {
 	}
 }
 
-// AddCheatRoute регистрирует секретную последовательность клавиш, при вводе
-// которой движок ПЕРЕХОДИТ на страницу (роут) — навигация, как по вкладке.
-// Используется инжекторами (например chch) для «секретных» страниц: страница
-// есть в tiles.json обычным тайлом, но не в menu — вкладок не видно, попасть
-// можно только секретным кодом.
-func AddCheatRoute(seq, route string) {
-	if seq == "" || route == "" {
-		return
-	}
-	cheats = append(cheats, cheatEntry{seq: seq, route: route})
-	if len(seq) > cheatMaxLen {
-		cheatMaxLen = len(seq)
-	}
-}
-
 // checkCheat отслеживает нажатую клавишу и, если набрана зарегистрированная
-// последовательность, выполняет её эффект (action или переход на страницу).
-// route — указатель на текущий роут: при совпадении навигации движок меняет
-// роут и сбрасывает фокус (страница новая — хотзоны другие). Вызывается из
-// handleKey.
-func checkCheat(e *tcell.EventKey, route *string) {
+// последовательность, выполняет её действие. Вызывается из handleKey.
+func checkCheat(e *tcell.EventKey) {
 	c := encodeCheatKey(e)
 	if c == 0 {
 		return
@@ -76,15 +56,7 @@ func checkCheat(e *tcell.EventKey, route *string) {
 	for _, ch := range cheats {
 		if strings.HasSuffix(keyBuffer, ch.seq) {
 			keyBuffer = "" // сброс после срабатывания
-			if ch.route != "" {
-				// Секретный переход на страницу: навигация — дело движка.
-				if route != nil {
-					*route = ch.route
-					focusIdx = -1 // новая страница — фокус сбрасывается
-				}
-			} else {
-				execAction(ch.action, "")
-			}
+			execAction(ch.action, "")
 			return
 		}
 	}

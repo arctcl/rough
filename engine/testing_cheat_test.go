@@ -28,33 +28,11 @@ func TestCheckCheat(t *testing.T) {
 		tcell.NewEventKey(tcell.KeyLeft, 0, 0), tcell.NewEventKey(tcell.KeyRight, 0, 0),
 		tcell.NewEventKey(tcell.KeyRune, 'b', 0), tcell.NewEventKey(tcell.KeyRune, 'A', 0),
 	}
-	route := ""
 	for _, ev := range seq {
-		checkCheat(ev, &route)
+		checkCheat(ev)
 	}
 	if !ran {
 		t.Fatal("конами-код не запустил действие")
-	}
-	// Сброс реестра для других тестов.
-	cheats = nil
-	keyBuffer = ""
-	cheatMaxLen = 0
-}
-
-// Секретный код с переходом (AddCheatRoute) меняет роут — навигация.
-func TestCheckCheatRoute(t *testing.T) {
-	// Сброс реестра и буфера.
-	cheats = nil
-	keyBuffer = ""
-	cheatMaxLen = 0
-	AddCheatRoute("ps+", "/ps")
-
-	route := "/charts"
-	for _, r := range []rune("ps+") {
-		checkCheat(tcell.NewEventKey(tcell.KeyRune, r, 0), &route)
-	}
-	if route != "/ps" {
-		t.Fatalf("секретный код не открыл страницу: роут = %q", route)
 	}
 	// Сброс реестра для других тестов.
 	cheats = nil
