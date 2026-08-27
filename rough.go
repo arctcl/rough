@@ -79,7 +79,7 @@ func AddCheat(seq, action string) { engine.AddCheat(seq, action) }
 
 // AddCheatRoute регистрирует секретную последовательность клавиш, при вводе
 // которой движок ПЕРЕХОДИТ на страницу (роут) — навигация, как по вкладке.
-// Используется инжектором chch для «секретных» страниц: страница есть в
+// Используется инжекторами для «секретных» страниц: страница есть в
 // tiles.json обычным тайлом со своим html, но не в menu — вкладок не видно,
 // попасть можно только секретным кодом.
 func AddCheatRoute(seq, route string) { engine.AddCheatRoute(seq, route) }
@@ -88,7 +88,7 @@ func AddCheatRoute(seq, route string) { engine.AddCheatRoute(seq, route) }
 type Tile = engine.Tile
 
 // AddPage регистрирует страницу (роут → тайлы) программно. Используется
-// инжекторами (chch) для секретных страниц: страница живёт не в tiles.json,
+// инжекторами для секретных страниц: страница живёт не в tiles.json,
 // а в конфиге инжектора, и добавляется в общий список страниц при старте Run.
 func AddPage(route string, tiles []Tile) { engine.AddPage(route, tiles) }
 

@@ -37,10 +37,10 @@ import (
 
 // chchConf — конфиг инжектора: заголовок-описание, секретные страницы и коды.
 type chchConf struct {
-	Title       string              `json:"title"`       // заголовок (справочно)
-	Description string              `json:"description"` // описание (справочно)
-	Pages       map[string][]rough.Tile `json:"pages"`   // секретные страницы (роут → тайлы)
-	Cheats      map[string]string   `json:"cheats"`      // секретный код → роут страницы
+	Title       string                  `json:"title"`       // заголовок (справочно)
+	Description string                  `json:"description"` // описание (справочно)
+	Pages       map[string][]rough.Tile `json:"pages"`       // секретные страницы (роут → тайлы)
+	Cheats      map[string]string       `json:"cheats"`      // секретный код → роут страницы
 }
 
 func init() {
