@@ -14,8 +14,11 @@ import (
 	// Plugins whose help is shown on the Man tab.
 	_ "github.com/arctcl/rough/plugins/awk"
 	_ "github.com/arctcl/rough/plugins/bars"
+	_ "github.com/arctcl/rough/plugins/cat"
 	_ "github.com/arctcl/rough/plugins/cut"
+	_ "github.com/arctcl/rough/plugins/export"
 	_ "github.com/arctcl/rough/plugins/grep"
+	_ "github.com/arctcl/rough/plugins/head"
 	_ "github.com/arctcl/rough/plugins/sed"
 	_ "github.com/arctcl/rough/plugins/set"
 	_ "github.com/arctcl/rough/plugins/sort"
