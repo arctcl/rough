@@ -24,7 +24,9 @@ import (
 	_ "github.com/arctcl/rough/plugins/tr"
 	_ "github.com/arctcl/rough/plugins/uniq"
 
-	// Killer-фичи: просмотр горутин (ps) и конами-код (konami).
+	// Killer-фичи: просмотр горутин (ps), конами-код (konami),
+	// инжектор секретных страниц (chch) — читает chch.json.
 	_ "github.com/arctcl/rough/plugins/konami"
 	_ "github.com/arctcl/rough/plugins/ps"
+	_ "github.com/arctcl/rough/plugins/chch"
 )

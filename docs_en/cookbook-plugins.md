@@ -52,6 +52,52 @@ composable.
 Plugins returning data over time (charts, monitors) are re-run by `<plugin
 interval="...">`. Add `updateanytime="1"` to keep them running on inactive tabs.
 
+## Inject into the engine (secret keys)
+
+A plugin is not only "called from HTML" — it can register **hooks** into the
+engine through public APIs.
+
+`AddCheat(seq, action)` — a secret key sequence runs an action (easter egg):
+- `'U','D','L','R'` — arrows; letter/digit — that key; `'+'` — the plus key.
+
+`AddCheatRoute(seq, route)` — a secret key sequence **navigates** to a page
+(like a tab). The page is an ordinary tile in `tiles.json` (html in `tiles/`),
+just **not in `menu`**: no tab button, reachable only by the secret code.
+
+`OnReady(fn func(fs.FS))` — a hook run right after the engine loads the embedded
+folder (in `init()` the folder is not ready yet). Use it to read config files.
+
+The **`chch` injector plugin** makes this data-driven. It reads `chch.json`
+from the project's `/rough` folder and registers every code:
+
+```json
+{
+  "title": "chch — secret pages",
+  "description": "Type a code to open a hidden page.",
+  "cheats": {
+    "ps+": "/ps",
+    "UUDDLRLRba": "/konami"
+  }
+}
+```
+
+```go
+func init() { rough.OnReady(load) }
+
+func load(fsys fs.FS) {
+	b, err := fs.ReadFile(fsys, "chch.json")
+	if err != nil { return }
+	var c struct{ Cheats map[string]string `json:"cheats"` }
+	if json.Unmarshal(b, &c) != nil { return }
+	for seq, route := range c.Cheats {
+		rough.AddCheatRoute(seq, route)
+	}
+}
+```
+
+The injector is optional: drop the `chch` import and the engine works as usual —
+just no secret pages. Everything goes through public engine APIs, no hacking.
+
 ## Tips
 
 - Do not touch files unless needed — `opt`/`flag` keep state in memory.
