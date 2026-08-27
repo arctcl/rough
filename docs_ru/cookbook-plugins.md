@@ -481,6 +481,8 @@ func load(fsys fs.FS) {
 5     chan receive  engine.Run.func1
 6     sleeping      time.Sleep
 7     DEAD
-goroutines: 7  heap: 1.2 MB  stack: 240 KB
+goroutines: 7  total: 8.2 MB  heap: 1.1 MB  stack: 240 KB
 ```
+`total` — вся память, занятая процессом (сколько рантайм Go взял у ОС);
+`heap`/`stack` — её части. Память терминала не входит — это отдельный процесс.
 

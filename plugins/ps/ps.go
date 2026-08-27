@@ -1,7 +1,9 @@
 // Плагин ps — «просмотр процессов»: список всех запущенных горутин движка
-// (id, статус, верхняя функция) + сводка по памяти (heap/stack). С флагом
-// --track=1 и запуском с interval+async помечает горутины, исчезнувшие с
-// прошлого запуска, как "DEAD" — удобно отлаживать утечки горутин.
+// (id, статус, верхняя функция) + сводка по памяти. total — ВСЯ память,
+// занятая процессом (рантайм Go взял у ОС); heap/stack — её части. Память
+// терминала не входит — это отдельный процесс. С флагом --track=1 и запуском
+// с interval+async помечает горутины, исчезнувшие с прошлого запуска, как
+// "DEAD" — удобно отлаживать утечки горутин.
 package ps
 
 import (
@@ -13,6 +15,7 @@ import (
 )
 
 const man_ps = `ps: list all running goroutines (id, state, top func) + memory.
+total = all memory used by this process (Go runtime from the OS).
 Usage:
   ps               — один снимок
   ps --track=1     — помнить горутины, исчезнувшие с прошлого запуска помечать DEAD
@@ -61,12 +64,14 @@ func init() {
 			prev = map[int]bool{}
 		}
 
-		// Сводка по памяти.
+		// Сводка по памяти: total = вся память, занятая процессом (сколько рантайм
+		// Go взял у ОС). Память терминала не входит — тот отдельный процесс.
+		// heap/stack — части этой памяти (для понимания, куда она ушла).
 		var m runtime.MemStats
 		runtime.ReadMemStats(&m)
 		lines = append(lines, "",
-			fmt.Sprintf("goroutines: %d  heap: %s  stack: %s",
-				runtime.NumGoroutine(), humanBytes(m.HeapAlloc), humanBytes(m.StackInuse)))
+			fmt.Sprintf("goroutines: %d  total: %s  heap: %s  stack: %s",
+				runtime.NumGoroutine(), humanBytes(m.Sys), humanBytes(m.HeapAlloc), humanBytes(m.StackInuse)))
 		return lines, nil
 	})
 }
