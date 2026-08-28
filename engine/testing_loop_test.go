@@ -66,3 +66,46 @@ func TestLoopVarCount(t *testing.T) {
 		t.Fatalf("loop:$n = %v, %v; ждали 3×hit", out, err)
 	}
 }
+
+// export/unexport — резервные слова движка, а не плагины: AddPlugin их не
+// примет, а RunSteps сам собирает/удаляет переменную из вывода пайпа.
+func TestEngineExportUnexport(t *testing.T) {
+	AddPlugin("__n", func(in, args []string) ([]string, error) {
+		return []string{args[0]}, nil
+	})
+	defer delete(plugins, "__n")
+
+	// export нельзя зарегистрировать как плагин (резервное слово движка).
+	if AddPlugin("export", func(in, args []string) ([]string, error) { return nil, nil }); HasPlugin("export") {
+		t.Fatal("export зарегистрировался как плагин — должен быть резервным словом")
+	}
+
+	// __n:7 | export:val — движок сохраняет вывод (7) в переменную val и
+	// пропускает строки дальше (как tee).
+	out, err := RunSteps([]string{"__n:7", "export:val"}, nil)
+	if err != nil || len(out) != 1 || out[0] != "7" {
+		t.Fatalf("export: %v %v, ждали [7]", out, err)
+	}
+	if got := VarLine("val"); got != "7" {
+		t.Fatalf("после export val = %q, ждали 7", got)
+	}
+
+	// $val читается из другого пайпа.
+	out, err = RunSteps([]string{"__n:$val"}, nil)
+	if err != nil || len(out) != 1 || out[0] != "7" {
+		t.Fatalf("$val = %v %v, ждали [7]", out, err)
+	}
+
+	// unexport удаляет переменную.
+	if _, err := RunSteps([]string{"unexport:val"}, nil); err != nil {
+		t.Fatalf("unexport: %v", err)
+	}
+	if got := VarLine("val"); got != "" {
+		t.Fatalf("после unexport val = %q, ждали пустую", got)
+	}
+
+	// export без имени — ошибка.
+	if _, err := RunSteps([]string{"export:"}, nil); err == nil {
+		t.Fatal("export без имени не дал ошибку")
+	}
+}

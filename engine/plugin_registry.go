@@ -23,9 +23,20 @@ var plugins = map[string]PluginFunc{}
 // "run" запрещён изначально: произвольный запуск команд через кнопку невозможен.
 const forbiddenName = "run"
 
+// isReserved — зарезервированные слова движка, которые НЕ плагины: их
+// обрабатывает сам движок (RunSteps / PrepareAction), а не реестр плагинов.
+// Плагин с таким именем зарегистрировать нельзя (AddPlugin молча отбросит).
+func isReserved(name string) bool {
+	switch strings.ToLower(name) {
+	case "run", "loop", "export", "unexport", "confirm":
+		return true
+	}
+	return false
+}
+
 // AddPlugin регистрирует плагин. Зарезервированные имена молча отбрасываются.
 func AddPlugin(name string, fn PluginFunc) {
-	if strings.EqualFold(name, forbiddenName) {
+	if isReserved(name) {
 		return
 	}
 	plugins[name] = fn
@@ -46,6 +57,42 @@ func AddMan(name, text string) {
 		return
 	}
 	mans[name] = text
+}
+
+// manExport / manUnexport — справка по резервным словам движка. Это НЕ плагины:
+// их обрабатывает сам движок в RunSteps, поэтому и справку он кладёт сам.
+const manExport = `export — резервное слово движка: сохранить текущий вывод пайпа
+в переменную сессии (для $подстановки в action).
+
+Использование:
+  часть пайпа: ... | export:ИМЯ
+
+Аргументы:
+  ИМЯ — имя переменной. Дальше в любом action её можно подставить через $ИМЯ
+        (или ${ИМЯ}). Переменная доступна всегда и отовсюду, в т.ч. из другого
+        "&&"-пайпа: $ИМЯ подставляется в момент выполнения шага.
+
+Примеры:
+  action="ssh:root:srv1::hostname | export:host"    — запомнить хост
+  action="ssh:root:$host::uptime"                   — подставить переменную
+  action="cat:app.conf | cut::2 | export:val | bars" — и сохранить, и показать`
+
+const manUnexport = `unexport — резервное слово движка: удалить переменную сессии
+(антипод export).
+
+Использование:
+  часть пайпа: ... | unexport:ИМЯ
+
+Аргументы:
+  ИМЯ — имя переменной. После удаления $ИМЯ больше нигде не подставляется.
+
+Примеры:
+  ... | unexport:tmp     — выкинуть временную переменную
+  export:count | ... | unexport:count — записать, использовать, удалить`
+
+func init() {
+	AddMan("export", manExport)
+	AddMan("unexport", manUnexport)
 }
 
 // ManText возвращает справку по имени плагина.
@@ -475,6 +522,25 @@ func RunSteps(steps []string, in []string) ([]string, error) {
 				acc = append(acc, r...)
 			}
 			return acc, nil
+		}
+		// export:ИМЯ — резервное слово движка: сохранить ТЕКУЩИЙ вывод пайпа (cur)
+		// в переменную сессии. Движок сам собирает переменные — плагин про них
+		// не знает. Дальше строки проходят как есть (как tee).
+		if strings.EqualFold(name, "export") {
+			if len(args) == 0 || args[0] == "" {
+				return nil, fmt.Errorf("export: нужно имя переменной")
+			}
+			SetVar(args[0], cur)
+			continue
+		}
+		// unexport:ИМЯ — резервное слово движка: удалить переменную (антипод
+		// export). $имя больше нигде не подставится.
+		if strings.EqualFold(name, "unexport") {
+			if len(args) == 0 || args[0] == "" {
+				return nil, fmt.Errorf("unexport: нужно имя переменной")
+			}
+			DelVar(args[0])
+			continue
 		}
 		if strings.EqualFold(name, forbiddenName) {
 			return nil, fmt.Errorf("%s запрещён движком", name)

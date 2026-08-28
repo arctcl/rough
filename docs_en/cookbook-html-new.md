@@ -93,10 +93,12 @@ Without `clear` only the last pipe's output lands in the target.
 
 ### 5.2. Variables: `export`, `$name`, `unexport`
 
-A variable saved with `export` is **available always and everywhere** — from any
-button, field, tile, and even from a **different `&&` pipe**. `$name` is
-substituted when the step *runs* (not when the action is parsed), so `export`
-from an earlier pipe writes before a later pipe reads it.
+`export` and `unexport` are **engine keywords** (not plugins): the engine itself
+collects and stores variables. A variable saved with `export` is **available
+always and everywhere** — from any button, field, tile, and even from a
+**different `&&` pipe**. `$name` is substituted when the step *runs* (not when
+the action is parsed), so `export` from an earlier pipe writes before a later
+pipe reads it.
 
 ```html
 <button action="ssh:root:srv1::hostname | export:host">Remember</button>
