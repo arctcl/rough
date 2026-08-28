@@ -80,7 +80,7 @@ provides two input ways and their mix.
 | flags | `chart --min=0 --max=100 --title=CPU` | order doesn't matter |
 | mix | `chart::100 --title=CPU` | |
 | value with `:`/`\|` | `sed:':':1` | in quotes |
-| arbitrary tail | `ssh:user:host:67:docker compose down && up` | last param «swallows» the rest |
+| arbitrary tail | `ssh:user:host:67:'docker compose down && up'` | last param «swallows» the rest |
 
 > [!IMPORTANT]
 > The contract is different for every plugin. What the params are and their
@@ -137,7 +137,7 @@ engine generates help from the plugin code). Main ones:
 | Plugin | What it does | Typical call |
 |---|---|---|
 | `cat` | reads a file | `cat:/etc/hostname` |
-| `wc` | counts input lines | `cat:x | wc:lines` |
+| `wc` | counts input lines | `cat:x | wc` |
 | `grep` | keeps matching lines | `cat:x | grep:^server` |
 | `head` / `tail` | first / last lines | `cat:x | tail:20` |
 | `line` | a line or line range | `cat:x | line:5-10` |

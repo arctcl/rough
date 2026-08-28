@@ -171,7 +171,7 @@ quick-позиционно, через двоеточие. Что именно �
 
 ```html
 <button action="ssh:root:srv::reboot | confirm">Перезагрузить</button>
-<button action="ssh:root:srv1::apt update && apt upgrade -y | confirm">Обновить</button>
+<button action="ssh:root:srv1::'apt update && apt upgrade -y' | confirm">Обновить</button>
 ```
 
 > [!WARNING]
@@ -267,7 +267,7 @@ quick-позиционно, через двоеточие. Что именно �
 Использовать переменную из другого `&&`-пайпа:
 
 ```html
-<button action="cat:data.log | wc:lines | export:n
+<button action="cat:data.log | wc | export:n
   && hello:строк $n" >Сколько строк</button>
 ```
 
@@ -290,14 +290,14 @@ bash (`${f%.log}`, `${f#/var/}`); литеральный `$` — `\$`; не по
 
 ```html
 <button action="clear
-  && cat:log.txt | line:0-499  | wc:lines | export:count +=
-  && cat:log.txt | line:500-999 | wc:lines | export:count +=
-  && cat:log.txt | line:1000-1499 | wc:lines | export:count +=
+  && cat:log.txt | line:0-499  | wc | export:count +=
+  && cat:log.txt | line:500-999 | wc | export:count +=
+  && cat:log.txt | line:1000-1499 | wc | export:count +=
   && hello:всего строк $count" >Сумма по кускам</button>
 ```
 
-(Напомним: `line` читает файл целиком — «куски» лишь разбиение на итерации,
-не экономия памяти.)
+(Примечание: `line:0-499` берёт строки 0–499 из входа пайпа; файл целиком
+читает `cat`.)
 
 ---
 
@@ -307,7 +307,7 @@ bash (`${f%.log}`, `${f#/var/}`); литеральный `$` — `\$`; не по
 на каждом значении, выводы склеиваются. Так обновляют флот серверов:
 
 ```html
-<button action="ssh:root:192.168.1.[1-250]:apt upgrade" output="out">Обновить все</button>
+<button action="ssh:root:192.168.1.[1-250]::apt upgrade" output="out">Обновить все</button>
 ```
 
 `[1-250]` → `192.168.1.1 … 192.168.1.250`.
@@ -329,8 +329,8 @@ bash (`${f%.log}`, `${f#/var/}`); литеральный `$` — `\$`; не по
 ровно столько раз:
 
 ```html
-<button action="clear && cat:lev_tolstoy.txt | wc:lines | export:ln_sum
-  && line:[0-$ln_sum:500] | grep:$in | wc:lines | export:count
+<button action="clear && cat:lev_tolstoy.txt | wc | export:ln_sum
+  && line:[0-$ln_sum:500] | grep:$in | wc | export:count +=
   && loop:$count | ssh:root:127.0.0.1:22:sl" label="Слово" output="out">Слово</button>
 ```
 
@@ -379,8 +379,11 @@ sed:':':1
 произвольным хвостом:
 
 ```text
-ssh:user:host:67:docker compose down && up
+ssh:user:host:67:'docker compose down && up'
 ```
+
+`&&` в значении команды — тоже спецсимвол (разделитель пайпов), поэтому команду
+с ним оборачивают в кавычки, как и `:` / `|`.
 
 Что именно принимает конкретный плагин и какие у него дефолты — смотрится через
 `man:имя` (кнопка `action="man:имя"`).
@@ -456,7 +459,7 @@ Esc отменяет ввод.
 
 ```html
 <plugin name="clock" interval="1s"/>                   <!-- часы -->
-<plugin pipe="emu_cpu | chart:0:100:1:2:CPU" height="14" interval="2s"/>
+<plugin pipe="emu:alpha:100 | chart:0:100:1:2:CPU" height="14" interval="2s"/>
 <plugin pipe="cat:data.log | tail:10 | bars" interval="2s"/>
 ```
 
@@ -465,11 +468,15 @@ Esc отменяет ввод.
 умолчанию. Высота — из `height`, ширина — из тайла, так что график сам
 подстраивается под место.
 
+> [!NOTE]
+> Живой источник `emu` (`emu:имя:масштаб`) — демо-плагин из `example_project`;
+> в корневом наборе своего живого источника нет — свой пишется как обычный плагин.
+
 Медленный источник (например ssh) — запускай как `async`, чтобы не морозить
 интерфейс:
 
 ```html
-<plugin pipe="ssh:host::vmstat | cut::2" interval="1s" async/>
+<plugin pipe="ssh:user:host::vmstat | cut::2" interval="1s" async/>
 ```
 
 ---
@@ -537,7 +544,7 @@ theme:orange
 <button action="clear && man:ssh && cat:app.conf" output="out">Справка + конфиг</button>
 <button action="ssh:root:srv::reboot | confirm">Перезапустить</button>
 
-<plugin pipe="emu_cpu | chart:0:100:1:2:CPU" height="10" interval="1s"/>
+<plugin pipe="emu:alpha:100 | chart:0:100:1:2:CPU" height="10" interval="1s"/>
 <plugin pipe="ps --track=1" interval="1s" async/>
 
 <hr/>

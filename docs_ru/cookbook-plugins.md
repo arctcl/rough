@@ -209,7 +209,7 @@ rough.AddPlugin("clock", func(in []string, args []string) ([]string, error) {
 
 ```html
 <plugin name="clock" interval="1s"/>
-<plugin pipe="emu_cpu | chart:0:100:1:2:CPU" height="14" interval="2s"/>
+<plugin pipe="emu:alpha:100 | chart:0:100:1:2:CPU" height="14" interval="2s"/>
 <plugin pipe="cat:data.log | tail:10 | bars" interval="2s"/>
 ```
 

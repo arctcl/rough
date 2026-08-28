@@ -175,7 +175,7 @@ A dangerous action (reboot, delete) is worth gating with a confirmation:
 
 ```html
 <button action="ssh:root:srv::reboot | confirm">Reboot</button>
-<button action="ssh:root:srv1::apt update && apt upgrade -y | confirm">Update</button>
+<button action="ssh:root:srv1::'apt update && apt upgrade -y' | confirm">Update</button>
 ```
 
 > [!WARNING]
@@ -272,7 +272,7 @@ Save a result and substitute it later:
 Use a variable from another `&&` pipe:
 
 ```html
-<button action="cat:data.log | wc:lines | export:n
+<button action="cat:data.log | wc | export:n
   && hello:lines $n" >How many lines</button>
 ```
 
@@ -295,14 +295,14 @@ lines of one chunk:
 
 ```html
 <button action="clear
-  && cat:log.txt | line:0-499  | wc:lines | export:count +=
-  && cat:log.txt | line:500-999 | wc:lines | export:count +=
-  && cat:log.txt | line:1000-1499 | wc:lines | export:count +=
+  && cat:log.txt | line:0-499  | wc | export:count +=
+  && cat:log.txt | line:500-999 | wc | export:count +=
+  && cat:log.txt | line:1000-1499 | wc | export:count +=
   && hello:total $count" >Sum over chunks</button>
 ```
 
-(Note: `line` reads the file whole — the "chunks" are only iteration boundaries,
-not a memory optimization.)
+(Note: `line:0-499` takes lines 0–499 from the pipe input; `cat` reads the
+whole file.)
 
 ---
 
@@ -312,7 +312,7 @@ A range in square brackets expands into an iteration: the command runs on every
 value, outputs are glued. That's how you upgrade a fleet of servers:
 
 ```html
-<button action="ssh:root:192.168.1.[1-250]:apt upgrade" output="out">Upgrade all</button>
+<button action="ssh:root:192.168.1.[1-250]::apt upgrade" output="out">Upgrade all</button>
 ```
 
 `[1-250]` → `192.168.1.1 … 192.168.1.250`.
@@ -333,8 +333,8 @@ the outputs. `$count` is already expanded to a number, so the command runs
 exactly that many times:
 
 ```html
-<button action="clear && cat:lev_tolstoy.txt | wc:lines | export:ln_sum
-  && line:[0-$ln_sum:500] | grep:$in | wc:lines | export:count
+<button action="clear && cat:lev_tolstoy.txt | wc | export:ln_sum
+  && line:[0-$ln_sum:500] | grep:$in | wc | export:count +=
   && loop:$count | ssh:root:127.0.0.1:22:sl" label="Word" output="out">Word</button>
 ```
 
@@ -383,8 +383,11 @@ The last parameter «swallows» the rest of the colons — this is how you pass 
 command with an arbitrary tail:
 
 ```text
-ssh:user:host:67:docker compose down && up
+ssh:user:host:67:'docker compose down && up'
 ```
+
+`&&` inside a command value is also a special character (a pipe separator), so
+a command with it goes in quotes, like `:` / `|`.
 
 What exactly a plugin accepts and its defaults — look in `man:name` (a button
 `action="man:name"`).
@@ -460,7 +463,7 @@ load graphs or sparklines live in a tile:
 
 ```html
 <plugin name="clock" interval="1s"/>                   <!-- clock -->
-<plugin pipe="emu_cpu | chart:0:100:1:2:CPU" height="14" interval="2s"/>
+<plugin pipe="emu:alpha:100 | chart:0:100:1:2:CPU" height="14" interval="2s"/>
 <plugin pipe="cat:data.log | tail:10 | bars" interval="2s"/>
 ```
 
@@ -469,10 +472,15 @@ load graphs or sparklines live in a tile:
 defaults. Height comes from `height`, width from the tile, so the chart fits the
 space on its own.
 
+> [!NOTE]
+> The live source `emu` (`emu:name:scale`) is a demo plugin from
+> `example_project`; the core set has no live source of its own — write yours as
+> a normal plugin.
+
 A slow source (e.g. ssh) — run it as `async` so it doesn't freeze the interface:
 
 ```html
-<plugin pipe="ssh:host::vmstat | cut::2" interval="1s" async/>
+<plugin pipe="ssh:user:host::vmstat | cut::2" interval="1s" async/>
 ```
 
 ---
@@ -540,7 +548,7 @@ buttons and a live chart:
 <button action="clear && man:ssh && cat:app.conf" output="out">Help + config</button>
 <button action="ssh:root:srv::reboot | confirm">Restart</button>
 
-<plugin pipe="emu_cpu | chart:0:100:1:2:CPU" height="10" interval="1s"/>
+<plugin pipe="emu:alpha:100 | chart:0:100:1:2:CPU" height="10" interval="1s"/>
 <plugin pipe="ps --track=1" interval="1s" async/>
 
 <hr/>
