@@ -43,9 +43,14 @@ the outputs are glued into one block. Great for a fleet of hosts:
 ```
 
 `[1-250]` expands to `192.168.1.1 … 192.168.1.250`. Also supported:
+- a **step** `[N-M:S]`: `[0-1000:500]` → `0,500,1000`;
 - letters: `[a-c]` → a, b, c;
 - a list: `[1,4,9]`;
 - several ranges at once (cartesian product): `192.168.[1-2].[1-2]` → 4 addresses.
+
+Pair the step with the `line` plugin (`line:N-M` — lines N..M) to process a big
+file in chunks of 500 without loading it all:
+`cat:data.log | line:0-500 | grep:needle | wc:lines`.
 
 Content that does **not** look like a range/list (e.g. `[foo]`) is left as-is.
 

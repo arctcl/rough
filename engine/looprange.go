@@ -67,34 +67,45 @@ func expandRanges(raw string) []string {
 
 // rangeValues разбирает содержимое "[...]" в список значений.
 //
-//	"1-3"   → 1,2,3
-//	"a-c"   → a,b,c
-//	"1,4,9" → 1,4,9
+//	"1-3"        → 1,2,3
+//	"0-1000:500" → 0,500,1000  (шаг — через двоеточие)
+//	"a-c"        → a,b,c
+//	"1,4,9"      → 1,4,9
 //
 // Если не похоже ни на то, ни на другое — возвращает nil (не диапазон).
 func rangeValues(spec string) []string {
-	if strings.Contains(spec, ",") {
-		return strings.Split(spec, ",")
+	// Опциональный шаг: [N-M:S].
+	step := 1
+	base := spec
+	if i := strings.LastIndexByte(spec, ':'); i > 0 {
+		if s, err := strconv.Atoi(spec[i+1:]); err == nil && s > 0 {
+			step = s
+			base = spec[:i]
+		}
 	}
-	if i := strings.IndexByte(spec, '-'); i > 0 {
-		lo, hi := spec[:i], spec[i+1:]
-		// Числовой диапазон N-M.
+	// Список через запятую (только без шага).
+	if step == 1 && strings.Contains(base, ",") {
+		return strings.Split(base, ",")
+	}
+	if i := strings.IndexByte(base, '-'); i > 0 {
+		lo, hi := base[:i], base[i+1:]
+		// Числовой диапазон N-M (с шагом).
 		if a, err := strconv.Atoi(lo); err == nil {
 			if b, err := strconv.Atoi(hi); err == nil {
 				var out []string
 				if a <= b {
-					for v := a; v <= b; v++ {
+					for v := a; v <= b; v += step {
 						out = append(out, strconv.Itoa(v))
 					}
 				} else {
-					for v := a; v >= b; v-- {
+					for v := a; v >= b; v -= step {
 						out = append(out, strconv.Itoa(v))
 					}
 				}
 				return out
 			}
 		}
-		// Буквенный диапазон a-c.
+		// Буквенный диапазон a-c (с шагом).
 		if len(lo) == 1 && len(hi) == 1 {
 			var out []string
 			for r := lo[0]; ; {
@@ -103,9 +114,9 @@ func rangeValues(spec string) []string {
 					break
 				}
 				if r < hi[0] {
-					r++
+					r += byte(step)
 				} else {
-					r--
+					r -= byte(step)
 				}
 			}
 			return out
