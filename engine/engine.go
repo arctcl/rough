@@ -48,13 +48,27 @@ func debugMode() bool {
 // execAction выполняет action из HTML (кнопка/поле/пайп) без внешнего ввода.
 func execAction(raw, target string) { execActionIn(raw, target, nil) }
 
-// execActionIn выполняет action с возможным ВХОДОМ пайпа (ввод снаружи, инпут).
+// execActionIn выполняет действие с возможным ВХОДОМ пайпа (ввод снаружи, инпут).
+// Диапазоны [N-M]/[a-b]/[v1,v2] в action разворачиваются в список вариантов
+// (перебор адресов/значений) — каждый вариант выполняется, выводы склеиваются.
 // Если в action есть $in — введённое уже подставлено аргументом в нужное место
-// (пластичность); иначе введённое (in) уходит ВХОДОМ первому плагину пайпа
-// (linux-стиль, как "echo введённое | плагин | ...").
+// (пластичность); иначе введённое (in) уходит ВХОДОМ первому плагину пайпа.
+func execActionIn(raw, target string, in []string) {
+	expanded := expandRanges(raw)
+	if len(expanded) > 1 {
+		// Диапазон [N-M]: много хостов/значений. Склеиваем все варианты в один
+		// пайп с clear — выводы собираются подряд (как "clear && a && b && c").
+		// confirm (если был в конце) PrepareAction поставит один раз на всё.
+		execSingle("clear && "+strings.Join(expanded, " && "), target, in)
+		return
+	}
+	execSingle(raw, target, in)
+}
+
+// execSingle выполняет ОДНО конкретное действие (без разворачивания диапазонов).
 // target — id блока для вывода (output="..."), пусто = статус-строка.
 // Если в action есть "| confirm" — открывает окно подтверждения и ждёт.
-func execActionIn(raw, target string, in []string) {
+func execSingle(raw, target string, in []string) {
 	// Новое действие — убираем отладочный вывод, скролл статуса и сбрасываем таймер.
 	debugLines = nil
 	statusScroll = 0
