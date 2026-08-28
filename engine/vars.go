@@ -18,6 +18,13 @@ func SetVar(name string, lines []string) {
 	engineMu.Unlock()
 }
 
+// DelVar удаляет переменную по имени (плагин unexport). Безопасно из async.
+func DelVar(name string) {
+	engineMu.Lock()
+	delete(vars, name)
+	engineMu.Unlock()
+}
+
 // VarLine возвращает переменную одной строкой для подстановки в action:
 // одна строка — как есть, несколько — склеиваются пробелом.
 // Безопасно из async-горутин.

@@ -26,6 +26,7 @@ import (
 	_ "github.com/arctcl/rough/plugins/toggle"
 	_ "github.com/arctcl/rough/plugins/tr"
 	_ "github.com/arctcl/rough/plugins/uniq"
+	_ "github.com/arctcl/rough/plugins/unexport"
 
 	// Killer-фичи: просмотр горутин (ps) и инжектор секретных страниц (chch) —
 	// читает chch.json и регистрирует коды как переход на страницу.

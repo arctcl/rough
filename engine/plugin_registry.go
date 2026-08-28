@@ -388,8 +388,10 @@ func PrepareAction(raw string) (pipes [][]string, needConfirm bool) {
 				needConfirm = true
 				continue
 			}
-			// Подстановка переменных $имя (движок) перед выполнением шага.
-			steps = append(steps, expandVars(s))
+			// Шаг храним БЕЗ подстановки переменных: $имя раскроется в RunSteps на
+			// момент выполнения, чтобы export из раннего "&&"-пайпа был виден в
+			// позднем. Разворачивать здесь — рано, значение ещё пустое.
+			steps = append(steps, s)
 		}
 		if len(steps) > 0 {
 			pipes = append(pipes, steps)
@@ -447,10 +449,15 @@ func RunSteps(steps []string, in []string) ([]string, error) {
 	cur := in
 	for i := 0; i < len(steps); i++ {
 		s := steps[i]
+		// Переменные $имя подставляем ЗДЕСЬ, на момент выполнения шага, а не при
+		// разборе: export в раннем "&&"-пайпе уже успел записать значение, и оно
+		// видно в позднем ($ln_sum в следующем куске). Это и есть "переменная
+		// доступна всегда и отовсюду".
+		s = expandVars(s)
 		name, args := SplitAction(s)
 		// loop:N — ключевое слово (как confirm): повторить ОСТАЛЬНЫЕ шаги пайпа
 		// N раз, выводы склеить. Например "loop:$count | ssh:...:sl" запустит
-		// ssh-паровозик $count раз.
+		// ssh-паровозик $count раз. $count уже раскрыт выше в число.
 		if strings.EqualFold(name, "loop") {
 			n := 1
 			if len(args) > 0 {
