@@ -1,13 +1,22 @@
 package engine
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
 )
 
+// inVarRe — маркер $in / ${in} в action поля ввода: введённое подставляется
+// аргументом именно в это место (пластичность). Если $in нет — введённое
+// уходит ВХОДОМ первому плагину пайпа (linux-стиль).
+var inVarRe = regexp.MustCompile(`\$\{in\}|\$in\b`)
+
+// hasInVar — есть ли $in в action.
+func hasInVar(s string) bool { return inVarRe.MatchString(s) }
+
 // Состояние поля ввода: пока inputMode включён, клавиши идут в буфер,
-// а Enter дописывает значение к действию и выполняет его.
+// а Enter выполняет действие с введённым значением.
 // Это ВИДЖЕТ интерфейса (инпут внутри интерфейса = фронт).
 var (
 	inputMode   bool   // открыто ли окно ввода
@@ -21,24 +30,26 @@ var (
 func widgetInputKey(e *tcell.EventKey) {
 	switch e.Key() {
 	case tcell.KeyEnter:
-		// Дописываем значение как последний аргумент действия.
-		act := inputAction
-		if !strings.HasSuffix(act, ":") {
-			act += ":"
-		}
-		// Ввод из поля — ЛИТЕРАЛ: оборачиваем в кавычки, чтобы спецсимволы
-		// (пайп |, двоеточие :, подстановка $) не трактовались как синтаксис
-		// action. Так через поле ввода нельзя протащить произвольную команду
-		// (инъекция: "cat | ssh:..." останется ОДНИМ значением, а не пайпом).
+		// Кавычка в значении конфликтует с обёрткой в $in-режиме — безопасно отклоняем.
 		if strings.Contains(inputBuf, "'") {
-			// Кавычка в значении конфликтует с обёрткой — безопасно отклоняем.
 			inputMode = false
 			statusMsg = "input contains quote ' — not allowed"
 			return
 		}
-		act += "'" + inputBuf + "'"
-		inputMode = false
-		execAction(act, inputOutput)
+		// Если в action есть $in — подставляем введённое аргументом в это место.
+		// Иначе — введённое уходит ВХОДОМ первому плагину пайпа (linux-стиль).
+		if hasInVar(inputAction) {
+			act := inVarRe.ReplaceAllString(inputAction, "'"+inputBuf+"'")
+			inputMode = false
+			execActionIn(act, inputOutput, nil)
+		} else {
+			var in []string
+			if inputBuf != "" {
+				in = []string{inputBuf}
+			}
+			inputMode = false
+			execActionIn(inputAction, inputOutput, in)
+		}
 	case tcell.KeyEscape:
 		inputMode = false
 		statusMsg = "ввод отменён"

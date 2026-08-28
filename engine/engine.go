@@ -45,10 +45,16 @@ func debugMode() bool {
 	return false
 }
 
-// execAction выполняет action из HTML (кнопка/поле/пайп).
+// execAction выполняет action из HTML (кнопка/поле/пайп) без внешнего ввода.
+func execAction(raw, target string) { execActionIn(raw, target, nil) }
+
+// execActionIn выполняет action с возможным ВХОДОМ пайпа (ввод снаружи, инпут).
+// Если в action есть $in — введённое уже подставлено аргументом в нужное место
+// (пластичность); иначе введённое (in) уходит ВХОДОМ первому плагину пайпа
+// (linux-стиль, как "echo введённое | плагин | ...").
 // target — id блока для вывода (output="..."), пусто = статус-строка.
 // Если в action есть "| confirm" — открывает окно подтверждения и ждёт.
-func execAction(raw, target string) {
+func execActionIn(raw, target string, in []string) {
 	// Новое действие — убираем отладочный вывод, скролл статуса и сбрасываем таймер.
 	debugLines = nil
 	statusScroll = 0
@@ -62,17 +68,18 @@ func execAction(raw, target string) {
 		confirmMsg = "Execute?"
 		pendingPipes = steps
 		pendingOutput = target
+		pendingIn = in
 		statusMsg = ""
 		return
 	}
 	// Несколько пайпов ("a && b") — выполняем каждый последовательно.
-	runAllPipes(steps, target)
+	runAllPipes(steps, target, in)
 }
 
 // runStepsAndShow выполняет пайп и показывает результат (в тайл или статус).
 // Ошибка ErrStop — пайп остановлен плагином отладки tobotom, вывод уже показан.
-func runStepsAndShow(steps []string, target string) {
-	out, err := RunSteps(steps, nil)
+func runStepsAndShow(steps []string, target string, in []string) {
+	out, err := RunSteps(steps, in)
 	if errors.Is(err, ErrStop) {
 		return
 	}
@@ -97,12 +104,12 @@ func isClearPipe(p []string) bool {
 // clear пайпы выполняются, последний перезаписывает приёмник (один пайп —
 // обычное выполнение). Так "clear && man:ssh && cat:/etc/hosts" соберёт
 // справку и файл подряд в один блок.
-func runAllPipes(pipes [][]string, target string) {
+func runAllPipes(pipes [][]string, target string, in []string) {
 	if len(pipes) == 0 {
 		return
 	}
 	if len(pipes) == 1 {
-		runStepsAndShow(pipes[0], target)
+		runStepsAndShow(pipes[0], target, in)
 		return
 	}
 	hasClear := false
@@ -114,7 +121,7 @@ func runAllPipes(pipes [][]string, target string) {
 	}
 	if !hasClear {
 		for _, p := range pipes {
-			runStepsAndShow(p, target)
+			runStepsAndShow(p, target, in)
 		}
 		return
 	}
@@ -126,14 +133,14 @@ func runAllPipes(pipes [][]string, target string) {
 		if isClearPipe(p) {
 			continue
 		}
-		runStepsAppend(p, target)
+		runStepsAppend(p, target, in)
 	}
 }
 
 // runStepsAppend выполняет пайп и ДОБАВЛЯЕТ вывод к приёмнику (склейка),
 // а не перезаписывает его.
-func runStepsAppend(steps []string, target string) {
-	out, err := RunSteps(steps, nil)
+func runStepsAppend(steps []string, target string, in []string) {
+	out, err := RunSteps(steps, in)
 	if errors.Is(err, ErrStop) {
 		return
 	}

@@ -14,6 +14,7 @@ var (
 	confirmMsg    string     // текст вопроса
 	pendingPipes  [][]string // пайпы, которые выполним после подтверждения ("a && b")
 	pendingOutput string     // куда направить вывод после подтверждения
+	pendingIn     []string   // вход пайпа (ввод снаружи), если был
 )
 
 // confirmYes — подтверждение (Enter/y или клик по «Да»): выполняет отложенные пайпы.
@@ -22,7 +23,7 @@ func confirmYes() {
 	debugLines = nil
 	statusShownAt = time.Now()
 	// Кнопка может нести несколько пайпов ("a && b") — склеиваем вывод.
-	runAllPipes(pendingPipes, pendingOutput)
+	runAllPipes(pendingPipes, pendingOutput, pendingIn)
 }
 
 // confirmNo — отмена (Esc/n или клик по «Нет»).
