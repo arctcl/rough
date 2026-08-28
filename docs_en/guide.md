@@ -14,26 +14,22 @@ nuclear reactor on Linux»). Each section — a short explanation and a ready ex
 
 ## Contents
 
-> Line numbers are approximate and updated on edits.
-
-| # | Section | What's inside | Line |
-|---|---|---|---|
-| 1 | [What is rough](#1-what-is-rough) | idea, pages, tiles, HTML | 36 |
-| 2 | [Here's how a tile is written](#2-heres-how-a-tile-is-written-tilesjson) | tiles.json, pages, menu | 50 |
-| 3 | [Here's how HTML is written](#3-heres-how-html-is-written-text-and-markup) | text, markup, color | 98 |
-| 4 | [Here's how a button works](#4-heres-how-a-button-works-action) | action, args, flags, man | 139 |
-| 5 | [Here's how a button with confirmation works](#5-heres-how-a-button-with-confirmation-works-confirm) | dangerous actions | 165 |
-| 6 | [Here's how a picture and a table work](#6-heres-how-a-picture-and-a-table-work) | img, table | 180 |
-| 7 | [Here's how a pipe works](#7-heres-how-a-pipe-works) | `\|`, command chains | 208 |
-| 8 | [Here's how multiple pipes work](#8-heres-how-multiple-pipes-work--and-clear) | `&&`, clear, glue | 231 |
-| 9 | [Here's how variables work](#9-heres-how-variables-work) | export, `$name`, accumulator | 249 |
-| 10 | [Here's how ranges and loops work](#10-heres-how-ranges-and-loops-work) | `[N-M]`, step, `loop:N` | 302 |
-| 11 | [Here's how quick params work](#11-heres-how-quick-params-work-plugin-contract) | plugin contract, slots, flags | 339 |
-| 12 | [Here's how inputs, checkboxes and selects work](#12-heres-how-inputs-checkboxes-and-selects-work) | input, toggles | 393 |
-| 13 | [Here's how live content works](#13-heres-how-live-content-works-plugin) | plugin on a timer, async | 449 |
-| 14 | [Here's where the result goes](#14-heres-where-the-result-goes-output) | status, output block | 475 |
-| 15 | [Here's how themes work](#15-heres-how-themes-work) | list, switch | 490 |
-| 16 | [Everything together: a panel](#16-everything-together-a-panel) | building a whole page | 501 |
+1. [What is rough](#1-what-is-rough) — idea, pages, tiles, HTML
+2. [Here's how a tile is written (tiles.json)](#2-heres-how-a-tile-is-written-tilesjson) — tiles.json, pages, menu
+3. [Here's how HTML is written (text and markup)](#3-heres-how-html-is-written-text-and-markup) — text, markup, color
+4. [Here's how a button works (action)](#4-heres-how-a-button-works-action) — action, args, flags, man
+5. [Here's how a button with confirmation works (confirm)](#5-heres-how-a-button-with-confirmation-works-confirm) — dangerous actions
+6. [Here's how a picture and a table work](#6-heres-how-a-picture-and-a-table-work) — img, table
+7. [Here's how a pipe works](#7-heres-how-a-pipe-works) — `|`, command chains
+8. [Here's how multiple pipes work (`&&` and `clear`)](#8-heres-how-multiple-pipes-work--and-clear) — `&&`, clear, glue
+9. [Here's how variables work](#9-heres-how-variables-work) — export, `$name`, accumulator
+10. [Here's how ranges and loops work](#10-heres-how-ranges-and-loops-work) — `[N-M]`, step, `loop:N`
+11. [Here's how quick params work (plugin contract)](#11-heres-how-quick-params-work-plugin-contract) — plugin contract, slots, flags
+12. [Here's how inputs, checkboxes and selects work](#12-heres-how-inputs-checkboxes-and-selects-work) — input, toggles
+13. [Here's how live content works (plugin)](#13-heres-how-live-content-works-plugin) — plugin on a timer, async
+14. [Here's where the result goes (output)](#14-heres-where-the-result-goes-output) — status, output block
+15. [Here's how themes work](#15-heres-how-themes-work) — list, switch
+16. [Everything together: a panel](#16-everything-together-a-panel) — building a whole page
 
 Reference (tags, params, ranges): [`reference.md`](reference.md).
 
