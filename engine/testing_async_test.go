@@ -72,9 +72,12 @@ func TestAsyncLivePlugin(t *testing.T) {
 	defer func() { delete(plugins, "__tick") }()
 	asyncLive = map[string][]string{}
 	asyncLiveStarted = map[string]bool{}
-	defer func() { asyncLiveStarted = map[string]bool{} }()
 
 	startAsyncLive("k", []string{"__tick"}, 20*time.Millisecond)
+	// Обязательно останавливаем службу и ждём выхода горутины: иначе она будет
+	// читать plugins вразнобой с cleanup (delete "__tick") и другими тестами —
+	// гонка данных, которую ловит -race.
+	defer stopAsyncLive("k")
 
 	deadline := time.Now().Add(time.Second)
 	for time.Now().Before(deadline) {

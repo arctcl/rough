@@ -87,24 +87,67 @@ var (
 	asyncLive        = map[string][]string{}
 	asyncLiveCh      = make(chan liveFrame, 64)
 	asyncLiveStarted = map[string]bool{}
+	// asyncLiveStop / asyncLiveDone — каналы управления живой службой по ключу:
+	// stop закрывает вызывающий (остановить), done закрывает горутина при выходе
+	// (дождаться). Без остановки утёкшая горутина гонялась бы с записью в plugins
+	// при cleanup тестов → -race падает.
+	asyncLiveStop = map[string]chan struct{}{}
+	asyncLiveDone = map[string]chan struct{}{}
 )
 
 // startAsyncLive запускает службу async-<plugin>: в своей горутине по interval
 // выполняет пайп и шлёт готовый кадр в asyncLiveCh. Запускается один раз на ключ.
 func startAsyncLive(key string, steps []string, iv time.Duration) {
 	asyncLiveStarted[key] = true
+	stop := make(chan struct{})
+	done := make(chan struct{})
+	asyncLiveStop[key] = stop
+	asyncLiveDone[key] = done
 	go func() {
+		defer close(done)
 		t := time.NewTicker(iv)
 		defer t.Stop()
 		for {
+			// Остановка снаружи — выходим, не дожидаясь следующего тика.
+			select {
+			case <-stop:
+				return
+			default:
+			}
 			out, err := RunSteps(steps, nil)
 			if err != nil {
 				out = []string{"error: " + err.Error()}
 			}
-			asyncLiveCh <- liveFrame{key: key, lines: out}
-			<-t.C
+			// Отправка кадра и ожидание тика — тоже с проверкой остановки: если
+			// asyncLiveCh полон, после отмены не блокируемся навсегда.
+			select {
+			case asyncLiveCh <- liveFrame{key: key, lines: out}:
+			case <-stop:
+				return
+			}
+			select {
+			case <-t.C:
+			case <-stop:
+				return
+			}
 		}
 	}()
+}
+
+// stopAsyncLive останавливает живую async-службу по ключу и ДОЖИДАЕТСЯ выхода
+// горутины (по done). После возврата горутина больше не читает plugins и не шлёт
+// в asyncLiveCh — тест может безопасно удалять плагины. Иначе утёкшая горутина
+// гонялась бы с записью в plugins (AddPlugin/delete) → -race падает.
+func stopAsyncLive(key string) {
+	if ch, ok := asyncLiveStop[key]; ok {
+		close(ch)
+		delete(asyncLiveStop, key)
+	}
+	if d, ok := asyncLiveDone[key]; ok {
+		delete(asyncLiveDone, key)
+		<-d // дождаться фактического выхода горутины
+	}
+	delete(asyncLiveStarted, key)
 }
 
 // drainAsyncLive забирает готовые кадры живых async-плагинов в asyncLive.
