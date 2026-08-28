@@ -54,6 +54,21 @@ file in chunks of 500 without loading it all:
 
 Content that does **not** look like a range/list (e.g. `[foo]`) is left as-is.
 
+### 4.2. Repeat the rest of the pipe `loop:N`
+
+`loop:N` is a reserved keyword: it just runs the remaining steps of the pipe
+**N times** and glues the outputs. Example — run the `sl` train over ssh once
+per found word:
+
+```html
+<button action="clear && wc:lines --file=lev_tolstoy.txt | export:ln_sum
+  && line:[0-$ln_sum:500] | grep:$in | wc:lines | export:count
+  && loop:$count | ssh:root:127.0.0.1:22:sl" label="Word" output="out">Word</button>
+```
+
+`$count` is already expanded to a number (e.g. `loop:7`), so the train runs
+exactly 7 times. `loop:1` is the same as no loop.
+
 ## 5. Pipes
 
 `|` chains commands: the output of one feeds the next.

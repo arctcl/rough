@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"runtime/debug"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -444,8 +445,30 @@ func splitAnd(raw string) []string {
 // весь интерфейс — пайп останавливается, а трасса уходит в ошибку.
 func RunSteps(steps []string, in []string) ([]string, error) {
 	cur := in
-	for _, s := range steps {
+	for i := 0; i < len(steps); i++ {
+		s := steps[i]
 		name, args := SplitAction(s)
+		// loop:N — ключевое слово (как confirm): повторить ОСТАЛЬНЫЕ шаги пайпа
+		// N раз, выводы склеить. Например "loop:$count | ssh:...:sl" запустит
+		// ssh-паровозик $count раз.
+		if strings.EqualFold(name, "loop") {
+			n := 1
+			if len(args) > 0 {
+				if v, err := strconv.Atoi(args[0]); err == nil && v > 0 {
+					n = v
+				}
+			}
+			rest := steps[i+1:]
+			var acc []string
+			for k := 0; k < n; k++ {
+				r, err := RunSteps(rest, cur)
+				if err != nil {
+					return nil, err
+				}
+				acc = append(acc, r...)
+			}
+			return acc, nil
+		}
 		if strings.EqualFold(name, forbiddenName) {
 			return nil, fmt.Errorf("%s запрещён движком", name)
 		}
