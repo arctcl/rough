@@ -1,6 +1,9 @@
 package engine
 
-import "testing"
+import (
+	"testing"
+	"testing/fstest"
+)
 
 // loop:N — повторяет следующие шаги пайпа N раз, выводы склеивает.
 func TestLoopRepeat(t *testing.T) {
@@ -172,5 +175,51 @@ func TestEngineAccumulator(t *testing.T) {
 	defer delete(plugins, "__txt")
 	if _, err := RunSteps([]string{"__txt", "export:acc +="}, nil); err == nil {
 		t.Fatal("аккумулятор с нечисловым выводом не дал ошибку")
+	}
+}
+
+// Резервные слова движка (export/unexport/loop/confirm) — НЕ плагины: синтакс-
+// чекер не должен ругаться на них в action и <plugin pipe>. Иначе примеры с
+// export не стартовали бы (баг: пропускался только confirm).
+func TestSyntaxReservedWords(t *testing.T) {
+	// __probe — реальный плагин, чтобы проверить, что обычные шаги валидны.
+	AddPlugin("__probe", func(in, args []string) ([]string, error) { return in, nil })
+	defer delete(plugins, "__probe")
+
+	fsys := fstest.MapFS{
+		"tiles.json": &fstest.MapFile{Data: []byte(
+			`{"pattern":["id","x","y","w","h","file"],` +
+				`"main":[["a","0","0","1","1","t.html"]]}`)},
+		"t.html": &fstest.MapFile{Data: []byte(`
+			<button action="export:host"></button>
+			<button action="__probe | export:n"></button>
+			<button action="loop:3 | __probe"></button>
+			<button action="unexport:tmp"></button>
+			<button action="__probe | confirm"></button>
+			<button action="__probe | export:n +="></button>
+			<plugin pipe="__probe | export:n"></plugin>
+		`)},
+	}
+	pages, err := LoadPages(fsys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if errs := CheckSyntax(fsys, pages); len(errs) != 0 {
+		t.Fatalf("CheckSyntax ошибочно ругнулся на резервные слова: %v", errs)
+	}
+
+	// А вот неизвестный плагин чекер обязан поймать.
+	fsys2 := fstest.MapFS{
+		"tiles.json": &fstest.MapFile{Data: []byte(
+			`{"pattern":["id","x","y","w","h","file"],` +
+				`"main":[["a","0","0","1","1","t2.html"]]}`)},
+		"t2.html": &fstest.MapFile{Data: []byte(`<button action="__nope"></button>`)},
+	}
+	pages2, err := LoadPages(fsys2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if errs := CheckSyntax(fsys2, pages2); len(errs) == 0 {
+		t.Fatal("CheckSyntax не поймал неизвестный плагин")
 	}
 }

@@ -62,8 +62,8 @@ func checkNodes(n *Node, file string, pages Pages, add func(where, msg string)) 
 		for _, seg := range splitAnd(act) { // "a && b" — несколько независимых пайпов
 			for _, s := range SplitSteps(seg) {
 				name, _ := SplitAction(s)
-				if name == "confirm" {
-					continue // гейт подтверждения, не плагин
+				if isReserved(name) {
+					continue // резервное слово движка (confirm/export/unexport/loop) — не плагин
 				}
 				if !HasPlugin(name) {
 					add(file, "нет такого плагина: "+name+"  (action=\""+act+"\")")
@@ -88,6 +88,9 @@ func checkNodes(n *Node, file string, pages Pages, add func(where, msg string)) 
 		// Все шаги пайпа (или собранного из атрибутов) должны существовать.
 		for _, s := range pluginSteps(n) {
 			name, _ := SplitAction(s)
+			if isReserved(name) {
+				continue // резервное слово движка (export/unexport/loop) — не плагин
+			}
 			if !HasPlugin(name) {
 				add(file, "нет такого плагина: "+name+"  (в <plugin>)")
 			}

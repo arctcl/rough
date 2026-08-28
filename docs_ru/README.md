@@ -55,7 +55,7 @@ rough\
     plugin_registry.go   # реестр плагинов + пайпы + ParseArgs (quick) + LoadUI
     vars.go              # переменные сессии: SetVar/VarLine, подстановка $имя
     syntax_checker.go    # проверка: action/plugin/ссылки существуют
-  plugins\               # ВСЕ плагины: cat, hello, ssh, curl, man, grep, cut, awk, sed, export, ...
+  plugins\               # ВСЕ плагины: cat, hello, ssh, curl, man, grep, cut, awk, sed, ...
   example_project\       # демо-проект для записи GIF-ок в README (отдельный модуль)
   docs_ru\               # эта документация (русский)
   docs_en\               # документация (english)
