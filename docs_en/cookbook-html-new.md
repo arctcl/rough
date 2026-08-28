@@ -33,6 +33,22 @@ percent/pixels, and an HTML file:
 <button action="cat:/etc/hostname">Hostname</button>
 ```
 
+### 4.1. Loop over a range `[N-M]`
+
+A range in brackets expands into a loop: the command runs for every value, and
+the outputs are glued into one block. Great for a fleet of hosts:
+
+```html
+<button action="ssh:root:192.168.1.[1-250]:apt upgrade" output="out">Upgrade all</button>
+```
+
+`[1-250]` expands to `192.168.1.1 … 192.168.1.250`. Also supported:
+- letters: `[a-c]` → a, b, c;
+- a list: `[1,4,9]`;
+- several ranges at once (cartesian product): `192.168.[1-2].[1-2]` → 4 addresses.
+
+Content that does **not** look like a range/list (e.g. `[foo]`) is left as-is.
+
 ## 5. Pipes
 
 `|` chains commands: the output of one feeds the next.

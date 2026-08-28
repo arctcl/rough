@@ -66,9 +66,11 @@ func expandRanges(raw string) []string {
 }
 
 // rangeValues разбирает содержимое "[...]" в список значений.
-//   "1-3"   → 1,2,3
-//   "a-c"   → a,b,c
-//   "1,4,9" → 1,4,9
+//
+//	"1-3"   → 1,2,3
+//	"a-c"   → a,b,c
+//	"1,4,9" → 1,4,9
+//
 // Если не похоже ни на то, ни на другое — возвращает nil (не диапазон).
 func rangeValues(spec string) []string {
 	if strings.Contains(spec, ",") {
