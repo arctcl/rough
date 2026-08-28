@@ -16,8 +16,8 @@
 ```html
 <input action="
   clear
-  && cat:lev_tolstoy.txt | head:500 | grep:$in | wc:lines | export:count
-  && cat:lev_tolstoy.txt | head:500 | grep:$in | tail:3
+  && cat:lev_tolstoy.txt | grep:$in | wc:lines | export:count
+  && cat:lev_tolstoy.txt | grep:$in | tail:3
   && ssh:root:srv:22::docker exec tolstoy bash -c 'for i in $(seq 1 $count); do sl; done'
   && chart:0:500:$count | bars
   | confirm
@@ -29,9 +29,9 @@
 - **`clear`** — очистить блок вывода и начать склейку с чистого листа.
 - **`&&`** — каждый кусок выполняется отдельно, а выводы склеиваются в один блок.
 - **`$in`** — введённое юзером слово встаёт ровно в место поиска.
-- **`cat:lev_tolstoy.txt | head:500 | grep:$in | wc:lines | export:count`** —
-  взять 500 строк, оставить строки со словом, посчитать их, запомнить число в
-  переменную `$count`.
+- **`cat:lev_tolstoy.txt | grep:$in | wc:lines | export:count`** — по пайпу течёт
+  **весь файл целиком**, `grep` оставляет строки со словом, `wc` считает их, число
+  запоминаем в переменную `$count`. (`head:500` тут нет — ищем по всему файлу.)
 - **`cat:... | grep:$in | tail:3`** — показать последние 3 найденные строки
   (для наглядности).
 - **`ssh:root:srv:22::docker exec tolstoy bash -c '...$count...'`** — по ssh в
@@ -42,6 +42,9 @@
 - **`| confirm`** — перед выполнением спросить подтверждение (Enter — да,
   Esc — нет): паровозик в докере — дело серьёзное.
 - **`label="Слово"`** — подпись поля; **`output="out"`** — куда пойдёт результат.
+
+Если же хочется ограничиться **только первыми 500 строками** — верни `head:500`
+после `cat`: `cat:lev_tolstoy.txt | head:500 | grep:$in | wc:lines`.
 
 ---
 
