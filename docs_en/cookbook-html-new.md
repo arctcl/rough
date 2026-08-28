@@ -72,6 +72,14 @@ Without `clear` only the last pipe's output lands in the target.
 ```
 Type `ssh`, press Enter → runs `man:ssh`.
 
+The typed value is a literal (quoted) — no injection. How it lands:
+- **`$in` in the action** → substituted as an argument at that exact spot,
+  anywhere in a pipe: `grep:$in | sort`, `man:$in`.
+- **a pipe without `$in`** → goes as **stdin to the first plugin** (Linux style,
+  `echo value | plugin | ...`).
+- **a single plugin without `|`** → appended as its argument (as before):
+  `man:` + "ssh" → `man:ssh`.
+
 ## 8. Configs: checkbox and select
 
 ```html

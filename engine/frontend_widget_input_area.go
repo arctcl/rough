@@ -36,20 +36,32 @@ func widgetInputKey(e *tcell.EventKey) {
 			statusMsg = "input contains quote ' — not allowed"
 			return
 		}
-		// Если в action есть $in — подставляем введённое аргументом в это место.
-		// Иначе — введённое уходит ВХОДОМ первому плагину пайпа (linux-стиль).
+		// $in — введённое подставляется аргументом в указанное место (где угодно).
 		if hasInVar(inputAction) {
 			act := inVarRe.ReplaceAllString(inputAction, "'"+inputBuf+"'")
 			inputMode = false
 			execActionIn(act, inputOutput, nil)
-		} else {
+			return
+		}
+		// Пайп без $in — введённое уходит ВХОДОМ (stdin) первому плагину (linux-стиль).
+		if strings.Contains(inputAction, "|") {
 			var in []string
 			if inputBuf != "" {
 				in = []string{inputBuf}
 			}
 			inputMode = false
 			execActionIn(inputAction, inputOutput, in)
+			return
 		}
+		// Один плагин без пайпа — введённое дописывается аргументом (как раньше):
+		// man: + "ssh" → man:'ssh'.
+		act := inputAction
+		if !strings.HasSuffix(act, ":") {
+			act += ":"
+		}
+		act += "'" + inputBuf + "'"
+		inputMode = false
+		execActionIn(act, inputOutput, nil)
 	case tcell.KeyEscape:
 		inputMode = false
 		statusMsg = "ввод отменён"
