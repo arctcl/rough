@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/arctcl/rough"
 )
@@ -24,6 +25,10 @@ Example:
 
 // prev — id горутин с прошлого запуска (для трекинга DEAD).
 var prev = map[int]bool{}
+
+// psMu — защита prev: плагин может зваться из async-службы и главного цикла
+// одновременно (ps --track + <plugin async interval>).
+var psMu sync.Mutex
 
 func init() {
 	rough.AddMan("ps", man_ps)
@@ -53,6 +58,7 @@ func init() {
 		}
 
 		// Трекинг DEAD: горутины из прошлого запуска, которых больше нет.
+		psMu.Lock()
 		if track {
 			for id := range prev {
 				if !cur[id] {
@@ -63,6 +69,7 @@ func init() {
 		} else {
 			prev = map[int]bool{}
 		}
+		psMu.Unlock()
 
 		// Сводка по памяти: total = вся память, занятая процессом (сколько рантайм
 		// Go взял у ОС). Память терминала не входит — тот отдельный процесс.

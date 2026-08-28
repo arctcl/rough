@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rivo/uniseg"
@@ -58,9 +59,17 @@ var series = map[string][]float64{}
 // lastAdd — время последнего добавления столбика по серии (не чаще СЕКУНД).
 var lastAdd = map[string]time.Time{}
 
+// chartMu — защита глобальной серии: один и тот же график (по названию) может
+// вызываться одновременно из async-службы (<plugin async>) и из главного цикла.
+var chartMu sync.Mutex
+
 func init() {
 	rough.AddMan("chart", man_chart)
 	rough.AddPlugin("chart", func(in []string, args []string) ([]string, error) {
+		// Весь вызов под мьютексом: append/обрезка серии и рисование должны быть
+		// согласованы, если плагин зовётся из async и из главного цикла сразу.
+		chartMu.Lock()
+		defer chartMu.Unlock()
 		// Гибридный разбор параметров: двоеточия по порядку или --флаги (и микс).
 		vals, err := engine.ParseArgs(args, chartParams)
 		if err != nil {

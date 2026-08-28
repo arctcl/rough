@@ -2,10 +2,35 @@ package chart
 
 import (
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/arctcl/rough/engine"
 )
+
+// TestChartConcurrent — параллельные вызовы chart (как async-служба + главный
+// цикл) не должны гоняться за глобальной серией: она под chartMu. Ловит -race.
+func TestChartConcurrent(t *testing.T) {
+	engine.SetWindowSize(40, 14)
+	defer engine.SetWindowSize(0, 0)
+	delete(series, "P")
+	delete(lastAdd, "P")
+
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 50; j++ {
+				if _, err := engine.RunSteps([]string{"chart:0:100:1:2 --title=P"}, []string{"50"}); err != nil {
+					t.Error(err)
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+}
 
 // TestChartAxisRight — подпись максимума («100») должна быть СПРАВА (у правой оси).
 func TestChartAxisRight(t *testing.T) {

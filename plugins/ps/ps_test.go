@@ -1,6 +1,30 @@
 package ps
 
-import "testing"
+import (
+	"sync"
+	"testing"
+
+	"github.com/arctcl/rough/engine"
+)
+
+// TestPSConcurrent — параллельные вызовы ps --track не должны гоняться за prev
+// (он под psMu). Ловит -race.
+func TestPSConcurrent(t *testing.T) {
+	var wg sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 20; j++ {
+				if _, err := engine.RunSteps([]string{"ps --track=1"}, nil); err != nil {
+					t.Error(err)
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+}
 
 // parseGoroutine разбирает блок дампа горутины.
 func TestParseGoroutine(t *testing.T) {
