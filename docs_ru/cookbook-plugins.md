@@ -163,7 +163,7 @@ rough.AddPlugin("grep", func(in []string, args []string) ([]string, error) {
 Флаг вырезается из аргументов функцией `engine.FlagValue`, значение
 нормализуется `normSep` (пусто/`=` → `=`, `space` → пробел). Такой же `--sep`
 понимает плагин `set` (и для чтения `...:file:key:get`). Про сами элементы
-в HTML (чекбокс, select) — [cookbook-html-new, раздел 8](cookbook-html-new.md).
+в HTML (чекбокс, select) — [guide, раздел 12](guide.md).
 
 ## 8. Сеть: curl и ssh
 
@@ -458,7 +458,8 @@ func load(fsys fs.FS) {
 
 ## 17. Async-плагин (плагин-служба) и отладка
 
-С флагом `async` (см. cookbook-syntax §3.3 и §10.1) плагин выполняется в **своей
+С флагом `async` (см. [guide, раздел 13](guide.md) и [reference, раздел 6](reference.md))
+плагин выполняется в **своей
 горутине**, а не в главном цикле. Это «плагин-служба»:
 - своя горутина, сам копит данные;
 - ядро НЕ опрашивает — плагин шлёт готовый кадр по каналу;
