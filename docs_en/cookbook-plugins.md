@@ -40,8 +40,10 @@ Quotes `'...'` / `"..."` protect `:` and `|` inside values.
 
 ## Pipes
 
-The output of one plugin feeds the next. Keep each plugin simple and
-composable.
+A plugin doesn't know about pipes: it gets `in` (lines from the previous step)
+and returns lines, while gluing steps into a chain `|`, confirmation `| confirm`
+and `&&` is done by the engine. How it works from the HTML side —
+[guide, sections 7–8](guide.md). Keep each plugin simple and composable.
 
 ## Man
 

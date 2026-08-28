@@ -25,7 +25,8 @@ Run: `myapp -tui`. Full template — [cookbook-project](cookbook-project.md).
 |---|---|
 | [README](../README.md) | the project face: what and why (for people) |
 | [cookbook-project](cookbook-project.md) | build your own project: 4 lines, `tiles.json`, HTML tiles, tabs |
-| [cookbook-html-new](cookbook-html-new.md) | HTML from scratch: general → specific, live examples (start here) |
+| [guide](guide.md) | Tutorial: HTML from scratch, simple → complex, live examples (start here) |
+| [reference](reference.md) | Reference: tags, tiles.json, quick params, ranges, variables, plugins |
 | [cookbook-plugins](cookbook-plugins.md) | write plugins: contract, live `cat` example, pipes, `man` |
 | [cookbook-themes](cookbook-themes.md) | themes: symbols, colors, examples |
 | [how-it-works](how-it-works.md) | engine internals: 2 ways to use, render, events |
