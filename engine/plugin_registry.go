@@ -510,6 +510,23 @@ func RunSteps(steps []string, in []string) ([]string, error) {
 		// видно в позднем ($ln_sum в следующем куске). Это и есть "переменная
 		// доступна всегда и отовсюду".
 		s = expandVars(s)
+		// Диапазон [N-M]/[a-b]/[v1,v2] в шаге мог стать валидным ТОЛЬКО после
+		// подстановки переменных ($имя → число): на старте (execActionIn) $имя
+		// ещё пуст, поэтому статический expandRanges его не раскрыл. Разворачиваем
+		// шаг в экземпляры (как expandRanges для целого action): каждый экземпляр
+		// прогоняет ОСТАЛЬНОЙ пайп, выводы склеиваются. Так "line:[0-$ln_sum:500]"
+		// | ... работает с уже подставленным числом.
+		if variants := expandRanges(s); len(variants) > 1 {
+			var acc []string
+			for _, v := range variants {
+				r, err := RunSteps(append([]string{v}, steps[i+1:]...), cur)
+				if err != nil {
+					return nil, err
+				}
+				acc = append(acc, r...)
+			}
+			return acc, nil
+		}
 		name, args := SplitAction(s)
 		// loop:N — ключевое слово (как confirm): повторить ОСТАЛЬНЫЕ шаги пайпа
 		// N раз, выводы склеить. Например "loop:$count | ssh:...:sl" запустит

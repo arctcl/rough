@@ -223,3 +223,35 @@ func TestSyntaxReservedWords(t *testing.T) {
 		t.Fatal("CheckSyntax не поймал неизвестный плагин")
 	}
 }
+
+// Диапазон [N-M]/[a-b]/[v1,v2] в шаге раскрывается в RunSteps ПОСЛЕ подстановки
+// переменной: на старте $n пуст, поэтому статический expandRanges (в execActionIn)
+// его не увидел; после подстановки шаг "line:[0-$n]" → "line:[0-2]" разворачивается
+// в line:0|line:1|line:2, каждый экземпляр прогоняет остальной пайп.
+func TestRangeAfterVarExpansion(t *testing.T) {
+	AddPlugin("__n", func(in, args []string) ([]string, error) {
+		return []string{args[0]}, nil
+	})
+	defer delete(plugins, "__n")
+	// Хвост пайпа: каждый вариант диапазона проходит через него, выводы склеиваются.
+	AddPlugin("__bang", func(in, args []string) ([]string, error) {
+		return []string{in[0] + "!"}, nil
+	})
+	defer delete(plugins, "__bang")
+
+	SetVar("n", []string{"2"})
+	// __n:[0-$n] | __bang  →  (__n:0|__n:1|__n:2) каждый через __bang → 0! 1! 2!
+	out, err := RunSteps([]string{"__n:[0-$n]", "__bang"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out) != 3 || out[0] != "0!" || out[1] != "1!" || out[2] != "2!" {
+		t.Fatalf("диапазон после переменной: %v, ждали [0! 1! 2!]", out)
+	}
+
+	// Шаг без диапазона не трогается: обычный вызов плагина.
+	out, err = RunSteps([]string{"__n:7", "__bang"}, nil)
+	if err != nil || len(out) != 1 || out[0] != "7!" {
+		t.Fatalf("обычный шаг: %v %v, ждали [7!]", out, err)
+	}
+}

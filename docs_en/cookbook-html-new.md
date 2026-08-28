@@ -52,6 +52,9 @@ Pair the step with the `line` plugin (`line:N-M` — lines N..M) to process a bi
 file in chunks of 500 without loading it all:
 `cat:data.log | line:0-500 | grep:needle | wc:lines`.
 
+A range can hold a variable: `[0-$n:500]` expands when the step runs (after
+`$n` becomes a number) — so a count from `wc` turns into a sweep.
+
 Content that does **not** look like a range/list (e.g. `[foo]`) is left as-is.
 
 ### 4.2. Repeat the rest of the pipe `loop:N`
@@ -61,13 +64,15 @@ Content that does **not** look like a range/list (e.g. `[foo]`) is left as-is.
 per found word:
 
 ```html
-<button action="clear && wc:lines --file=lev_tolstoy.txt | export:ln_sum
+<button action="clear && cat:lev_tolstoy.txt | wc:lines | export:ln_sum
   && line:[0-$ln_sum:500] | grep:$in | wc:lines | export:count
   && loop:$count | ssh:root:127.0.0.1:22:sl" label="Word" output="out">Word</button>
 ```
 
 `$count` is already expanded to a number (e.g. `loop:7`), so the train runs
-exactly 7 times. `loop:1` is the same as no loop.
+exactly 7 times. `loop:1` is the same as no loop. The range `[0-$ln_sum:500]`
+holds a variable: it expands when the step runs (after `$ln_sum` becomes a
+number), not at startup when the variable is empty.
 
 ## 5. Pipes
 
