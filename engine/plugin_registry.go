@@ -66,16 +66,25 @@ const manExport = `export — резервное слово движка: сох
 
 Использование:
   часть пайпа: ... | export:ИМЯ
+  накопление:  ... | export:ИМЯ += [ЧИСЛО]
 
 Аргументы:
   ИМЯ — имя переменной. Дальше в любом action её можно подставить через $ИМЯ
         (или ${ИМЯ}). Переменная доступна всегда и отовсюду, в т.ч. из другого
         "&&"-пайпа: $ИМЯ подставляется в момент выполнения шага.
 
+Аккумулятор (export:ИМЯ +=):
+  Вместо перезаписи ПРИБАВЛЯЕТ число к текущему значению переменной — движок
+  сам складывает, плагин wc просто считает строки куска. Число берётся из
+  текущего вывода пайпа (кусок) либо задаётся явно после оператора. Так по
+  кускам файла собирается общая сумма (см. пример с line по диапазонам).
+
 Примеры:
-  action="ssh:root:srv1::hostname | export:host"    — запомнить хост
-  action="ssh:root:$host::uptime"                   — подставить переменную
-  action="cat:app.conf | cut::2 | export:val | bars" — и сохранить, и показать`
+  action="ssh:root:srv1::hostname | export:host"     — запомнить хост
+  action="ssh:root:$host::uptime"                    — подставить переменную
+  action="cat:app.conf | cut::2 | export:val | bars" — и сохранить, и показать
+  action="... | wc | export:count +="                — прибавить кусок к $count
+  action="export:count += 5"                         — прибавить литерал 5`
 
 const manUnexport = `unexport — резервное слово движка: удалить переменную сессии
 (антипод export).
@@ -530,6 +539,33 @@ func RunSteps(steps []string, in []string) ([]string, error) {
 			if len(args) == 0 || args[0] == "" {
 				return nil, fmt.Errorf("export: нужно имя переменной")
 			}
+			// Аккумулятор: export:ИМЯ += [ЧИСЛО] — ПРИБАВИТЬ к текущему значению
+			// переменной, а не перезаписать. Движок сам складывает числа: плагин
+			// wc только считает строки одного куска, а сумму по кускам копит
+			// движок (по принципу «переменные собирает движок, не плагин»).
+			if varName, val, isAcc := splitAcc(args[0]); isAcc {
+				// Число не задано в самом шаге — берём из ТЕКУЩЕГО вывода пайпа (cur),
+				// т.е. "... | wc | export:count +=". Если вывода нет — нечего прибавить.
+				if val == "" {
+					if len(cur) == 0 {
+						return nil, fmt.Errorf("export %s +=: пустой вывод, нечего прибавить", varName)
+					}
+					val = strings.TrimSpace(cur[0])
+				}
+				n, err := strconv.Atoi(val)
+				if err != nil {
+					return nil, fmt.Errorf("export %s +=: не число: %q", varName, val)
+				}
+				// Текущее значение переменной: нет или не число — стартуем с 0.
+				sum := n
+				if v := VarLine(varName); v != "" {
+					if pv, err := strconv.Atoi(strings.TrimSpace(v)); err == nil {
+						sum += pv
+					}
+				}
+				SetVar(varName, []string{strconv.Itoa(sum)})
+				continue
+			}
 			SetVar(args[0], cur)
 			continue
 		}
@@ -560,6 +596,29 @@ func RunSteps(steps []string, in []string) ([]string, error) {
 		cur = out
 	}
 	return cur, nil
+}
+
+// splitAcc разбирает аргумент export на имя переменной и операнд аккумулятора.
+// Пробел после имени — маркер оператора (иначе это обычный export:ИМЯ):
+//
+//	"count"      → isAcc=false (обычный export: перезаписать выводом);
+//	"count +="   → isAcc=true,  val=""   (прибавить число из ТЕКУЩЕГО вывода);
+//	"count += 5" → isAcc=true,  val="5"  (прибавить литерал);
+//	"count + 5"  → isAcc=true,  val="5"  (та же форма, без '=').
+func splitAcc(spec string) (name, val string, isAcc bool) {
+	i := strings.IndexByte(spec, ' ')
+	if i < 0 {
+		return spec, "", false
+	}
+	name = spec[:i]
+	rest := strings.TrimSpace(spec[i+1:])
+	if strings.HasPrefix(rest, "+=") {
+		return name, strings.TrimSpace(rest[2:]), true
+	}
+	if strings.HasPrefix(rest, "+") {
+		return name, strings.TrimSpace(rest[1:]), true
+	}
+	return name, "", false
 }
 
 // callSafe вызывает плагин с защитой от паники. Паника (кривой параметр,

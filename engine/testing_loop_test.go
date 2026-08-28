@@ -109,3 +109,68 @@ func TestEngineExportUnexport(t *testing.T) {
 		t.Fatal("export без имени не дал ошибку")
 	}
 }
+
+// Аккумулятор export:ИМЯ += — движок ПРИБАВЛЯЕТ число к текущему значению
+// переменной (а не перезаписывает, как обычный export:ИМЯ). Так по кускам
+// файла собирается общая сумма: "cat | line | wc | export:count +=".
+func TestEngineAccumulator(t *testing.T) {
+	// __n:N выдаёт одну строку-число (как wc в реальном пайпе).
+	AddPlugin("__n", func(in, args []string) ([]string, error) {
+		return []string{args[0]}, nil
+	})
+	defer delete(plugins, "__n")
+
+	// export:ИМЯ +=  — обычный export ПО-ПРЕЖНЕМУ перезаписывает.
+	if _, err := RunSteps([]string{"__n:100", "export:acc"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := VarLine("acc"); got != "100" {
+		t.Fatalf("обычный export: acc = %q, ждали 100", got)
+	}
+
+	// export:acc +=  — прибавляет число из вывода пайпа (cur): 100 + 7 = 107.
+	if _, err := RunSteps([]string{"__n:7", "export:acc +="}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := VarLine("acc"); got != "107" {
+		t.Fatalf("аккумулятор 1: acc = %q, ждали 107", got)
+	}
+
+	// Ещё кусок: 107 + 5 = 112 (накапливается, а не перезаписывает).
+	if _, err := RunSteps([]string{"__n:5", "export:acc +="}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := VarLine("acc"); got != "112" {
+		t.Fatalf("аккумулятор 2: acc = %q, ждали 112", got)
+	}
+
+	// export:ИМЯ += ЧИСЛО — литерал прибавляется тоже: 112 + 3 = 115.
+	if _, err := RunSteps([]string{"export:acc += 3"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := VarLine("acc"); got != "115" {
+		t.Fatalf("литерал: acc = %q, ждали 115", got)
+	}
+
+	// export:ИМЯ + ЧИСЛО — та же форма без '=': 115 + 10 = 125.
+	if _, err := RunSteps([]string{"export:acc + 10"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := VarLine("acc"); got != "125" {
+		t.Fatalf("форма +: acc = %q, ждали 125", got)
+	}
+
+	// Аккумулятор с пустым выводом (нет строк в cur) — ошибка.
+	if _, err := RunSteps([]string{"export:acc +="}, nil); err == nil {
+		t.Fatal("аккумулятор с пустым выводом не дал ошибку")
+	}
+
+	// Аккумулятор с нечисловым выводом — ошибка.
+	AddPlugin("__txt", func(in, args []string) ([]string, error) {
+		return []string{"not-a-number"}, nil
+	})
+	defer delete(plugins, "__txt")
+	if _, err := RunSteps([]string{"__txt", "export:acc +="}, nil); err == nil {
+		t.Fatal("аккумулятор с нечисловым выводом не дал ошибку")
+	}
+}

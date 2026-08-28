@@ -120,6 +120,27 @@ Delete a variable with `unexport` (the opposite of `export`):
 
 After `unexport:name` the variable `$name` is gone (expands to empty).
 
+#### Accumulator: `export:NAME +=`
+
+Plain `export:name` **overwrites** the variable on every call — in a multi-step
+pipe only the last number survives, and there is no sum over chunks. The form
+`export:NAME +=` makes the engine **add** a number to the current value instead
+of replacing it. The number comes from the current pipe output (the chunk) or
+is given explicitly after the operator (`export:count += 5`). The engine does
+the summing itself — the `wc` plugin just counts the lines of one chunk.
+
+```html
+<button action="clear
+  && cat:log.txt | line:0-499  | wc:lines | export:count +=
+  && cat:log.txt | line:500-999 | wc:lines | export:count +=
+  && cat:log.txt | line:1000-1499 | wc:lines | export:count +=
+  && hello:total $count" >Sum over chunks</button>
+```
+
+Three 500-line chunks: after each `export:count +=` the `$count` grows rather
+than overwrites, ending with the total. (Note: `line` reads the file whole —
+the "chunks" are only iteration boundaries, not a memory optimization.)
+
 ## 6. Where the result goes
 
 - `output="id"` → into a `<div id="id">` tile;
