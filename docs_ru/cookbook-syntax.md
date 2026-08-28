@@ -15,8 +15,8 @@
 ```html
 <button action="
   clear
-  && cat:lev_tolstoy.txt | head:500 | grep:война | wc:lines | export:count
-  && cat:lev_tolstoy.txt | head:500 | grep:война | tail:3
+  && cat:lev_tolstoy.txt | head:500 | grep:мир | wc:lines | export:count
+  && cat:lev_tolstoy.txt | head:500 | grep:мир | tail:3
   && ssh:root:srv:22::docker exec tolstoy bash -c 'for i in $(seq 1 $count); do sl; done'
   && chart:0:500:$count | bars
   | confirm
@@ -25,14 +25,14 @@
 </button>
 ```
 
-Что здесь задействовано, построчно:
+Что здесь задействовано, построчно (слово «мир» — просто пример, подставь своё):
 
 - **`clear`** — очистить блок вывода и начать склейку с чистого листа.
 - **`&&`** — каждый кусок выполняется отдельно, а выводы склеиваются в один блок.
-- **`cat:lev_tolstoy.txt | head:500 | grep:война | wc:lines | export:count`** —
-  взять 500 строк, оставить строки со словом «война», посчитать их, запомнить
+- **`cat:lev_tolstoy.txt | head:500 | grep:мир | wc:lines | export:count`** —
+  взять 500 строк, оставить строки со словом «мир», посчитать их, запомнить
   число в переменную `$count`.
-- **`cat:... | grep:война | tail:3`** — показать последние 3 найденные строки
+- **`cat:... | grep:мир | tail:3`** — показать последние 3 найденные строки
   (для наглядности).
 - **`ssh:root:srv:22::docker exec tolstoy bash -c '...$count...'`** — по ssh в
   докер-контейнер запустить `sl` (паровозик) столько раз, сколько слов нашли;
